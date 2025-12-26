@@ -189,8 +189,9 @@ const handleUserMenuClick: MenuProps['onClick'] = ({ key }) => {
 </script>
 
 <template>
-  <a-config-provider :theme="menuQRTheme" :locale="antdLocale">
-    <a-layout class="min-h-screen">
+  <div class="admin-layout-wrapper">
+    <a-config-provider :theme="menuQRTheme" :locale="antdLocale">
+      <a-layout class="min-h-screen">
       <!-- Desktop Sider -->
       <a-layout-sider
         v-if="!isMobile"
@@ -290,7 +291,8 @@ const handleUserMenuClick: MenuProps['onClick'] = ({ key }) => {
         </a-layout-content>
       </a-layout>
     </a-layout>
-  </a-config-provider>
+    </a-config-provider>
+  </div>
 </template>
 
 <style scoped>
