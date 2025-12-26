@@ -31,8 +31,10 @@
     ]
   },
   "dependencies": {
+    "@ant-design/icons-vue": "^7.0.1",
     "@tailwindcss/postcss": "^4.1.18",
     "@vueuse/core": "^14.1.0",
+    "ant-design-vue": "^4.2.6",
     "chart.js": "^4.5.1",
     "file-saver": "^2.0.5",
     "jszip": "^3.10.1",

@@ -5,8 +5,11 @@ import piniaPluginPersistedstate from 'pinia-plugin-persistedstate';
 import App from './App.vue';
 import router from './router';
 import i18n from './i18n';
+import setupAntd from './plugins/antd';
 
 import './assets/styles/main.css';
+// Ant Design styles (used only in admin panel)
+import 'ant-design-vue/dist/reset.css';
 
 // Create Vue app
 const app = createApp(App);
@@ -19,6 +22,9 @@ pinia.use(piniaPluginPersistedstate);
 app.use(pinia);
 app.use(router);
 app.use(i18n);
+
+// Setup Ant Design Vue (for admin panel)
+setupAntd(app);
 
 // Mount app
 app.mount('#app');
