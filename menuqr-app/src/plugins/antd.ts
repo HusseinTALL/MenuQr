@@ -41,8 +41,6 @@ import {
   Modal,
   Drawer,
   Popconfirm,
-  Message,
-  Notification,
   Progress,
   Spin,
   Alert,
@@ -62,6 +60,9 @@ import {
   Popover,
   ConfigProvider,
 } from 'ant-design-vue';
+
+// Message and notification are standalone APIs, not components
+import { message, notification } from 'ant-design-vue';
 
 import frFR from 'ant-design-vue/es/locale/fr_FR';
 
@@ -174,18 +175,20 @@ export function setupAntd(app: App) {
     app.use(component);
   });
 
-  // Configure message and notification
-  Message.config({
+  // Configure message and notification defaults
+  message.config({
     top: '80px',
     duration: 3,
     maxCount: 3,
   });
 
-  Notification.config({
+  notification.config({
     placement: 'topRight',
     duration: 4,
   });
 }
 
+// Export utilities for use in components
+export { message, notification };
 export { frFR as antdLocale };
 export default setupAntd;
