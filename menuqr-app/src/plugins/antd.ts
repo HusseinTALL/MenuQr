@@ -36,7 +36,6 @@ import {
   Upload,
   Rate,
   Slider,
-  ColorPicker,
 
   // Feedback
   Modal,
@@ -150,7 +149,6 @@ const components = [
   Upload,
   Rate,
   Slider,
-  ColorPicker,
   Modal,
   Drawer,
   Popconfirm,
