@@ -1,0 +1,304 @@
+{
+  "app": {
+    "title": "MenuQR",
+    "loading": "Chargement...",
+    "offline": "Vous \u00eates hors ligne",
+    "online": "Connexion r\u00e9tablie",
+    "error": "Une erreur est survenue",
+    "retry": "R\u00e9essayer",
+    "close": "Fermer",
+    "cancel": "Annuler",
+    "confirm": "Confirmer",
+    "save": "Enregistrer",
+    "delete": "Supprimer",
+    "edit": "Modifier",
+    "add": "Ajouter",
+    "back": "Retour",
+    "next": "Suivant",
+    "done": "Termin\u00e9",
+    "yes": "Oui",
+    "no": "Non"
+  },
+  "menu": {
+    "title": "Menu",
+    "categories": "Cat\u00e9gories",
+    "allDishes": "Tous les plats",
+    "popular": "Populaires",
+    "new": "Nouveau",
+    "unavailable": "Indisponible",
+    "vegetarian": "V\u00e9g\u00e9tarien",
+    "spicy": "Pic",
+    "search": "Rechercher un plat...",
+    "clearSearch": "Effacer la recherche",
+    "noResults": "Aucun plat trouv\u00e9",
+    "tryAgain": "Essayez avec d'autres mots-cl\u00e9s",
+    "estimatedTime": "{time} min",
+    "price": "{price} FCFA",
+    "options": "Options",
+    "required": "Obligatoire",
+    "optional": "Optionnel",
+    "selectOption": "Choisir une option",
+    "selectOptions": "Choisir des options",
+    "addToCart": "Ajouter au panier",
+    "addedToCart": "Ajout\u00e9 au panier",
+    "requiredOption": "Veuillez s\u00e9lectionner une option",
+    "maxSelections": "Max. {max} choix",
+    "filters": "Filtres",
+    "clearFilters": "Effacer les filtres",
+    "showFilters": "Afficher les filtres",
+    "hideFilters": "Masquer les filtres",
+    "filterVegetarian": "V\u00e9g\u00e9tarien",
+    "filterSpicy": "\u00c9pic\u00e9",
+    "filterNew": "Nouveaut\u00e9s",
+    "filterPopular": "Populaires",
+    "sortBy": "Trier par",
+    "sortDefault": "Par d\u00e9faut",
+    "sortPriceAsc": "Prix croissant",
+    "sortPriceDesc": "Prix d\u00e9croissant",
+    "sortName": "Nom (A-Z)",
+    "sortPopularity": "Popularit\u00e9",
+    "resultsCount": "{count} plat(s) trouv\u00e9(s)",
+    "noMatchingDishes": "Aucun plat ne correspond \u00e0 vos crit\u00e8res",
+    "adjustFilters": "Essayez de modifier vos filtres"
+  },
+  "cart": {
+    "title": "Votre commande",
+    "empty": "Votre panier est vide",
+    "emptyMessage": "Ajoutez des plats depuis le menu pour commencer",
+    "addItems": "Parcourir le menu",
+    "item": "article",
+    "items": "articles",
+    "quantity": "Quantit\u00e9",
+    "notes": "Notes sp\u00e9ciales",
+    "notesPlaceholder": "Ex: sans oignon, bien cuit...",
+    "orderNotes": "Notes pour la commande",
+    "orderNotesPlaceholder": "Instructions sp\u00e9ciales pour votre commande...",
+    "subtotal": "Sous-total",
+    "total": "Total",
+    "clear": "Vider le panier",
+    "clearConfirm": "\u00cates-vous s\u00fbr de vouloir vider le panier ?",
+    "remove": "Retirer",
+    "removeConfirm": "Retirer ce plat du panier ?",
+    "continueShopping": "Continuer mes achats",
+    "checkout": "Passer la commande"
+  },
+  "order": {
+    "title": "Commande",
+    "table": "Table",
+    "tableNumber": "Num\u00e9ro de table",
+    "selectTable": "S\u00e9lectionnez votre table",
+    "noTable": "\u00c0 emporter",
+    "orderWhatsApp": "Commander sur WhatsApp",
+    "orderSummary": "R\u00e9capitulatif",
+    "sendOrder": "Envoyer la commande",
+    "orderSent": "Commande envoy\u00e9e !",
+    "orderSentMessage": "Votre commande a \u00e9t\u00e9 envoy\u00e9e sur WhatsApp",
+    "thankYou": "Merci pour votre commande !",
+    "newOrder": "Nouvelle commande",
+    "previewMessage": "Voir le message WhatsApp",
+    "estimatedTime": "Temps estim\u00e9",
+    "orderNumber": "N\u00b0 Commande",
+    "copyOrder": "Copier la commande",
+    "copied": "Copi\u00e9 !",
+    "popupBlocked": "Popup bloqu\u00e9",
+    "orderCopied": "Votre commande a \u00e9t\u00e9 copi\u00e9e. Collez-la dans WhatsApp.",
+    "openWhatsApp": "Ouvrir WhatsApp",
+    "sendError": "Erreur lors de l'envoi",
+    "tryAgain": "Veuillez r\u00e9essayer ou copier la commande.",
+    "offlineMessage": "Vous devez \u00eatre connect\u00e9 \u00e0 Internet pour envoyer votre commande via WhatsApp.",
+    "messagePreviewHint": "Voir le message qui sera envoy\u00e9",
+    "location": "Ma position",
+    "locationIncluded": "Sera incluse dans la commande",
+    "locationDenied": "Acc\u00e8s refus\u00e9",
+    "locationWillBeRequested": "Sera demand\u00e9e lors de l'envoi",
+    "gettingLocation": "R\u00e9cup\u00e9ration de la position..."
+  },
+  "service": {
+    "callServer": "Appeler le serveur",
+    "callServerMessage": "Un serveur va venir \u00e0 votre table",
+    "requestBill": "Demander l'addition",
+    "requestBillMessage": "L'addition arrive",
+    "help": "Aide",
+    "contact": "Nous contacter"
+  },
+  "admin": {
+    "title": "Administration",
+    "dashboard": "Tableau de bord",
+    "menuEditor": "Gestion du menu",
+    "qrCodes": "Codes QR",
+    "settings": "Param\u00e8tres",
+    "logout": "D\u00e9connexion",
+    "addCategory": "Ajouter une cat\u00e9gorie",
+    "addDish": "Ajouter un plat",
+    "editDish": "Modifier le plat",
+    "deleteDish": "Supprimer le plat",
+    "deleteConfirm": "\u00cates-vous s\u00fbr de vouloir supprimer ?",
+    "availability": "Disponibilit\u00e9",
+    "available": "Disponible",
+    "notAvailable": "Indisponible",
+    "uploadImage": "T\u00e9l\u00e9charger une image",
+    "generateQR": "G\u00e9n\u00e9rer le QR code",
+    "downloadQR": "T\u00e9l\u00e9charger",
+    "printQR": "Imprimer",
+    "tableQR": "QR code table {number}",
+    "generalQR": "QR code g\u00e9n\u00e9ral"
+  },
+  "pwa": {
+    "install": "Installer l'application",
+    "installMessage": "Installez MenuQR pour un acc\u00e8s rapide",
+    "installButton": "Installer",
+    "later": "Plus tard",
+    "updateAvailable": "Mise \u00e0 jour disponible",
+    "updateMessage": "Une nouvelle version est disponible",
+    "updateButton": "Mettre \u00e0 jour",
+    "offlineReady": "Application pr\u00eate hors ligne"
+  },
+  "validation": {
+    "required": "Ce champ est obligatoire",
+    "minLength": "Minimum {min} caract\u00e8res",
+    "maxLength": "Maximum {max} caract\u00e8res",
+    "invalidPhone": "Num\u00e9ro de t\u00e9l\u00e9phone invalide",
+    "invalidPrice": "Prix invalide"
+  },
+  "currency": {
+    "code": "XOF",
+    "symbol": "FCFA",
+    "format": "{amount} FCFA"
+  },
+  "time": {
+    "minutes": "min",
+    "hours": "h",
+    "now": "Maintenant",
+    "today": "Aujourd'hui"
+  },
+  "about": {
+    "title": "À propos",
+    "version": "Version",
+    "tagline": "Menu digital pour restaurants",
+    "description": {
+      "title": "Description",
+      "text1": "MenuQR est une application de menu digital progressive (PWA) conçue spécialement pour les restaurants au Burkina Faso.",
+      "text2": "Consultez le menu, personnalisez vos plats et commandez directement via WhatsApp. Fonctionne même hors ligne !"
+    },
+    "features": {
+      "title": "Fonctionnalités",
+      "offline": "Fonctionne hors ligne",
+      "whatsapp": "Commande via WhatsApp",
+      "multilingual": "Multilingue (Français/Anglais)",
+      "fast": "Rapide et performant",
+      "mobile": "Optimisé mobile"
+    },
+    "technology": {
+      "title": "Technologies utilisées"
+    },
+    "contact": {
+      "title": "Contact",
+      "text": "Vous avez des questions ou des suggestions ?"
+    },
+    "credits": "Tous droits réservés",
+    "made_in": "Fait au Burkina Faso"
+  },
+  "contact": {
+    "title": "Contact",
+    "info": "Informations de contact",
+    "whatsapp_action": "Cliquez pour discuter",
+    "address": "Adresse",
+    "hours": "Horaires d'ouverture",
+    "closed": "Fermé",
+    "help": {
+      "title": "Besoin d'aide ?",
+      "order": "Pour passer commande, ajoutez des plats au panier et cliquez sur 'Commander sur WhatsApp'.",
+      "issue": "Si vous rencontrez un problème, contactez-nous via WhatsApp.",
+      "feedback": "Vos suggestions sont les bienvenues !"
+    }
+  },
+  "days": {
+    "monday": "Lundi",
+    "tuesday": "Mardi",
+    "wednesday": "Mercredi",
+    "thursday": "Jeudi",
+    "friday": "Vendredi",
+    "saturday": "Samedi",
+    "sunday": "Dimanche"
+  },
+  "daysShort": {
+    "monday": "Lun",
+    "tuesday": "Mar",
+    "wednesday": "Mer",
+    "thursday": "Jeu",
+    "friday": "Ven",
+    "saturday": "Sam",
+    "sunday": "Dim"
+  },
+  "months": {
+    "january": "Janvier",
+    "february": "Février",
+    "march": "Mars",
+    "april": "Avril",
+    "may": "Mai",
+    "june": "Juin",
+    "july": "Juillet",
+    "august": "Août",
+    "september": "Septembre",
+    "october": "Octobre",
+    "november": "Novembre",
+    "december": "Décembre"
+  },
+  "install": {
+    "title": "Installer l'app",
+    "already_installed": {
+      "title": "Application déjà installée",
+      "text": "MenuQR est déjà installé sur votre appareil."
+    },
+    "ready": {
+      "title": "Installer MenuQR",
+      "text": "Installez l'application pour un accès rapide et une utilisation hors ligne.",
+      "action": "Installer l'application"
+    },
+    "ios": {
+      "title": "Installation sur iPhone/iPad",
+      "step1": "Appuyez sur le bouton Partager en bas de Safari",
+      "step2": "Faites défiler et touchez 'Sur l'écran d'accueil'",
+      "step3": "Touchez 'Ajouter' en haut à droite",
+      "share_button": "Partager",
+      "add_button": "Sur l'écran d'accueil"
+    },
+    "android": {
+      "title": "Installation sur Android",
+      "step1": "Ouvrez le menu en haut à droite (⋮)",
+      "step2": "Sélectionnez 'Installer l'application' ou 'Ajouter à l'écran d'accueil'",
+      "step3": "Suivez les instructions"
+    },
+    "benefits": {
+      "title": "Avantages de l'installation",
+      "offline": "Accès hors ligne complet",
+      "fast": "Chargement ultra rapide",
+      "homescreen": "Icône sur votre écran d'accueil",
+      "space": "Occupe moins d'espace qu'une app native"
+    }
+  },
+  "notFound": {
+    "title": "Page introuvable",
+    "message": "Désolé, la page que vous recherchez n'existe pas ou a été déplacée.",
+    "goBack": "Retour",
+    "goHome": "Aller au menu"
+  },
+  "storage": {
+    "title": "Stockage hors ligne",
+    "subtitle": "Données mises en cache pour l'accès hors ligne",
+    "used": "utilisé",
+    "available": "disponible",
+    "caches": "Caches",
+    "entries": "entrées",
+    "lastCleanup": "Dernier nettoyage",
+    "cleanup": "Nettoyer",
+    "clearAll": "Tout effacer",
+    "confirmClear": "Êtes-vous sûr de vouloir effacer toutes les données en cache ? L'application devra retélécharger le contenu.",
+    "warning": "L'espace de stockage est presque plein",
+    "critical": "L'espace de stockage est critique - nettoyage recommandé"
+  },
+  "reservation": {
+    "available": "Disponible",
+    "unavailable": "Indisponible"
+  }
+}

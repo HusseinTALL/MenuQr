@@ -1,0 +1,304 @@
+{
+  "app": {
+    "title": "MenuQR",
+    "loading": "Loading...",
+    "offline": "You are offline",
+    "online": "Back online",
+    "error": "An error occurred",
+    "retry": "Retry",
+    "close": "Close",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "save": "Save",
+    "delete": "Delete",
+    "edit": "Edit",
+    "add": "Add",
+    "back": "Back",
+    "next": "Next",
+    "done": "Done",
+    "yes": "Yes",
+    "no": "No"
+  },
+  "menu": {
+    "title": "Menu",
+    "categories": "Categories",
+    "allDishes": "All dishes",
+    "popular": "Popular",
+    "new": "New",
+    "unavailable": "Unavailable",
+    "vegetarian": "Vegetarian",
+    "spicy": "Spicy",
+    "search": "Search for a dish...",
+    "clearSearch": "Clear search",
+    "noResults": "No dishes found",
+    "tryAgain": "Try different keywords",
+    "estimatedTime": "{time} min",
+    "price": "{price} FCFA",
+    "options": "Options",
+    "required": "Required",
+    "optional": "Optional",
+    "selectOption": "Select an option",
+    "selectOptions": "Select options",
+    "addToCart": "Add to cart",
+    "addedToCart": "Added to cart",
+    "requiredOption": "Please select an option",
+    "maxSelections": "Max. {max} selections",
+    "filters": "Filters",
+    "clearFilters": "Clear filters",
+    "showFilters": "Show filters",
+    "hideFilters": "Hide filters",
+    "filterVegetarian": "Vegetarian",
+    "filterSpicy": "Spicy",
+    "filterNew": "New",
+    "filterPopular": "Popular",
+    "sortBy": "Sort by",
+    "sortDefault": "Default",
+    "sortPriceAsc": "Price (low to high)",
+    "sortPriceDesc": "Price (high to low)",
+    "sortName": "Name (A-Z)",
+    "sortPopularity": "Popularity",
+    "resultsCount": "{count} dish(es) found",
+    "noMatchingDishes": "No dishes match your criteria",
+    "adjustFilters": "Try adjusting your filters"
+  },
+  "cart": {
+    "title": "Your order",
+    "empty": "Your cart is empty",
+    "emptyMessage": "Add dishes from the menu to get started",
+    "addItems": "Browse menu",
+    "item": "item",
+    "items": "items",
+    "quantity": "Quantity",
+    "notes": "Special notes",
+    "notesPlaceholder": "E.g., no onion, well done...",
+    "orderNotes": "Order notes",
+    "orderNotesPlaceholder": "Special instructions for your order...",
+    "subtotal": "Subtotal",
+    "total": "Total",
+    "clear": "Clear cart",
+    "clearConfirm": "Are you sure you want to clear the cart?",
+    "remove": "Remove",
+    "removeConfirm": "Remove this dish from cart?",
+    "continueShopping": "Continue shopping",
+    "checkout": "Checkout"
+  },
+  "order": {
+    "title": "Order",
+    "table": "Table",
+    "tableNumber": "Table number",
+    "selectTable": "Select your table",
+    "noTable": "Takeaway",
+    "orderWhatsApp": "Order on WhatsApp",
+    "orderSummary": "Order summary",
+    "sendOrder": "Send order",
+    "orderSent": "Order sent!",
+    "orderSentMessage": "Your order has been sent on WhatsApp",
+    "thankYou": "Thank you for your order!",
+    "newOrder": "New order",
+    "previewMessage": "Preview WhatsApp message",
+    "estimatedTime": "Estimated time",
+    "orderNumber": "Order #",
+    "copyOrder": "Copy order",
+    "copied": "Copied!",
+    "popupBlocked": "Popup blocked",
+    "orderCopied": "Your order has been copied. Paste it in WhatsApp.",
+    "openWhatsApp": "Open WhatsApp",
+    "sendError": "Failed to send",
+    "tryAgain": "Please try again or copy the order.",
+    "offlineMessage": "You must be connected to the Internet to send your order via WhatsApp.",
+    "messagePreviewHint": "See the message that will be sent",
+    "location": "My location",
+    "locationIncluded": "Will be included in the order",
+    "locationDenied": "Access denied",
+    "locationWillBeRequested": "Will be requested when sending",
+    "gettingLocation": "Getting location..."
+  },
+  "service": {
+    "callServer": "Call server",
+    "callServerMessage": "A server will come to your table",
+    "requestBill": "Request bill",
+    "requestBillMessage": "The bill is on its way",
+    "help": "Help",
+    "contact": "Contact us"
+  },
+  "admin": {
+    "title": "Administration",
+    "dashboard": "Dashboard",
+    "menuEditor": "Menu management",
+    "qrCodes": "QR Codes",
+    "settings": "Settings",
+    "logout": "Logout",
+    "addCategory": "Add category",
+    "addDish": "Add dish",
+    "editDish": "Edit dish",
+    "deleteDish": "Delete dish",
+    "deleteConfirm": "Are you sure you want to delete?",
+    "availability": "Availability",
+    "available": "Available",
+    "notAvailable": "Unavailable",
+    "uploadImage": "Upload image",
+    "generateQR": "Generate QR code",
+    "downloadQR": "Download",
+    "printQR": "Print",
+    "tableQR": "Table {number} QR code",
+    "generalQR": "General QR code"
+  },
+  "pwa": {
+    "install": "Install app",
+    "installMessage": "Install MenuQR for quick access",
+    "installButton": "Install",
+    "later": "Later",
+    "updateAvailable": "Update available",
+    "updateMessage": "A new version is available",
+    "updateButton": "Update",
+    "offlineReady": "App ready for offline use"
+  },
+  "validation": {
+    "required": "This field is required",
+    "minLength": "Minimum {min} characters",
+    "maxLength": "Maximum {max} characters",
+    "invalidPhone": "Invalid phone number",
+    "invalidPrice": "Invalid price"
+  },
+  "currency": {
+    "code": "XOF",
+    "symbol": "FCFA",
+    "format": "{amount} FCFA"
+  },
+  "time": {
+    "minutes": "min",
+    "hours": "h",
+    "now": "Now",
+    "today": "Today"
+  },
+  "about": {
+    "title": "About",
+    "version": "Version",
+    "tagline": "Digital menu for restaurants",
+    "description": {
+      "title": "Description",
+      "text1": "MenuQR is a progressive web app (PWA) digital menu designed specifically for restaurants in Burkina Faso.",
+      "text2": "Browse the menu, customize your dishes and order directly via WhatsApp. Works even offline!"
+    },
+    "features": {
+      "title": "Features",
+      "offline": "Works offline",
+      "whatsapp": "Order via WhatsApp",
+      "multilingual": "Multilingual (French/English)",
+      "fast": "Fast and performant",
+      "mobile": "Mobile optimized"
+    },
+    "technology": {
+      "title": "Technologies used"
+    },
+    "contact": {
+      "title": "Contact",
+      "text": "Have questions or suggestions?"
+    },
+    "credits": "All rights reserved",
+    "made_in": "Made in Burkina Faso"
+  },
+  "contact": {
+    "title": "Contact",
+    "info": "Contact information",
+    "whatsapp_action": "Click to chat",
+    "address": "Address",
+    "hours": "Opening hours",
+    "closed": "Closed",
+    "help": {
+      "title": "Need help?",
+      "order": "To place an order, add dishes to cart and click 'Order on WhatsApp'.",
+      "issue": "If you encounter a problem, contact us via WhatsApp.",
+      "feedback": "Your suggestions are welcome!"
+    }
+  },
+  "days": {
+    "monday": "Monday",
+    "tuesday": "Tuesday",
+    "wednesday": "Wednesday",
+    "thursday": "Thursday",
+    "friday": "Friday",
+    "saturday": "Saturday",
+    "sunday": "Sunday"
+  },
+  "daysShort": {
+    "monday": "Mon",
+    "tuesday": "Tue",
+    "wednesday": "Wed",
+    "thursday": "Thu",
+    "friday": "Fri",
+    "saturday": "Sat",
+    "sunday": "Sun"
+  },
+  "months": {
+    "january": "January",
+    "february": "February",
+    "march": "March",
+    "april": "April",
+    "may": "May",
+    "june": "June",
+    "july": "July",
+    "august": "August",
+    "september": "September",
+    "october": "October",
+    "november": "November",
+    "december": "December"
+  },
+  "install": {
+    "title": "Install app",
+    "already_installed": {
+      "title": "Already installed",
+      "text": "MenuQR is already installed on your device."
+    },
+    "ready": {
+      "title": "Install MenuQR",
+      "text": "Install the app for quick access and offline use.",
+      "action": "Install app"
+    },
+    "ios": {
+      "title": "Install on iPhone/iPad",
+      "step1": "Tap the Share button at the bottom of Safari",
+      "step2": "Scroll and tap 'Add to Home Screen'",
+      "step3": "Tap 'Add' in the top right",
+      "share_button": "Share",
+      "add_button": "Add to Home Screen"
+    },
+    "android": {
+      "title": "Install on Android",
+      "step1": "Open the menu in the top right (⋮)",
+      "step2": "Select 'Install app' or 'Add to Home screen'",
+      "step3": "Follow the instructions"
+    },
+    "benefits": {
+      "title": "Installation benefits",
+      "offline": "Full offline access",
+      "fast": "Lightning fast loading",
+      "homescreen": "Icon on your home screen",
+      "space": "Takes less space than a native app"
+    }
+  },
+  "notFound": {
+    "title": "Page not found",
+    "message": "Sorry, the page you're looking for doesn't exist or has been moved.",
+    "goBack": "Go back",
+    "goHome": "Go to menu"
+  },
+  "storage": {
+    "title": "Offline Storage",
+    "subtitle": "Data cached for offline access",
+    "used": "used",
+    "available": "available",
+    "caches": "Caches",
+    "entries": "entries",
+    "lastCleanup": "Last cleanup",
+    "cleanup": "Cleanup",
+    "clearAll": "Clear all",
+    "confirmClear": "Are you sure you want to clear all cached data? The app will need to re-download content.",
+    "warning": "Storage space is almost full",
+    "critical": "Storage space is critical - cleanup recommended"
+  },
+  "reservation": {
+    "available": "Available",
+    "unavailable": "Unavailable"
+  }
+}

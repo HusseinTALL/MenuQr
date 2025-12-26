@@ -1,0 +1,11 @@
+dist
+dist-ssr
+coverage
+node_modules
+*.min.js
+*.min.css
+public
+dev-dist
+.git
+pnpm-lock.yaml
+package-lock.json
