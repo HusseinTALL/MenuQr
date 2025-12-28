@@ -130,6 +130,13 @@ const menuGroups = computed(() => [
     ],
   },
   {
+    label: 'GESTION',
+    items: [
+      { key: '/admin/staff', icon: UserOutlined, label: 'Personnel', badge: 0 },
+      { key: '/admin/reviews', icon: StarOutlined, label: 'Avis Clients', badge: badges.value.pendingReviews },
+    ],
+  },
+  {
     label: 'CONFIGURATION',
     items: [
       { key: '/admin/pricing', icon: CreditCardOutlined, label: 'Abonnements', badge: 0 },

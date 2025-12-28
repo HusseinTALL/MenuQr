@@ -18,6 +18,7 @@ import {
   type ReviewFilters,
 } from '../services/reviewService.js';
 import { emitNewReview } from '../services/socketService.js';
+import * as auditService from '../services/auditService.js';
 
 // =====================
 // Customer Endpoints
@@ -577,6 +578,22 @@ export const approveReview = asyncHandler(async (req: Request, res: Response): P
     await review.populate('dishId', 'name slug image');
   }
 
+  // Audit log (only if status changed)
+  if (!wasApproved) {
+    const auditUser = auditService.getUserFromRequest(req);
+    if (auditUser) {
+      await auditService.auditStatusChange(
+        'review',
+        auditUser,
+        { type: 'Review', id: review._id, name: `Review rating ${review.rating}` },
+        'pending',
+        'approved',
+        auditService.getRequestInfo(req),
+        { rating: review.rating }
+      );
+    }
+  }
+
   res.json({
     success: true,
     message: 'Avis approuvé avec succès',
@@ -618,6 +635,20 @@ export const rejectReview = asyncHandler(async (req: Request, res: Response): Pr
       await updateDishReviewStats(review.dishId);
     }
     await updateRestaurantReviewStats(review.restaurantId);
+  }
+
+  // Audit log
+  const auditUser = auditService.getUserFromRequest(req);
+  if (auditUser) {
+    await auditService.auditStatusChange(
+      'review',
+      auditUser,
+      { type: 'Review', id: review._id, name: `Review rating ${review.rating}` },
+      wasApproved ? 'approved' : 'pending',
+      'rejected',
+      auditService.getRequestInfo(req),
+      { reason }
+    );
   }
 
   res.json({
@@ -689,7 +720,8 @@ export const deleteReview = asyncHandler(async (req: Request, res: Response): Pr
   }
 
   const wasApproved = review.status === 'approved';
-  const { dishId, restaurantId } = review;
+  const { dishId, restaurantId: restId } = review;
+  const reviewRating = review.rating;
 
   await Review.findByIdAndDelete(id);
 
@@ -698,7 +730,19 @@ export const deleteReview = asyncHandler(async (req: Request, res: Response): Pr
     if (dishId) {
       await updateDishReviewStats(dishId);
     }
-    await updateRestaurantReviewStats(restaurantId);
+    await updateRestaurantReviewStats(restId);
+  }
+
+  // Audit log
+  const auditUser = auditService.getUserFromRequest(req);
+  if (auditUser) {
+    await auditService.auditDelete(
+      'review',
+      auditUser,
+      { type: 'Review', id: review._id, name: `Review rating ${reviewRating}` },
+      `Review (rating ${reviewRating}) deleted by admin`,
+      auditService.getRequestInfo(req)
+    );
   }
 
   res.json({

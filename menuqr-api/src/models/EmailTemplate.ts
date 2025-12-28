@@ -24,6 +24,9 @@ export type EmailTemplateType =
   | 'invoice_created'
   | 'account_suspended'
   | 'account_reactivated'
+  | 'login_notification'
+  | 'account_lockout'
+  | 'password_changed'
   | 'custom';
 
 export interface IEmailTemplateVariable {
@@ -52,6 +55,7 @@ export interface IEmailTemplate extends Document {
   lastModifiedBy: mongoose.Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
+  render(language: 'fr' | 'en', data: Record<string, string>): { subject: string; body: string };
 }
 
 const emailTemplateVariableSchema = new Schema<IEmailTemplateVariable>(
@@ -100,6 +104,9 @@ const emailTemplateSchema = new Schema<IEmailTemplate>(
         'invoice_created',
         'account_suspended',
         'account_reactivated',
+        'login_notification',
+        'account_lockout',
+        'password_changed',
         'custom',
       ],
       index: true,

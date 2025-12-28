@@ -9,7 +9,8 @@ import {
   cancelCampaign,
   getCampaignStats,
 } from '../controllers/campaignController.js';
-import { authenticate, authorize } from '../middleware/auth.js';
+import { authenticate } from '../middleware/auth.js';
+import { hasPermission, PERMISSIONS } from '../middleware/permission.js';
 import { validate } from '../middleware/validate.js';
 import {
   createCampaignValidator,
@@ -21,19 +22,25 @@ import {
 
 const router = Router();
 
-// All routes require owner/admin authentication
-router.use(authenticate, authorize('owner', 'admin'));
+// All routes require authentication
+router.use(authenticate);
 
-// CRUD routes
-router.post('/', validate(createCampaignValidator), createCampaign);
-router.get('/', validate(campaignQueryValidator), getCampaigns);
-router.get('/stats', getCampaignStats); // Aggregate stats - must be before /:id
-router.get('/:id', validate(campaignIdValidator), getCampaignById);
-router.put('/:id', validate(updateCampaignValidator), updateCampaign);
-router.delete('/:id', validate(campaignIdValidator), deleteCampaign);
+// Read routes
+router.get('/', hasPermission(PERMISSIONS.CAMPAIGNS_READ), validate(campaignQueryValidator), getCampaigns);
+router.get('/stats', hasPermission(PERMISSIONS.CAMPAIGNS_READ), getCampaignStats);
+router.get('/:id', hasPermission(PERMISSIONS.CAMPAIGNS_READ), validate(campaignIdValidator), getCampaignById);
+
+// Create routes
+router.post('/', hasPermission(PERMISSIONS.CAMPAIGNS_CREATE), validate(createCampaignValidator), createCampaign);
+
+// Update routes
+router.put('/:id', hasPermission(PERMISSIONS.CAMPAIGNS_UPDATE), validate(updateCampaignValidator), updateCampaign);
+
+// Delete routes
+router.delete('/:id', hasPermission(PERMISSIONS.CAMPAIGNS_DELETE), validate(campaignIdValidator), deleteCampaign);
 
 // Action routes
-router.post('/:id/send', validate(sendCampaignValidator), sendCampaign);
-router.post('/:id/cancel', validate(campaignIdValidator), cancelCampaign);
+router.post('/:id/send', hasPermission(PERMISSIONS.CAMPAIGNS_SEND), validate(sendCampaignValidator), sendCampaign);
+router.post('/:id/cancel', hasPermission(PERMISSIONS.CAMPAIGNS_UPDATE), validate(campaignIdValidator), cancelCampaign);
 
 export default router;

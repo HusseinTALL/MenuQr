@@ -306,6 +306,14 @@ const routes: RouteRecordRaw[] = [
           title: 'Cuisine (KDS)',
         },
       },
+      {
+        path: 'staff',
+        name: 'AdminStaff',
+        component: () => import('@/views/admin/StaffView.vue'),
+        meta: {
+          title: 'Personnel',
+        },
+      },
     ],
   },
 

@@ -15,7 +15,8 @@ import {
   triggerExpirePoints,
 } from '../controllers/loyaltyController.js';
 import { authenticateCustomer } from '../middleware/customerAuth.js';
-import { authenticate, authorize } from '../middleware/auth.js';
+import { authenticate } from '../middleware/auth.js';
+import { hasPermission, PERMISSIONS } from '../middleware/permission.js';
 import { validate } from '../middleware/validate.js';
 import {
   redeemPointsValidator,
@@ -52,45 +53,40 @@ customerLoyaltyRouter.get('/me/expiring', validate(expiringPointsQueryValidator)
 // ============================================
 export const adminLoyaltyRouter = Router();
 
-// All routes require authentication and owner/admin role
+// All routes require authentication
 adminLoyaltyRouter.use(authenticate);
-adminLoyaltyRouter.use(authorize('owner', 'admin'));
 
-// Get loyalty program stats
-adminLoyaltyRouter.get('/stats', getLoyaltyStats);
-
-// Get all customers with loyalty info
-adminLoyaltyRouter.get('/customers', validate(loyaltyCustomersQueryValidator), getCustomersLoyalty);
-
-// Get specific customer loyalty info
+// Read routes
+adminLoyaltyRouter.get('/stats', hasPermission(PERMISSIONS.LOYALTY_READ), getLoyaltyStats);
+adminLoyaltyRouter.get('/customers', hasPermission(PERMISSIONS.LOYALTY_READ), validate(loyaltyCustomersQueryValidator), getCustomersLoyalty);
 adminLoyaltyRouter.get(
   '/customers/:customerId',
+  hasPermission(PERMISSIONS.LOYALTY_READ),
   validate(customerIdValidator),
   getCustomerLoyaltyAdmin
 );
-
-// Get specific customer history
 adminLoyaltyRouter.get(
   '/customers/:customerId/history',
+  hasPermission(PERMISSIONS.LOYALTY_READ),
   validate([...customerIdValidator, ...pointsHistoryQueryValidator]),
   getCustomerHistoryAdmin
 );
 
-// Adjust customer points
+// Manage routes
 adminLoyaltyRouter.post(
   '/customers/:customerId/adjust',
+  hasPermission(PERMISSIONS.LOYALTY_MANAGE),
   validate(adjustPointsValidator),
   adjustCustomerPoints
 );
-
-// Add bonus points
 adminLoyaltyRouter.post(
   '/customers/:customerId/bonus',
+  hasPermission(PERMISSIONS.LOYALTY_MANAGE),
   validate(bonusPointsValidator),
   addBonusPoints
 );
 
-// Trigger point expiration (maintenance)
-adminLoyaltyRouter.post('/expire-points', triggerExpirePoints);
+// Maintenance (requires manage permission)
+adminLoyaltyRouter.post('/expire-points', hasPermission(PERMISSIONS.LOYALTY_MANAGE), triggerExpirePoints);
 
 export default { customerLoyaltyRouter, adminLoyaltyRouter };

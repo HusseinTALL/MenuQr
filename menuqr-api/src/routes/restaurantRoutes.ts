@@ -9,7 +9,8 @@ import {
   getAllRestaurants,
 } from '../controllers/restaurantController.js';
 import { getFullMenu } from '../controllers/menuController.js';
-import { authenticate, authorize } from '../middleware/auth.js';
+import { authenticate } from '../middleware/auth.js';
+import { hasPermission, PERMISSIONS } from '../middleware/permission.js';
 import { validate } from '../middleware/validate.js';
 import {
   createRestaurantValidator,
@@ -227,7 +228,7 @@ router.get('/:id/menu', validate(restaurantIdValidator), getFullMenu);
 router.post(
   '/',
   authenticate,
-  authorize('owner', 'admin'),
+  hasPermission(PERMISSIONS.RESTAURANT_UPDATE), // Only owners can create restaurants
   validate(createRestaurantValidator),
   createRestaurant
 );
@@ -260,7 +261,7 @@ router.post(
  *       404:
  *         $ref: '#/components/responses/NotFound'
  */
-router.get('/me/restaurant', authenticate, getMyRestaurant);
+router.get('/me/restaurant', authenticate, hasPermission(PERMISSIONS.RESTAURANT_READ), getMyRestaurant);
 
 /**
  * @swagger
@@ -307,7 +308,7 @@ router.get('/me/restaurant', authenticate, getMyRestaurant);
 router.put(
   '/:id',
   authenticate,
-  authorize('owner', 'admin'),
+  hasPermission(PERMISSIONS.RESTAURANT_UPDATE),
   validate(updateRestaurantValidator),
   updateRestaurant
 );
@@ -339,7 +340,7 @@ router.put(
 router.delete(
   '/:id',
   authenticate,
-  authorize('owner', 'admin'),
+  hasPermission(PERMISSIONS.RESTAURANT_SETTINGS), // Only owners can delete restaurant
   validate(restaurantIdValidator),
   deleteRestaurant
 );

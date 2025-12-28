@@ -9,7 +9,8 @@ import {
   toggleAvailability,
   reorderDishes,
 } from '../controllers/dishController.js';
-import { authenticate, authorize } from '../middleware/auth.js';
+import { authenticate } from '../middleware/auth.js';
+import { hasPermission, PERMISSIONS } from '../middleware/permission.js';
 import { validate } from '../middleware/validate.js';
 import {
   createDishValidator,
@@ -21,11 +22,17 @@ import {
 const router = Router();
 
 // Protected routes - MUST be before /:id to avoid conflict
-router.get('/me/dishes', authenticate, validate(dishQueryValidator), getMyDishes);
+router.get(
+  '/me/dishes',
+  authenticate,
+  hasPermission(PERMISSIONS.DISHES_READ),
+  validate(dishQueryValidator),
+  getMyDishes
+);
 router.put(
   '/reorder',
   authenticate,
-  authorize('owner', 'admin'),
+  hasPermission(PERMISSIONS.DISHES_UPDATE),
   reorderDishes
 );
 
@@ -41,21 +48,21 @@ router.get('/:id', validate(dishIdValidator), getDishById);
 router.put(
   '/:id',
   authenticate,
-  authorize('owner', 'admin'),
+  hasPermission(PERMISSIONS.DISHES_UPDATE),
   validate(updateDishValidator),
   updateDish
 );
 router.delete(
   '/:id',
   authenticate,
-  authorize('owner', 'admin'),
+  hasPermission(PERMISSIONS.DISHES_DELETE),
   validate(dishIdValidator),
   deleteDish
 );
 router.patch(
   '/:id/availability',
   authenticate,
-  authorize('owner', 'admin', 'staff'),
+  hasPermission(PERMISSIONS.DISHES_AVAILABILITY),
   validate(dishIdValidator),
   toggleAvailability
 );
@@ -64,7 +71,7 @@ router.patch(
 router.post(
   '/',
   authenticate,
-  authorize('owner', 'admin'),
+  hasPermission(PERMISSIONS.DISHES_CREATE),
   validate(createDishValidator),
   createDish
 );

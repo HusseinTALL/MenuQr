@@ -4,6 +4,7 @@ import { asyncHandler, ApiError } from '../middleware/errorHandler.js';
 import * as loyaltyService from '../services/loyaltyService.js';
 import { emitNewOrder, emitOrderUpdate, emitOrderReady } from '../services/socketService.js';
 import logger from '../utils/logger.js';
+import * as auditService from '../services/auditService.js';
 
 interface OrderItemInput {
   dishId: string;
@@ -270,6 +271,9 @@ export const updateOrderStatus = asyncHandler(
       throw new ApiError(404, 'Order not found');
     }
 
+    // Store old status for audit
+    const oldStatus = order.status;
+
     // Check ownership
     const restaurant = await Restaurant.findById(order.restaurantId);
     if (!restaurant || (restaurant.ownerId.toString() !== user._id.toString() && user.role !== 'admin')) {
@@ -363,6 +367,20 @@ export const updateOrderStatus = asyncHandler(
     } else {
       // General order update event
       emitOrderUpdate(order.restaurantId.toString(), orderEventData);
+    }
+
+    // Audit log
+    const auditUser = auditService.getUserFromRequest(req);
+    if (auditUser) {
+      await auditService.auditStatusChange(
+        'order',
+        auditUser,
+        { type: 'Order', id: order._id, name: order.orderNumber },
+        oldStatus,
+        status,
+        auditService.getRequestInfo(req),
+        { tableNumber: order.tableNumber, total: order.total, cancelReason }
+      );
     }
 
     res.json({

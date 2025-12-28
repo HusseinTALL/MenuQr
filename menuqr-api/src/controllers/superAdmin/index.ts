@@ -9,3 +9,4 @@ export * as reportController from './reportController.js';
 export * as bulkController from './bulkController.js';
 export * as backupController from './backupController.js';
 export * as monitoringController from './monitoringController.js';
+export * as gdprController from './gdprController.js';

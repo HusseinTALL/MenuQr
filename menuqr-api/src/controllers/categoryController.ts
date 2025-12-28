@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { Category, Restaurant } from '../models/index.js';
 import { asyncHandler, ApiError } from '../middleware/errorHandler.js';
+import * as auditService from '../services/auditService.js';
 
 export const createCategory = asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const user = req.user!;
@@ -23,6 +24,20 @@ export const createCategory = asyncHandler(async (req: Request, res: Response): 
     restaurantId: restaurant._id,
     order,
   });
+
+  // Audit log
+  const auditUser = auditService.getUserFromRequest(req);
+  if (auditUser) {
+    const categoryDoc = Array.isArray(category) ? category[0] : category;
+    const categoryName = (categoryDoc.name as Record<string, string>).fr;
+    await auditService.auditCreate(
+      'category',
+      auditUser,
+      { type: 'Category', id: categoryDoc._id, name: categoryName },
+      `Category "${categoryName}" created`,
+      auditService.getRequestInfo(req)
+    );
+  }
 
   res.status(201).json({
     success: true,
@@ -93,11 +108,31 @@ export const updateCategory = asyncHandler(async (req: Request, res: Response): 
     throw new ApiError(403, 'Not authorized to update this category');
   }
 
+  // Store old values for audit
+  const oldName = (category.name as Record<string, string>).fr;
+
   // Update category
   const updatedCategory = await Category.findByIdAndUpdate(id, req.body, {
     new: true,
     runValidators: true,
   });
+
+  // Audit log
+  const auditUser = auditService.getUserFromRequest(req);
+  if (auditUser && updatedCategory) {
+    const changes = [];
+    if (req.body.name) {
+      changes.push({ field: 'name', oldValue: oldName, newValue: (updatedCategory.name as Record<string, string>).fr });
+    }
+    await auditService.auditUpdate(
+      'category',
+      auditUser,
+      { type: 'Category', id: category._id, name: (updatedCategory.name as Record<string, string>).fr },
+      changes.length > 0 ? changes : undefined,
+      `Category "${(updatedCategory.name as Record<string, string>).fr}" updated`,
+      auditService.getRequestInfo(req)
+    );
+  }
 
   res.json({
     success: true,
@@ -122,8 +157,23 @@ export const deleteCategory = asyncHandler(async (req: Request, res: Response): 
     throw new ApiError(403, 'Not authorized to delete this category');
   }
 
+  // Store name for audit
+  const categoryName = (category.name as Record<string, string>).fr;
+
   // Soft delete
   await Category.findByIdAndUpdate(id, { isActive: false });
+
+  // Audit log
+  const auditUser = auditService.getUserFromRequest(req);
+  if (auditUser) {
+    await auditService.auditDelete(
+      'category',
+      auditUser,
+      { type: 'Category', id: category._id, name: categoryName },
+      `Category "${categoryName}" deleted (soft delete)`,
+      auditService.getRequestInfo(req)
+    );
+  }
 
   res.json({
     success: true,

@@ -13,6 +13,7 @@ import {
   bulkController,
   backupController,
   monitoringController,
+  gdprController,
 } from '../controllers/superAdmin/index.js';
 
 const router = Router();
@@ -106,6 +107,10 @@ router.put('/alerts/:id/resolve', auditController.resolveAlert);
 router.delete('/alerts/:id', auditController.deleteAlert);
 router.post('/alerts/test', auditController.createTestAlert);
 
+// Anomaly detection routes
+router.get('/anomaly/stats', auditController.getAnomalyStats);
+router.get('/anomaly/ip/:ip', auditController.checkIPStatus);
+
 // Notification routes
 router.get('/notifications', notificationController.getNotifications);
 router.get('/notifications/stats', notificationController.getNotificationStats);
@@ -181,5 +186,14 @@ router.get('/monitoring/app', monitoringController.getAppMetrics);
 router.get('/monitoring/services', monitoringController.getServicesHealth);
 router.get('/monitoring/health', monitoringController.getHealthCheck);
 router.get('/monitoring/history', monitoringController.getMetricsHistory);
+
+// GDPR routes
+router.get('/gdpr/stats', gdprController.getGDPRStats);
+router.get('/gdpr/user/:userId/export', gdprController.exportUserData);
+router.get('/gdpr/user/:userId/download', gdprController.downloadUserData);
+router.delete('/gdpr/user/:userId', gdprController.deleteUserData);
+router.get('/gdpr/customer/:customerId/export', gdprController.exportCustomerData);
+router.get('/gdpr/customer/:customerId/download', gdprController.downloadCustomerData);
+router.delete('/gdpr/customer/:customerId', gdprController.deleteCustomerData);
 
 export default router;

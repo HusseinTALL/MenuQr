@@ -1,16 +1,24 @@
 import mongoose, { Document, Schema } from 'mongoose';
 import bcrypt from 'bcryptjs';
+import type { Permission } from '../config/permissions.js';
+
+// Available roles for staff/admin users
+export type UserRole = 'superadmin' | 'owner' | 'admin' | 'manager' | 'kitchen' | 'cashier' | 'staff';
 
 export interface IUser extends Document {
   _id: mongoose.Types.ObjectId;
   email: string;
   password: string;
   name: string;
-  role: 'admin' | 'owner' | 'staff' | 'superadmin';
+  role: UserRole;
   restaurantId?: mongoose.Types.ObjectId;
   isActive: boolean;
   refreshToken?: string;
   lastLogin?: Date;
+  // Custom permissions (overrides role defaults if set)
+  customPermissions?: Permission[];
+  // Staff management
+  createdBy?: mongoose.Types.ObjectId; // Who created this user (for staff tracking)
   // Account security
   failedLoginAttempts: number;
   lockUntil?: Date;
@@ -62,12 +70,22 @@ const userSchema = new Schema<IUser>(
     },
     role: {
       type: String,
-      enum: ['admin', 'owner', 'staff', 'superadmin'],
+      enum: ['superadmin', 'owner', 'admin', 'manager', 'kitchen', 'cashier', 'staff'],
       default: 'owner',
     },
     restaurantId: {
       type: Schema.Types.ObjectId,
       ref: 'Restaurant',
+    },
+    // Custom permissions - allows overriding default role permissions
+    customPermissions: {
+      type: [String],
+      default: undefined, // null means use role defaults
+    },
+    // Track who created this staff member
+    createdBy: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
     },
     isActive: {
       type: Boolean,
@@ -134,8 +152,10 @@ userSchema.methods.comparePassword = async function (
   return bcrypt.compare(candidatePassword, this.password);
 };
 
-// Index for faster queries (email index created by unique: true)
+// Indexes for faster queries (email index created by unique: true)
 userSchema.index({ restaurantId: 1 });
+userSchema.index({ createdBy: 1 });
+userSchema.index({ restaurantId: 1, role: 1 });
 
 // Virtual for account lock status
 userSchema.virtual('isLocked').get(function () {
