@@ -101,36 +101,21 @@ const columns: ColumnsType<StaffMember> = [
     title: 'Rôle',
     dataIndex: 'role',
     key: 'role',
-    customRender: ({ record }) => (
-      <Tag color={getRoleColor(record.role)}>{record.roleDisplayName}</Tag>
-    ),
   },
   {
     title: 'Statut',
     dataIndex: 'isActive',
     key: 'isActive',
-    customRender: ({ record }) => (
-      <Tag color={record.isActive ? 'success' : 'error'}>
-        {record.isActive ? 'Actif' : 'Inactif'}
-      </Tag>
-    ),
   },
   {
     title: '2FA',
     dataIndex: 'twoFactorEnabled',
     key: 'twoFactorEnabled',
-    customRender: ({ record }) => (
-      <Tag color={record.twoFactorEnabled ? 'blue' : 'default'}>
-        {record.twoFactorEnabled ? 'Activé' : 'Désactivé'}
-      </Tag>
-    ),
   },
   {
     title: 'Dernière connexion',
     dataIndex: 'lastLogin',
     key: 'lastLogin',
-    customRender: ({ record }) =>
-      record.lastLogin ? new Date(record.lastLogin).toLocaleString('fr-FR') : 'Jamais',
   },
   {
     title: 'Actions',
@@ -370,7 +355,7 @@ onMounted(() => {
           <template v-else-if="column.key === 'actions'">
             <Space>
               <Tooltip title="Modifier">
-                <Button type="text" size="small" @click="openEditModal(record)">
+                <Button type="text" size="small" @click="openEditModal(record as StaffMember)">
                   <EditOutlined />
                 </Button>
               </Tooltip>
@@ -378,7 +363,7 @@ onMounted(() => {
                 <Switch
                   :checked="record.isActive"
                   size="small"
-                  @change="toggleActive(record)"
+                  @change="toggleActive(record as StaffMember)"
                 />
               </Tooltip>
               <Tooltip title="Réinitialiser le mot de passe">

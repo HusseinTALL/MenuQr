@@ -409,8 +409,8 @@ export const updateReservation = asyncHandler(
     const auditUser = auditService.getUserFromRequest(req);
     if (auditUser && updated) {
       const changes = [];
-      if (req.body.timeSlot && req.body.timeSlot !== oldTimeSlot) changes.push({ field: 'timeSlot', oldValue: oldTimeSlot, newValue: updated.timeSlot });
-      if (req.body.partySize && req.body.partySize !== oldPartySize) changes.push({ field: 'partySize', oldValue: oldPartySize, newValue: updated.partySize });
+      if (req.body.timeSlot && req.body.timeSlot !== oldTimeSlot) {changes.push({ field: 'timeSlot', oldValue: oldTimeSlot, newValue: updated.timeSlot });}
+      if (req.body.partySize && req.body.partySize !== oldPartySize) {changes.push({ field: 'partySize', oldValue: oldPartySize, newValue: updated.partySize });}
 
       await auditService.auditUpdate(
         'reservation',

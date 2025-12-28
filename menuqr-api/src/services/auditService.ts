@@ -548,7 +548,7 @@ export const getUserFromRequest = (req: {
     role: string;
   };
 }): AuditUser | null => {
-  if (!req.user) return null;
+  if (!req.user) {return null;}
   return {
     _id: req.user._id,
     name: req.user.name,

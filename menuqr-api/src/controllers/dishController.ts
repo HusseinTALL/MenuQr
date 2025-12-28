@@ -183,9 +183,9 @@ export const updateDish = asyncHandler(async (req: Request, res: Response): Prom
   const auditUser = auditService.getUserFromRequest(req);
   if (auditUser && updatedDish) {
     const changes = [];
-    if (req.body.name) changes.push({ field: 'name', oldValue: oldName, newValue: (updatedDish.name as Record<string, string>).fr });
-    if (req.body.price !== undefined && req.body.price !== oldPrice) changes.push({ field: 'price', oldValue: oldPrice, newValue: updatedDish.price });
-    if (req.body.isAvailable !== undefined && req.body.isAvailable !== oldAvailable) changes.push({ field: 'isAvailable', oldValue: oldAvailable, newValue: updatedDish.isAvailable });
+    if (req.body.name) {changes.push({ field: 'name', oldValue: oldName, newValue: (updatedDish.name as Record<string, string>).fr });}
+    if (req.body.price !== undefined && req.body.price !== oldPrice) {changes.push({ field: 'price', oldValue: oldPrice, newValue: updatedDish.price });}
+    if (req.body.isAvailable !== undefined && req.body.isAvailable !== oldAvailable) {changes.push({ field: 'isAvailable', oldValue: oldAvailable, newValue: updatedDish.isAvailable });}
 
     await auditService.auditUpdate(
       'dish',
