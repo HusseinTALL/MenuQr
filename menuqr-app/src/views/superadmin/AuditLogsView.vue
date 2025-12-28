@@ -133,6 +133,15 @@ const categoryLabels: Record<string, string> = {
   settings: 'Parametres',
   system: 'Systeme',
   billing: 'Facturation',
+  dish: 'Plat',
+  category: 'Categorie',
+  table: 'Table',
+  reservation: 'Reservation',
+  review: 'Avis',
+  campaign: 'Campagne',
+  loyalty: 'Fidelite',
+  customer: 'Client',
+  staff: 'Personnel',
 };
 
 const _categoryIcons: Record<string, string> = {

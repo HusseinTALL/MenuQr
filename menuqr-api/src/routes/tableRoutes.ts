@@ -4,7 +4,8 @@
  */
 
 import { Router } from 'express';
-import { authenticate, authorize } from '../middleware/auth.js';
+import { authenticate } from '../middleware/auth.js';
+import { hasPermission, PERMISSIONS } from '../middleware/permission.js';
 import {
   getTables,
   getTableById,
@@ -20,20 +21,25 @@ import {
 
 const router = Router();
 
-// All routes require authentication and owner/admin role
+// All routes require authentication
 router.use(authenticate);
-router.use(authorize('owner', 'admin'));
 
-// Table CRUD
-router.get('/', getTables);
-router.get('/stats', getTableStats);
-router.get('/location/:location', getTablesByLocation);
-router.get('/:id', getTableById);
-router.post('/', createTable);
-router.post('/bulk', bulkCreateTables);
-router.put('/reorder', reorderTables);
-router.put('/:id', updateTable);
-router.put('/:id/toggle', toggleTableStatus);
-router.delete('/:id', deleteTable);
+// Table read operations
+router.get('/', hasPermission(PERMISSIONS.TABLES_READ), getTables);
+router.get('/stats', hasPermission(PERMISSIONS.TABLES_READ), getTableStats);
+router.get('/location/:location', hasPermission(PERMISSIONS.TABLES_READ), getTablesByLocation);
+router.get('/:id', hasPermission(PERMISSIONS.TABLES_READ), getTableById);
+
+// Table create operations
+router.post('/', hasPermission(PERMISSIONS.TABLES_CREATE), createTable);
+router.post('/bulk', hasPermission(PERMISSIONS.TABLES_CREATE), bulkCreateTables);
+
+// Table update operations
+router.put('/reorder', hasPermission(PERMISSIONS.TABLES_UPDATE), reorderTables);
+router.put('/:id', hasPermission(PERMISSIONS.TABLES_UPDATE), updateTable);
+router.put('/:id/toggle', hasPermission(PERMISSIONS.TABLES_UPDATE), toggleTableStatus);
+
+// Table delete operations
+router.delete('/:id', hasPermission(PERMISSIONS.TABLES_DELETE), deleteTable);
 
 export default router;

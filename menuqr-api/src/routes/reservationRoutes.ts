@@ -4,7 +4,8 @@
  */
 
 import { Router } from 'express';
-import { authenticate, authorize } from '../middleware/auth.js';
+import { authenticate } from '../middleware/auth.js';
+import { hasPermission, PERMISSIONS } from '../middleware/permission.js';
 import { authenticateCustomer, optionalCustomerAuth } from '../middleware/customerAuth.js';
 import {
   // Customer endpoints
@@ -58,26 +59,25 @@ const adminRouter = Router();
 
 // All admin routes require authentication
 adminRouter.use(authenticate);
-adminRouter.use(authorize('owner', 'admin'));
 
-// Quick views
-adminRouter.get('/today', getTodayReservations);
-adminRouter.get('/stats', getReservationStats);
+// Quick views (read)
+adminRouter.get('/today', hasPermission(PERMISSIONS.RESERVATIONS_READ), getTodayReservations);
+adminRouter.get('/stats', hasPermission(PERMISSIONS.RESERVATIONS_STATS), getReservationStats);
 
 // CRUD
-adminRouter.get('/', getReservations);
-adminRouter.post('/', createReservationAdmin);
-adminRouter.get('/:id', getReservation);
-adminRouter.put('/:id', updateReservation);
+adminRouter.get('/', hasPermission(PERMISSIONS.RESERVATIONS_READ), getReservations);
+adminRouter.post('/', hasPermission(PERMISSIONS.RESERVATIONS_CREATE), createReservationAdmin);
+adminRouter.get('/:id', hasPermission(PERMISSIONS.RESERVATIONS_READ), getReservation);
+adminRouter.put('/:id', hasPermission(PERMISSIONS.RESERVATIONS_UPDATE), updateReservation);
 
 // Status actions
-adminRouter.put('/:id/confirm', confirmReservation);
-adminRouter.put('/:id/assign-table', assignTable);
-adminRouter.put('/:id/arrived', markArrived);
-adminRouter.put('/:id/seated', markSeated);
-adminRouter.put('/:id/completed', markCompleted);
-adminRouter.put('/:id/no-show', markNoShow);
-adminRouter.put('/:id/cancel', cancelReservation);
+adminRouter.put('/:id/confirm', hasPermission(PERMISSIONS.RESERVATIONS_UPDATE_STATUS), confirmReservation);
+adminRouter.put('/:id/assign-table', hasPermission(PERMISSIONS.RESERVATIONS_UPDATE_STATUS), assignTable);
+adminRouter.put('/:id/arrived', hasPermission(PERMISSIONS.RESERVATIONS_UPDATE_STATUS), markArrived);
+adminRouter.put('/:id/seated', hasPermission(PERMISSIONS.RESERVATIONS_UPDATE_STATUS), markSeated);
+adminRouter.put('/:id/completed', hasPermission(PERMISSIONS.RESERVATIONS_UPDATE_STATUS), markCompleted);
+adminRouter.put('/:id/no-show', hasPermission(PERMISSIONS.RESERVATIONS_UPDATE_STATUS), markNoShow);
+adminRouter.put('/:id/cancel', hasPermission(PERMISSIONS.RESERVATIONS_UPDATE_STATUS), cancelReservation);
 
 export { customerRouter, adminRouter };
 export default adminRouter;

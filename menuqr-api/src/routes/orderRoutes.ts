@@ -9,7 +9,8 @@ import {
   getActiveOrders,
   getOrderStats,
 } from '../controllers/orderController.js';
-import { authenticate, authorize } from '../middleware/auth.js';
+import { authenticate } from '../middleware/auth.js';
+import { hasPermission, PERMISSIONS } from '../middleware/permission.js';
 import { validate } from '../middleware/validate.js';
 import {
   createOrderValidator,
@@ -155,7 +156,7 @@ router.get('/number/:orderNumber', getOrderByNumber);
 router.get(
   '/',
   authenticate,
-  authorize('owner', 'admin', 'staff'),
+  hasPermission(PERMISSIONS.ORDERS_READ),
   validate(orderQueryValidator),
   getOrdersByRestaurant
 );
@@ -192,7 +193,7 @@ router.get(
 router.get(
   '/active',
   authenticate,
-  authorize('owner', 'admin', 'staff'),
+  hasPermission(PERMISSIONS.ORDERS_READ),
   getActiveOrders
 );
 
@@ -245,7 +246,7 @@ router.get(
 router.get(
   '/stats',
   authenticate,
-  authorize('owner', 'admin'),
+  hasPermission(PERMISSIONS.ORDERS_STATS),
   getOrderStats
 );
 
@@ -337,7 +338,7 @@ router.get('/:id', validate(orderIdValidator), getOrderById);
 router.patch(
   '/:id/status',
   authenticate,
-  authorize('owner', 'admin', 'staff'),
+  hasPermission(PERMISSIONS.ORDERS_UPDATE_STATUS),
   validate(updateOrderStatusValidator),
   updateOrderStatus
 );
@@ -392,7 +393,7 @@ router.patch(
 router.put(
   '/:id/items',
   authenticate,
-  authorize('owner', 'admin', 'staff'),
+  hasPermission(PERMISSIONS.ORDERS_UPDATE),
   validate(updateOrderItemsValidator),
   updateOrderItems
 );

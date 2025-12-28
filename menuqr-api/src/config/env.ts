@@ -129,6 +129,33 @@ export const config = {
     secretKey: process.env.CAPTCHA_SECRET_KEY || '',
   },
 
+  // Email Configuration
+  email: {
+    provider: process.env.EMAIL_PROVIDER || 'mock', // 'mock' | 'smtp' | 'sendgrid' | 'mailgun'
+    from: process.env.EMAIL_FROM || 'noreply@menuqr.fr',
+    fromName: process.env.EMAIL_FROM_NAME || 'MenuQR',
+    // SMTP settings
+    smtp: {
+      host: process.env.SMTP_HOST || 'smtp.gmail.com',
+      port: parseInt(process.env.SMTP_PORT || '587', 10),
+      secure: process.env.SMTP_SECURE === 'true',
+      user: process.env.SMTP_USER || '',
+      pass: process.env.SMTP_PASS || '',
+    },
+    // SendGrid
+    sendgridApiKey: process.env.SENDGRID_API_KEY || '',
+    // Mailgun
+    mailgunApiKey: process.env.MAILGUN_API_KEY || '',
+    mailgunDomain: process.env.MAILGUN_DOMAIN || '',
+    // Login notification settings
+    loginNotification: {
+      enabled: process.env.LOGIN_NOTIFICATION_ENABLED !== 'false', // Enabled by default
+      notifyNewDevice: process.env.LOGIN_NOTIFY_NEW_DEVICE !== 'false',
+      notifyNewIP: process.env.LOGIN_NOTIFY_NEW_IP !== 'false',
+      notifyNewLocation: process.env.LOGIN_NOTIFY_NEW_LOCATION !== 'false',
+    },
+  },
+
   // Sentry Error Tracking
   sentry: {
     dsn: process.env.SENTRY_DSN || '',

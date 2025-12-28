@@ -52,6 +52,34 @@ interface RequestOptions {
   headers?: Record<string, string>;
 }
 
+// Staff types
+export interface StaffMember {
+  id: string;
+  email: string;
+  name: string;
+  role: string;
+  roleDisplayName: string;
+  isActive: boolean;
+  lastLogin?: string;
+  twoFactorEnabled: boolean;
+  createdAt: string;
+  customPermissions?: string[];
+}
+
+export interface CreateStaffData {
+  email: string;
+  name: string;
+  role: string;
+  customPermissions?: string[];
+}
+
+export interface UpdateStaffData {
+  name?: string;
+  role?: string;
+  isActive?: boolean;
+  customPermissions?: string[];
+}
+
 // JWT token expiry buffer (refresh 5 minutes before expiry)
 const TOKEN_EXPIRY_BUFFER_MS = 5 * 60 * 1000;
 
@@ -1798,6 +1826,78 @@ class ApiService {
       count: number;
       hours: number;
     }>(`/superadmin/monitoring/history?hours=${hours}`);
+  }
+
+  // ============================================
+  // STAFF MANAGEMENT
+  // ============================================
+
+  async getStaff(params?: { role?: string; isActive?: string; search?: string }) {
+    let url = '/staff';
+    if (params) {
+      const query = new URLSearchParams();
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined) {
+          query.set(key, value);
+        }
+      });
+      const queryString = query.toString();
+      if (queryString) {
+        url = `${url}?${queryString}`;
+      }
+    }
+    return this.request<{
+      staff: StaffMember[];
+      total: number;
+    }>(url);
+  }
+
+  async getStaffMember(id: string) {
+    return this.request<{
+      staff: StaffMember & { permissions: string[] };
+    }>(`/staff/${id}`);
+  }
+
+  async createStaffMember(data: CreateStaffData) {
+    return this.request<{
+      staff: StaffMember;
+      temporaryPassword: string;
+    }>('/staff', { method: 'POST', body: data });
+  }
+
+  async updateStaffMember(id: string, data: UpdateStaffData) {
+    return this.request<{
+      staff: StaffMember;
+    }>(`/staff/${id}`, { method: 'PUT', body: data });
+  }
+
+  async deleteStaffMember(id: string) {
+    return this.request<void>(`/staff/${id}`, { method: 'DELETE' });
+  }
+
+  async resetStaffPassword(id: string) {
+    return this.request<{
+      temporaryPassword: string;
+    }>(`/staff/${id}/reset-password`, { method: 'POST' });
+  }
+
+  async getAvailableRoles() {
+    return this.request<{
+      roles: {
+        value: string;
+        label: string;
+        permissions: string[];
+      }[];
+    }>('/staff/roles');
+  }
+
+  async getAvailablePermissions() {
+    return this.request<{
+      permissions: {
+        key: string;
+        value: string;
+      }[];
+    }>('/staff/permissions');
   }
 
   // ============================================

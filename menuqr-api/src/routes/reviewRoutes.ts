@@ -4,7 +4,8 @@
  */
 
 import { Router } from 'express';
-import { authenticate, authorize } from '../middleware/auth.js';
+import { authenticate } from '../middleware/auth.js';
+import { hasPermission, PERMISSIONS } from '../middleware/permission.js';
 import { authenticateCustomer, optionalCustomerAuth } from '../middleware/customerAuth.js';
 import { validate } from '../middleware/validate.js';
 import {
@@ -150,7 +151,7 @@ customerRouter.post(
 adminRouter.get(
   '/',
   authenticate,
-  authorize('owner', 'admin'),
+  hasPermission(PERMISSIONS.REVIEWS_READ),
   validate(adminReviewQueryValidator),
   getAdminReviews
 );
@@ -159,7 +160,7 @@ adminRouter.get(
 adminRouter.get(
   '/pending',
   authenticate,
-  authorize('owner', 'admin'),
+  hasPermission(PERMISSIONS.REVIEWS_READ),
   getPendingReviews
 );
 
@@ -167,7 +168,7 @@ adminRouter.get(
 adminRouter.get(
   '/stats',
   authenticate,
-  authorize('owner', 'admin'),
+  hasPermission(PERMISSIONS.REVIEWS_READ),
   getAdminReviewStatsController
 );
 
@@ -175,7 +176,7 @@ adminRouter.get(
 adminRouter.put(
   '/:id/approve',
   authenticate,
-  authorize('owner', 'admin'),
+  hasPermission(PERMISSIONS.REVIEWS_MODERATE),
   validate(reviewIdValidator),
   approveReview
 );
@@ -184,7 +185,7 @@ adminRouter.put(
 adminRouter.put(
   '/:id/reject',
   authenticate,
-  authorize('owner', 'admin'),
+  hasPermission(PERMISSIONS.REVIEWS_MODERATE),
   validate(rejectReviewValidator),
   rejectReview
 );
@@ -193,7 +194,7 @@ adminRouter.put(
 adminRouter.put(
   '/:id/respond',
   authenticate,
-  authorize('owner', 'admin'),
+  hasPermission(PERMISSIONS.REVIEWS_MODERATE),
   validate(respondToReviewValidator),
   respondToReview
 );
@@ -202,7 +203,7 @@ adminRouter.put(
 adminRouter.delete(
   '/:id',
   authenticate,
-  authorize('owner', 'admin'),
+  hasPermission(PERMISSIONS.REVIEWS_DELETE),
   validate(reviewIdValidator),
   deleteReview
 );
