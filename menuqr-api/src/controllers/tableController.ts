@@ -128,8 +128,8 @@ export const updateTable = asyncHandler(async (req: Request, res: Response): Pro
   const auditUser = auditService.getUserFromRequest(req);
   if (auditUser && updatedTable) {
     const changes = [];
-    if (req.body.name && req.body.name !== oldName) changes.push({ field: 'name', oldValue: oldName, newValue: updatedTable.name });
-    if (req.body.capacity !== undefined && req.body.capacity !== oldCapacity) changes.push({ field: 'capacity', oldValue: oldCapacity, newValue: updatedTable.capacity });
+    if (req.body.name && req.body.name !== oldName) {changes.push({ field: 'name', oldValue: oldName, newValue: updatedTable.name });}
+    if (req.body.capacity !== undefined && req.body.capacity !== oldCapacity) {changes.push({ field: 'capacity', oldValue: oldCapacity, newValue: updatedTable.capacity });}
 
     await auditService.auditUpdate(
       'table',

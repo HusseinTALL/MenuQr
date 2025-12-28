@@ -263,9 +263,9 @@ export const updateStaffMember = asyncHandler(async (req: Request, res: Response
   }
 
   // Update fields
-  if (name) member.name = name;
-  if (role) member.role = role;
-  if (typeof isActive === 'boolean') member.isActive = isActive;
+  if (name) {member.name = name;}
+  if (role) {member.role = role;}
+  if (typeof isActive === 'boolean') {member.isActive = isActive;}
   if (customPermissions !== undefined) {
     member.customPermissions = customPermissions.length > 0 ? customPermissions : undefined;
   }
@@ -282,9 +282,9 @@ export const updateStaffMember = asyncHandler(async (req: Request, res: Response
   const auditUser = auditService.getUserFromRequest(req);
   if (auditUser) {
     const changes = [];
-    if (name) changes.push({ field: 'name', oldValue: 'previous', newValue: name });
-    if (role) changes.push({ field: 'role', oldValue: 'previous', newValue: role });
-    if (typeof isActive === 'boolean') changes.push({ field: 'isActive', oldValue: !isActive, newValue: isActive });
+    if (name) {changes.push({ field: 'name', oldValue: 'previous', newValue: name });}
+    if (role) {changes.push({ field: 'role', oldValue: 'previous', newValue: role });}
+    if (typeof isActive === 'boolean') {changes.push({ field: 'isActive', oldValue: !isActive, newValue: isActive });}
 
     await auditService.auditUpdate(
       'staff',
