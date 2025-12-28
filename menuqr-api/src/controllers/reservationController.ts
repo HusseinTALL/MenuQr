@@ -10,6 +10,7 @@ import { asyncHandler, ApiError } from '../middleware/errorHandler.js';
 import * as reservationService from '../services/reservationService.js';
 import { emitNewReservation } from '../services/socketService.js';
 import type { ReservationStatus, LocationPreference } from '../models/Reservation.js';
+import * as auditService from '../services/auditService.js';
 
 // ============================================================================
 // Customer Endpoints
@@ -380,6 +381,10 @@ export const updateReservation = asyncHandler(
       throw new ApiError(403, 'Non autorisé');
     }
 
+    // Store old values for audit
+    const oldTimeSlot = reservation.timeSlot;
+    const oldPartySize = reservation.partySize;
+
     const updated = await reservationService.updateReservation(
       new mongoose.Types.ObjectId(id),
       {
@@ -399,6 +404,23 @@ export const updateReservation = asyncHandler(
           : undefined,
       }
     );
+
+    // Audit log
+    const auditUser = auditService.getUserFromRequest(req);
+    if (auditUser && updated) {
+      const changes = [];
+      if (req.body.timeSlot && req.body.timeSlot !== oldTimeSlot) {changes.push({ field: 'timeSlot', oldValue: oldTimeSlot, newValue: updated.timeSlot });}
+      if (req.body.partySize && req.body.partySize !== oldPartySize) {changes.push({ field: 'partySize', oldValue: oldPartySize, newValue: updated.partySize });}
+
+      await auditService.auditUpdate(
+        'reservation',
+        auditUser,
+        { type: 'Reservation', id: reservation._id, name: `${reservation.customerName} - ${reservation.timeSlot}` },
+        changes.length > 0 ? changes : undefined,
+        `Reservation for ${updated.customerName} updated`,
+        auditService.getRequestInfo(req)
+      );
+    }
 
     res.json({
       success: true,
@@ -427,9 +449,23 @@ export const confirmReservation = asyncHandler(
       throw new ApiError(403, 'Non autorisé');
     }
 
+    const oldStatus = reservation.status;
     const updated = await reservationService.confirmReservation(
       new mongoose.Types.ObjectId(id)
     );
+
+    // Audit log
+    const auditUser = auditService.getUserFromRequest(req);
+    if (auditUser && updated) {
+      await auditService.auditStatusChange(
+        'reservation',
+        auditUser,
+        { type: 'Reservation', id: reservation._id, name: `${reservation.customerName} - ${reservation.timeSlot}` },
+        oldStatus,
+        'confirmed',
+        auditService.getRequestInfo(req)
+      );
+    }
 
     res.json({
       success: true,
@@ -602,11 +638,26 @@ export const cancelReservation = asyncHandler(
       throw new ApiError(403, 'Non autorisé');
     }
 
+    const oldStatus = reservation.status;
     const updated = await reservationService.cancelReservation(
       new mongoose.Types.ObjectId(id),
       reason,
       'restaurant'
     );
+
+    // Audit log
+    const auditUser = auditService.getUserFromRequest(req);
+    if (auditUser && updated) {
+      await auditService.auditStatusChange(
+        'reservation',
+        auditUser,
+        { type: 'Reservation', id: reservation._id, name: `${reservation.customerName} - ${reservation.timeSlot}` },
+        oldStatus,
+        'cancelled',
+        auditService.getRequestInfo(req),
+        { reason, cancelledBy: 'restaurant' }
+      );
+    }
 
     res.json({
       success: true,

@@ -6,6 +6,7 @@ import { startScheduler, stopScheduler } from './services/scheduler.js';
 import { initializeSocket } from './services/socketService.js';
 import { logger } from './utils/logger.js';
 import { initializeSentry, flushSentry, captureException } from './services/sentryService.js';
+import { initializeEmailService } from './services/emailService.js';
 
 // Create HTTP server for both Express and Socket.io
 const httpServer = createServer(app);
@@ -20,6 +21,9 @@ const startServer = async (): Promise<void> => {
 
     // Initialize Socket.io
     initializeSocket(httpServer);
+
+    // Initialize email service
+    await initializeEmailService();
 
     // Start campaign scheduler
     startScheduler();

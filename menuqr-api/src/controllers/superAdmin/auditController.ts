@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import mongoose from 'mongoose';
 import { AuditLog, LoginHistory, SystemAlert } from '../../models/index.js';
 import { asyncHandler } from '../../middleware/errorHandler.js';
+import * as anomalyDetectionService from '../../services/anomalyDetectionService.js';
 
 // ================== AUDIT LOGS ==================
 
@@ -758,5 +759,46 @@ export const createTestAlert = asyncHandler(async (req: Request, res: Response):
     success: true,
     message: 'Test alert created',
     data: alert,
+  });
+});
+
+// ================== ANOMALY DETECTION ==================
+
+/**
+ * Get anomaly detection statistics
+ */
+export const getAnomalyStats = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  const { days = 7 } = req.query;
+
+  const stats = await anomalyDetectionService.getAnomalyStats(Number(days));
+
+  res.json({
+    success: true,
+    data: stats,
+  });
+});
+
+/**
+ * Check if an IP is blocked
+ */
+export const checkIPStatus = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  const { ip } = req.params;
+
+  if (!ip) {
+    res.status(400).json({
+      success: false,
+      message: 'IP address is required',
+    });
+    return;
+  }
+
+  const status = await anomalyDetectionService.isIPBlocked(ip);
+
+  res.json({
+    success: true,
+    data: {
+      ip,
+      ...status,
+    },
   });
 });

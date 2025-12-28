@@ -13,6 +13,8 @@ import customerRoutes from './customerRoutes.js';
 import campaignRoutes from './campaignRoutes.js';
 import { customerLoyaltyRouter, adminLoyaltyRouter } from './loyaltyRoutes.js';
 import tableRoutes from './tableRoutes.js';
+import staffRoutes from './staffRoutes.js';
+import inventoryRoutes from './inventoryRoutes.js';
 import { customerRouter as customerReservationRouter, adminRouter as adminReservationRouter } from './reservationRoutes.js';
 import { reviewPublicRoutes, reviewCustomerRoutes, reviewAdminRoutes } from './reviewRoutes.js';
 import {
@@ -56,6 +58,8 @@ router.use('/campaigns', campaignRoutes);
 router.use('/loyalty', adminLoyaltyRouter);
 router.use('/tables', tableRoutes);
 router.use('/reservations', adminReservationRouter);
+router.use('/staff', staffRoutes);
+router.use('/inventory', inventoryRoutes);
 router.use('/reviews', reviewPublicRoutes);
 router.use('/admin/reviews', reviewAdminRoutes);
 router.use('/scheduled-orders', scheduledOrderPublicRouter); // Public routes (availability, slots)

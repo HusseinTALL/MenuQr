@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue';
+import { ref, reactive, onMounted, computed } from 'vue';
+import DOMPurify from 'dompurify';
 import {
   SettingOutlined,
   SecurityScanOutlined,
@@ -248,6 +249,9 @@ const emailTemplateModalVisible = ref(false);
 const emailTemplatePreviewVisible = ref(false);
 const selectedTemplate = ref<EmailTemplate | null>(null);
 const previewContent = ref({ subject: '', body: '' });
+const sanitizedPreviewBody = computed(() =>
+  DOMPurify.sanitize(previewContent.value.body || '')
+);
 
 // Audit logs
 const auditLogs = ref<AuditLog[]>([]);
@@ -1357,7 +1361,7 @@ onMounted(() => {
         <strong>Sujet:</strong> {{ previewContent.subject }}
       </div>
       <a-divider />
-      <div class="preview-body" v-html="previewContent.body"></div>
+      <div class="preview-body" v-html="sanitizedPreviewBody"></div>
     </a-modal>
   </div>
 </template>

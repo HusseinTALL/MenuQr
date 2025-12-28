@@ -6,6 +6,7 @@
 import { Request, Response } from 'express';
 import { Table, Restaurant } from '../models/index.js';
 import { asyncHandler, ApiError } from '../middleware/errorHandler.js';
+import * as auditService from '../services/auditService.js';
 
 /**
  * Get all tables for the current restaurant (admin)
@@ -75,6 +76,20 @@ export const createTable = asyncHandler(async (req: Request, res: Response): Pro
     order,
   });
 
+  // Audit log
+  const auditUser = auditService.getUserFromRequest(req);
+  if (auditUser) {
+    const tableDoc = Array.isArray(table) ? table[0] : table;
+    await auditService.auditCreate(
+      'table',
+      auditUser,
+      { type: 'Table', id: tableDoc._id, name: tableDoc.name },
+      `Table "${tableDoc.name}" created`,
+      auditService.getRequestInfo(req),
+      { capacity: tableDoc.capacity, location: tableDoc.location }
+    );
+  }
+
   res.status(201).json({
     success: true,
     message: 'Table créée avec succès',
@@ -100,10 +115,31 @@ export const updateTable = asyncHandler(async (req: Request, res: Response): Pro
     throw new ApiError(403, 'Non autorisé à modifier cette table');
   }
 
+  // Store old values for audit
+  const oldName = table.name;
+  const oldCapacity = table.capacity;
+
   const updatedTable = await Table.findByIdAndUpdate(id, req.body, {
     new: true,
     runValidators: true,
   });
+
+  // Audit log
+  const auditUser = auditService.getUserFromRequest(req);
+  if (auditUser && updatedTable) {
+    const changes = [];
+    if (req.body.name && req.body.name !== oldName) {changes.push({ field: 'name', oldValue: oldName, newValue: updatedTable.name });}
+    if (req.body.capacity !== undefined && req.body.capacity !== oldCapacity) {changes.push({ field: 'capacity', oldValue: oldCapacity, newValue: updatedTable.capacity });}
+
+    await auditService.auditUpdate(
+      'table',
+      auditUser,
+      { type: 'Table', id: table._id, name: updatedTable.name },
+      changes.length > 0 ? changes : undefined,
+      `Table "${updatedTable.name}" updated`,
+      auditService.getRequestInfo(req)
+    );
+  }
 
   res.json({
     success: true,
@@ -130,7 +166,22 @@ export const deleteTable = asyncHandler(async (req: Request, res: Response): Pro
     throw new ApiError(403, 'Non autorisé à supprimer cette table');
   }
 
+  // Store table info for audit
+  const tableName = table.name;
+
   await Table.findByIdAndDelete(id);
+
+  // Audit log
+  const auditUser = auditService.getUserFromRequest(req);
+  if (auditUser) {
+    await auditService.auditDelete(
+      'table',
+      auditUser,
+      { type: 'Table', id: table._id, name: tableName },
+      `Table "${tableName}" deleted`,
+      auditService.getRequestInfo(req)
+    );
+  }
 
   res.json({
     success: true,
@@ -157,8 +208,22 @@ export const toggleTableStatus = asyncHandler(
       throw new ApiError(403, 'Non autorisé');
     }
 
+    const oldActive = table.isActive;
     table.isActive = !table.isActive;
     await table.save();
+
+    // Audit log
+    const auditUser = auditService.getUserFromRequest(req);
+    if (auditUser) {
+      await auditService.auditUpdate(
+        'table',
+        auditUser,
+        { type: 'Table', id: table._id, name: table.name },
+        [{ field: 'isActive', oldValue: oldActive, newValue: table.isActive }],
+        `Table "${table.name}" ${table.isActive ? 'activated' : 'deactivated'}`,
+        auditService.getRequestInfo(req)
+      );
+    }
 
     res.json({
       success: true,

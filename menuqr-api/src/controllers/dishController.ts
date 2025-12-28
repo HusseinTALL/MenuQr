@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { Dish, Category, Restaurant } from '../models/index.js';
 import { asyncHandler, ApiError } from '../middleware/errorHandler.js';
+import * as auditService from '../services/auditService.js';
 
 export const createDish = asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const user = req.user!;
@@ -32,6 +33,21 @@ export const createDish = asyncHandler(async (req: Request, res: Response): Prom
     restaurantId: restaurant._id,
     order,
   });
+
+  // Audit log
+  const auditUser = auditService.getUserFromRequest(req);
+  if (auditUser) {
+    const dishDoc = Array.isArray(dish) ? dish[0] : dish;
+    const dishName = (dishDoc.name as Record<string, string>).fr;
+    await auditService.auditCreate(
+      'dish',
+      auditUser,
+      { type: 'Dish', id: dishDoc._id, name: dishName },
+      `Dish "${dishName}" created`,
+      auditService.getRequestInfo(req),
+      { categoryId: dishDoc.categoryId, price: dishDoc.price }
+    );
+  }
 
   res.status(201).json({
     success: true,
@@ -152,11 +168,34 @@ export const updateDish = asyncHandler(async (req: Request, res: Response): Prom
     }
   }
 
+  // Store old values for audit
+  const oldName = (dish.name as Record<string, string>).fr;
+  const oldPrice = dish.price;
+  const oldAvailable = dish.isAvailable;
+
   // Update dish
   const updatedDish = await Dish.findByIdAndUpdate(id, req.body, {
     new: true,
     runValidators: true,
   }).populate('categoryId', 'name slug');
+
+  // Audit log
+  const auditUser = auditService.getUserFromRequest(req);
+  if (auditUser && updatedDish) {
+    const changes = [];
+    if (req.body.name) {changes.push({ field: 'name', oldValue: oldName, newValue: (updatedDish.name as Record<string, string>).fr });}
+    if (req.body.price !== undefined && req.body.price !== oldPrice) {changes.push({ field: 'price', oldValue: oldPrice, newValue: updatedDish.price });}
+    if (req.body.isAvailable !== undefined && req.body.isAvailable !== oldAvailable) {changes.push({ field: 'isAvailable', oldValue: oldAvailable, newValue: updatedDish.isAvailable });}
+
+    await auditService.auditUpdate(
+      'dish',
+      auditUser,
+      { type: 'Dish', id: dish._id, name: (updatedDish.name as Record<string, string>).fr },
+      changes.length > 0 ? changes : undefined,
+      `Dish "${(updatedDish.name as Record<string, string>).fr}" updated`,
+      auditService.getRequestInfo(req)
+    );
+  }
 
   res.json({
     success: true,
@@ -181,8 +220,23 @@ export const deleteDish = asyncHandler(async (req: Request, res: Response): Prom
     throw new ApiError(403, 'Not authorized to delete this dish');
   }
 
+  // Store dish info for audit before deletion
+  const dishName = (dish.name as Record<string, string>).fr;
+
   // Hard delete
   await Dish.findByIdAndDelete(id);
+
+  // Audit log
+  const auditUser = auditService.getUserFromRequest(req);
+  if (auditUser) {
+    await auditService.auditDelete(
+      'dish',
+      auditUser,
+      { type: 'Dish', id: dish._id, name: dishName },
+      `Dish "${dishName}" deleted`,
+      auditService.getRequestInfo(req)
+    );
+  }
 
   res.json({
     success: true,
@@ -208,8 +262,22 @@ export const toggleAvailability = asyncHandler(
     }
 
     // Toggle availability
+    const oldAvailable = dish.isAvailable;
     dish.isAvailable = !dish.isAvailable;
     await dish.save();
+
+    // Audit log
+    const auditUser = auditService.getUserFromRequest(req);
+    if (auditUser) {
+      await auditService.auditUpdate(
+        'dish',
+        auditUser,
+        { type: 'Dish', id: dish._id, name: (dish.name as Record<string, string>).fr },
+        [{ field: 'isAvailable', oldValue: oldAvailable, newValue: dish.isAvailable }],
+        `Dish "${(dish.name as Record<string, string>).fr}" ${dish.isAvailable ? 'enabled' : 'disabled'}`,
+        auditService.getRequestInfo(req)
+      );
+    }
 
     res.json({
       success: true,

@@ -25,7 +25,16 @@ export type AuditCategory =
   | 'subscription'
   | 'settings'
   | 'system'
-  | 'billing';
+  | 'billing'
+  | 'dish'
+  | 'category'
+  | 'table'
+  | 'reservation'
+  | 'review'
+  | 'campaign'
+  | 'loyalty'
+  | 'customer'
+  | 'staff';
 
 export interface IAuditLog extends Document {
   _id: mongoose.Types.ObjectId;
@@ -88,6 +97,15 @@ const auditLogSchema = new Schema<IAuditLog>(
         'settings',
         'system',
         'billing',
+        'dish',
+        'category',
+        'table',
+        'reservation',
+        'review',
+        'campaign',
+        'loyalty',
+        'customer',
+        'staff',
       ],
       index: true,
     },

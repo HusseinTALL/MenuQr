@@ -73,6 +73,12 @@ export interface IDish extends Document {
   preparationTime?: number;
   order: number;
   reviewStats?: IReviewStats;
+  // Stock management
+  trackStock: boolean;
+  stock: number;
+  lowStockThreshold: number;
+  stockAlertSent?: boolean;
+  lastStockUpdate?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -151,6 +157,12 @@ const dishSchema = new Schema<IDish>(
     isNewDish: { type: Boolean, default: false },
     preparationTime: { type: Number, min: 0 },
     order: { type: Number, default: 0 },
+    // Stock management fields
+    trackStock: { type: Boolean, default: false },
+    stock: { type: Number, default: -1 }, // -1 = unlimited
+    lowStockThreshold: { type: Number, default: 5, min: 0 },
+    stockAlertSent: { type: Boolean, default: false },
+    lastStockUpdate: { type: Date },
     reviewStats: {
       averageRating: { type: Number, default: 0, min: 0, max: 5 },
       totalReviews: { type: Number, default: 0, min: 0 },
@@ -186,6 +198,7 @@ dishSchema.index({ restaurantId: 1, slug: 1 }, { unique: true });
 dishSchema.index({ restaurantId: 1, isAvailable: 1 });
 dishSchema.index({ categoryId: 1, order: 1 });
 dishSchema.index({ 'name.fr': 'text', 'description.fr': 'text' });
+dishSchema.index({ restaurantId: 1, trackStock: 1, stock: 1 }); // For stock management queries
 
 export const Dish = mongoose.model<IDish>('Dish', dishSchema);
 export default Dish;

@@ -8,7 +8,8 @@ import {
   deleteCategory,
   reorderCategories,
 } from '../controllers/categoryController.js';
-import { authenticate, authorize } from '../middleware/auth.js';
+import { authenticate } from '../middleware/auth.js';
+import { hasPermission, PERMISSIONS } from '../middleware/permission.js';
 import { validate } from '../middleware/validate.js';
 import {
   createCategoryValidator,
@@ -20,11 +21,16 @@ import {
 const router = Router();
 
 // Protected routes - MUST be before /:id to avoid conflict
-router.get('/me/categories', authenticate, getMyCategories);
+router.get(
+  '/me/categories',
+  authenticate,
+  hasPermission(PERMISSIONS.CATEGORIES_READ),
+  getMyCategories
+);
 router.put(
   '/reorder',
   authenticate,
-  authorize('owner', 'admin'),
+  hasPermission(PERMISSIONS.CATEGORIES_UPDATE),
   validate(reorderCategoriesValidator),
   reorderCategories
 );
@@ -37,14 +43,14 @@ router.get('/:id', validate(categoryIdValidator), getCategoryById);
 router.put(
   '/:id',
   authenticate,
-  authorize('owner', 'admin'),
+  hasPermission(PERMISSIONS.CATEGORIES_UPDATE),
   validate(updateCategoryValidator),
   updateCategory
 );
 router.delete(
   '/:id',
   authenticate,
-  authorize('owner', 'admin'),
+  hasPermission(PERMISSIONS.CATEGORIES_DELETE),
   validate(categoryIdValidator),
   deleteCategory
 );
@@ -53,7 +59,7 @@ router.delete(
 router.post(
   '/',
   authenticate,
-  authorize('owner', 'admin'),
+  hasPermission(PERMISSIONS.CATEGORIES_CREATE),
   validate(createCategoryValidator),
   createCategory
 );

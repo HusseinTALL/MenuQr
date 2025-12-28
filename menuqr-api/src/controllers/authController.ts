@@ -7,6 +7,8 @@ import config from '../config/env.js';
 import * as auditService from '../services/auditService.js';
 import * as sessionService from '../services/sessionService.js';
 import * as passwordExpiryService from '../services/passwordExpiryService.js';
+import * as loginNotificationService from '../services/loginNotificationService.js';
+import * as anomalyDetectionService from '../services/anomalyDetectionService.js';
 
 // Constants for account lockout
 const MAX_FAILED_ATTEMPTS = config.security.maxFailedLoginAttempts;
@@ -94,6 +96,12 @@ export const login = asyncHandler(async (req: Request, res: Response): Promise<v
   const ipAddress = req.ip || req.socket.remoteAddress;
   const userAgent = req.get('user-agent');
 
+  // Check if IP is blocked due to suspicious activity
+  const ipBlockStatus = await anomalyDetectionService.isIPBlocked(ipAddress || '');
+  if (ipBlockStatus.blocked) {
+    throw new ApiError(429, ipBlockStatus.reason || 'Too many requests. Please try again later.');
+  }
+
   // Find user with password, lockout, and password expiry fields
   const user = await User.findOne({ email }).select('+password +failedLoginAttempts +lockUntil +passwordChangedAt');
 
@@ -115,6 +123,13 @@ export const login = asyncHandler(async (req: Request, res: Response): Promise<v
       'User not found',
       { ip: ipAddress, userAgent }
     );
+
+    // Process for anomaly detection (async, don't block)
+    anomalyDetectionService.processLoginForAnomalies({
+      ipAddress,
+      email,
+      isSuccess: false,
+    }).catch((err) => logger.error('Anomaly detection failed', { error: err }));
 
     throw new ApiError(401, 'Invalid email or password');
   }
@@ -194,6 +209,14 @@ export const login = asyncHandler(async (req: Request, res: Response): Promise<v
       // Audit log - account lockout
       await auditService.auditAccountLockout(email, { ip: ipAddress, userAgent });
 
+      // Send account lockout notification (async, don't block response)
+      loginNotificationService.notifyAccountLockout({
+        email: user.email,
+        userName: user.name,
+        ipAddress,
+        attemptCount: MAX_FAILED_ATTEMPTS,
+      }).catch((err) => logger.error('Failed to send lockout notification', { error: err }));
+
       throw new ApiError(423, `Account is now locked due to ${MAX_FAILED_ATTEMPTS} failed login attempts. Try again in ${config.security.lockoutDurationMinutes} minutes.`);
     }
 
@@ -212,6 +235,14 @@ export const login = asyncHandler(async (req: Request, res: Response): Promise<v
       status: 'failed',
       failureReason: 'invalid_credentials',
     }).catch((err) => logger.error('Failed to log login attempt', { error: err }));
+
+    // Process for anomaly detection (async, don't block)
+    anomalyDetectionService.processLoginForAnomalies({
+      ipAddress,
+      email,
+      isSuccess: false,
+      userId: user._id.toString(),
+    }).catch((err) => logger.error('Anomaly detection failed', { error: err }));
 
     const remainingAttempts = MAX_FAILED_ATTEMPTS - user.failedLoginAttempts;
     throw new ApiError(401, `Invalid email or password. ${remainingAttempts} attempt(s) remaining before account lockout.`);
@@ -284,6 +315,24 @@ export const login = asyncHandler(async (req: Request, res: Response): Promise<v
     { _id: user._id, email: user.email, name: user.name, role: user.role },
     { ip: ipAddress, userAgent }
   );
+
+  // Send login notification if new device/IP detected (async, don't block response)
+  loginNotificationService.notifyLoginIfNeeded({
+    userId: user._id.toString(),
+    userEmail: user.email,
+    userName: user.name,
+    ipAddress,
+    userAgent,
+    device: parseUserAgent(userAgent),
+  }).catch((err) => logger.error('Failed to process login notification', { error: err }));
+
+  // Process for anomaly detection (async, don't block)
+  anomalyDetectionService.processLoginForAnomalies({
+    ipAddress,
+    email: user.email,
+    isSuccess: true,
+    userId: user._id.toString(),
+  }).catch((err) => logger.error('Anomaly detection failed', { error: err }));
 
   // Check password expiry status
   const passwordStatus = passwordExpiryService.getPasswordExpiryStatus(user.passwordChangedAt);
@@ -510,6 +559,13 @@ export const changePassword = asyncHandler(async (req: Request, res: Response): 
     { _id: user._id, email: user.email, name: user.name, role: user.role },
     { ip: req.ip, userAgent: req.get('user-agent') }
   );
+
+  // Send password changed notification (async, don't block response)
+  loginNotificationService.notifyPasswordChanged({
+    email: user.email,
+    userName: user.name,
+    ipAddress: req.ip,
+  }).catch((err) => logger.error('Failed to send password changed notification', { error: err }));
 
   res.json({
     success: true,

@@ -2,8 +2,10 @@ import { Request, Response } from 'express';
 import { Order, Dish, Restaurant, Customer } from '../models/index.js';
 import { asyncHandler, ApiError } from '../middleware/errorHandler.js';
 import * as loyaltyService from '../services/loyaltyService.js';
+import * as inventoryService from '../services/inventoryService.js';
 import { emitNewOrder, emitOrderUpdate, emitOrderReady } from '../services/socketService.js';
 import logger from '../utils/logger.js';
+import * as auditService from '../services/auditService.js';
 
 interface OrderItemInput {
   dishId: string;
@@ -30,6 +32,21 @@ export const createOrder = asyncHandler(async (req: Request, res: Response): Pro
   const restaurant = await Restaurant.findById(restaurantId);
   if (!restaurant || !restaurant.isActive) {
     throw new ApiError(404, 'Restaurant not found');
+  }
+
+  // Validate stock availability before processing
+  const stockValidation = await inventoryService.validateOrderStock(
+    (items as OrderItemInput[]).map(item => ({
+      dishId: item.dishId,
+      quantity: item.quantity,
+    }))
+  );
+
+  if (!stockValidation.isValid) {
+    const insufficientItems = stockValidation.insufficientItems
+      .map(item => `${item.dishName} (demandé: ${item.requestedQuantity}, disponible: ${item.availableStock})`)
+      .join(', ');
+    throw new ApiError(400, `Stock insuffisant pour: ${insufficientItems}`);
   }
 
   // Process items and calculate totals
@@ -157,6 +174,35 @@ export const createOrder = asyncHandler(async (req: Request, res: Response): Pro
     loyalty: loyaltyData,
   });
 
+  // Reduce stock for ordered items
+  try {
+    const stockResults = await inventoryService.reduceStockForOrder(
+      processedItems.map(item => ({
+        dishId: item.dishId.toString(),
+        quantity: item.quantity,
+      }))
+    );
+
+    // Log any items that became low stock or out of stock
+    const lowStockItems = stockResults.filter(r => r.isLowStock || r.isOutOfStock);
+    if (lowStockItems.length > 0) {
+      logger.info('Stock alert after order', {
+        orderId: order._id,
+        lowStockItems: lowStockItems.map(i => ({
+          dish: i.dishName,
+          stock: i.newStock,
+          outOfStock: i.isOutOfStock,
+        })),
+      });
+    }
+  } catch (stockError) {
+    // Log error but don't fail the order (stock was already validated)
+    logger.error('Error reducing stock after order creation', {
+      orderId: order._id,
+      error: stockError,
+    });
+  }
+
   // Emit real-time event for new order
   emitNewOrder(restaurantId, {
     orderId: order._id.toString(),
@@ -270,6 +316,9 @@ export const updateOrderStatus = asyncHandler(
       throw new ApiError(404, 'Order not found');
     }
 
+    // Store old status for audit
+    const oldStatus = order.status;
+
     // Check ownership
     const restaurant = await Restaurant.findById(order.restaurantId);
     if (!restaurant || (restaurant.ownerId.toString() !== user._id.toString() && user.role !== 'admin')) {
@@ -340,6 +389,26 @@ export const updateOrderStatus = asyncHandler(
       case 'cancelled':
         order.cancelledAt = now;
         order.cancelReason = cancelReason;
+
+        // Restore stock for cancelled order items
+        try {
+          await inventoryService.restoreStockForCancelledOrder(
+            order.items.map(item => ({
+              dishId: item.dishId.toString(),
+              quantity: item.quantity,
+            })),
+            user._id.toString()
+          );
+          logger.info('Stock restored for cancelled order', {
+            orderId: order._id,
+            orderNumber: order.orderNumber,
+          });
+        } catch (stockError) {
+          logger.error('Error restoring stock for cancelled order', {
+            orderId: order._id,
+            error: stockError,
+          });
+        }
         break;
     }
 
@@ -363,6 +432,20 @@ export const updateOrderStatus = asyncHandler(
     } else {
       // General order update event
       emitOrderUpdate(order.restaurantId.toString(), orderEventData);
+    }
+
+    // Audit log
+    const auditUser = auditService.getUserFromRequest(req);
+    if (auditUser) {
+      await auditService.auditStatusChange(
+        'order',
+        auditUser,
+        { type: 'Order', id: order._id, name: order.orderNumber },
+        oldStatus,
+        status,
+        auditService.getRequestInfo(req),
+        { tableNumber: order.tableNumber, total: order.total, cancelReason }
+      );
     }
 
     res.json({
