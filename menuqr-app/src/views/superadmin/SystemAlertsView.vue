@@ -174,7 +174,7 @@ const fetchAlerts = async () => {
       pagination.value.total = response.data.pagination.total;
     }
   } catch (_error) {
-    console.error('Failed to fetch alerts:', error);
+    console.error('Failed to fetch alerts:');
     message.error('Erreur lors du chargement des alertes');
   } finally {
     loading.value = false;
@@ -188,7 +188,7 @@ const fetchStats = async () => {
       stats.value = response.data;
     }
   } catch (_error) {
-    console.error('Failed to fetch stats:', error);
+    console.error('Failed to fetch stats:');
   }
 };
 
@@ -244,7 +244,7 @@ const acknowledgeAlert = async (alert: SystemAlertEntry) => {
       }
     }
   } catch (_error) {
-    console.error('Failed to acknowledge alert:', error);
+    console.error('Failed to acknowledge alert:');
     message.error('Erreur lors de l\'acquittement');
   }
 };
@@ -269,7 +269,7 @@ const handleResolve = async () => {
       closeDrawer();
     }
   } catch (_error) {
-    console.error('Failed to resolve alert:', error);
+    console.error('Failed to resolve alert:');
     message.error('Erreur lors de la resolution');
   } finally {
     resolveModalLoading.value = false;
@@ -299,7 +299,7 @@ const deleteAlert = (alert: SystemAlertEntry) => {
           }
         }
       } catch (_error) {
-        console.error('Failed to delete alert:', error);
+        console.error('Failed to delete alert:');
         message.error('Erreur lors de la suppression');
       }
     },
@@ -342,7 +342,7 @@ const handleCreateTestAlert = async () => {
       fetchStats();
     }
   } catch (_error) {
-    console.error('Failed to create test alert:', error);
+    console.error('Failed to create test alert:');
     message.error('Erreur lors de la creation');
   } finally {
     testModalLoading.value = false;

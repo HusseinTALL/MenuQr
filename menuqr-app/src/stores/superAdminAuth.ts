@@ -13,6 +13,7 @@ export const useSuperAdminAuthStore = defineStore('superAdminAuth', () => {
   const user = ref<SuperAdminUser | null>(null);
   const isLoading = ref(false);
   const error = ref<string | null>(null);
+  const isSessionValidated = ref(false);
 
   const isAuthenticated = computed(() => !!user.value);
   const isSuperAdmin = computed(() => user.value?.role === 'superadmin');
@@ -115,18 +116,60 @@ export const useSuperAdminAuthStore = defineStore('superAdminAuth', () => {
     }
   }
 
+  /**
+   * Validate the current session with the backend
+   * Should be called on app initialization
+   * Returns true if session is valid and user is superadmin, false otherwise
+   */
+  async function validateSession(): Promise<boolean> {
+    const stored = localStorage.getItem('menuqr_superadmin_auth');
+    if (!stored) {
+      isSessionValidated.value = true;
+      return false;
+    }
+
+    try {
+      // Attempt to fetch profile - this will validate the token
+      const response = await api.getProfile();
+      if (response.success && response.data) {
+        // Verify user is a superadmin
+        if (response.data.role !== 'superadmin') {
+          clearAuth();
+          isSessionValidated.value = true;
+          return false;
+        }
+        user.value = response.data as SuperAdminUser;
+        localStorage.setItem('menuqr_superadmin_user', JSON.stringify(response.data));
+        isSessionValidated.value = true;
+        return true;
+      }
+      clearAuth();
+      isSessionValidated.value = true;
+      return false;
+    } catch {
+      clearAuth();
+      isSessionValidated.value = true;
+      return false;
+    }
+  }
+
   // Initialize
   loadFromStorage();
 
   return {
+    // State
     user,
     isLoading,
     error,
+    isSessionValidated,
+    // Computed
     isAuthenticated,
     isSuperAdmin,
+    // Actions
     login,
     logout,
     fetchProfile,
+    validateSession,
     clearAuth,
   };
 });

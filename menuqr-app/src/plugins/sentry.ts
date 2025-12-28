@@ -132,7 +132,7 @@ export function initializeSentry(app: App, router: Router): void {
  */
 export function captureException(error: Error | unknown, context?: Record<string, unknown>): string | undefined {
   if (!isInitialized) {
-    console.error('[Sentry] Not initialized, logging error locally:', error);
+    console.error('[Sentry] Not initialized, logging error locally:');
     return undefined;
   }
 

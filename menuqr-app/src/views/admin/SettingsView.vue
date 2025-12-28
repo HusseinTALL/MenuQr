@@ -34,8 +34,8 @@ const copyMenuUrl = async () => {
   try {
     await navigator.clipboard.writeText(menuUrl.value);
     message.success('URL copiée dans le presse-papiers');
-  } catch {
-    console.error('Failed to copy:', err);
+  } catch (copyErr) {
+    console.error('Failed to copy:', copyErr);
     message.error('Erreur lors de la copie');
   }
 };
@@ -307,10 +307,10 @@ const handleSubmit = async () => {
       restaurant.value = response.data;
       message.success('Paramètres enregistrés avec succès');
     }
-  } catch {
+  } catch (saveErr) {
     error.value = 'Erreur lors de la sauvegarde';
     message.error('Erreur lors de la sauvegarde');
-    console.error(err);
+    console.error(saveErr);
   } finally {
     isSaving.value = false;
   }

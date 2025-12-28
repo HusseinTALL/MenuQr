@@ -8,15 +8,36 @@ interface AdminUser {
   name: string;
   role: string;
   restaurantId?: string;
+  twoFactorEnabled?: boolean;
+}
+
+interface PasswordExpiryInfo {
+  daysUntilExpiry: number;
+  isExpired: boolean;
+  isExpiringSoon: boolean;
+  expiresAt: string;
+}
+
+interface LoginResult {
+  success: boolean;
+  requiresTwoFactor?: boolean;
+  userId?: string;
+  passwordExpired?: boolean;
+  passwordExpiryWarning?: string;
 }
 
 export const useAdminAuthStore = defineStore('adminAuth', () => {
   const user = ref<AdminUser | null>(null);
   const isLoading = ref(false);
   const error = ref<string | null>(null);
+  const passwordExpiry = ref<PasswordExpiryInfo | null>(null);
+  const isSessionValidated = ref(false);
+  const pendingTwoFactor = ref<{ userId: string; email: string } | null>(null);
 
   const isAuthenticated = computed(() => !!user.value);
   const hasRestaurant = computed(() => !!user.value?.restaurantId);
+  const isPasswordExpired = computed(() => passwordExpiry.value?.isExpired ?? false);
+  const isPasswordExpiringSoon = computed(() => passwordExpiry.value?.isExpiringSoon ?? false);
 
   // Get current access token from localStorage
   const token = computed(() => {
@@ -128,13 +149,68 @@ export const useAdminAuthStore = defineStore('adminAuth', () => {
     try {
       const response = await api.getProfile();
       if (response.success && response.data) {
-        user.value = response.data;
-        localStorage.setItem('menuqr_admin_user', JSON.stringify(response.data));
+        const profileData = response.data as AdminUser & { passwordExpiry?: PasswordExpiryInfo };
+        user.value = {
+          id: profileData.id,
+          email: profileData.email,
+          name: profileData.name,
+          role: profileData.role,
+          restaurantId: profileData.restaurantId,
+          twoFactorEnabled: profileData.twoFactorEnabled,
+        };
+        // Update password expiry info
+        if (profileData.passwordExpiry) {
+          passwordExpiry.value = profileData.passwordExpiry;
+        }
+        localStorage.setItem('menuqr_admin_user', JSON.stringify(user.value));
         return true;
       }
       return false;
     } catch {
       clearAuth();
+      return false;
+    }
+  }
+
+  /**
+   * Validate the current session with the backend
+   * Should be called on app initialization
+   * Returns true if session is valid, false otherwise
+   */
+  async function validateSession(): Promise<boolean> {
+    const stored = localStorage.getItem('menuqr_admin_auth');
+    if (!stored) {
+      isSessionValidated.value = true;
+      return false;
+    }
+
+    try {
+      // Attempt to fetch profile - this will validate the token
+      const response = await api.getProfile();
+      if (response.success && response.data) {
+        const profileData = response.data as AdminUser & { passwordExpiry?: PasswordExpiryInfo };
+        user.value = {
+          id: profileData.id,
+          email: profileData.email,
+          name: profileData.name,
+          role: profileData.role,
+          restaurantId: profileData.restaurantId,
+          twoFactorEnabled: profileData.twoFactorEnabled,
+        };
+        // Update password expiry info
+        if (profileData.passwordExpiry) {
+          passwordExpiry.value = profileData.passwordExpiry;
+        }
+        localStorage.setItem('menuqr_admin_user', JSON.stringify(user.value));
+        isSessionValidated.value = true;
+        return true;
+      }
+      clearAuth();
+      isSessionValidated.value = true;
+      return false;
+    } catch {
+      clearAuth();
+      isSessionValidated.value = true;
       return false;
     }
   }
@@ -202,16 +278,25 @@ export const useAdminAuthStore = defineStore('adminAuth', () => {
   loadFromStorage();
 
   return {
+    // State
     user,
     token,
     isLoading,
     error,
+    passwordExpiry,
+    isSessionValidated,
+    pendingTwoFactor,
+    // Computed
     isAuthenticated,
     hasRestaurant,
+    isPasswordExpired,
+    isPasswordExpiringSoon,
+    // Actions
     login,
     register,
     logout,
     fetchProfile,
+    validateSession,
     updateProfile,
     changePassword,
     updateUserRestaurant,

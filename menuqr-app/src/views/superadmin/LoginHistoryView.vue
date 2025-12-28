@@ -160,7 +160,7 @@ const fetchHistory = async () => {
       pagination.value.total = response.data.pagination.total;
     }
   } catch (_error) {
-    console.error('Failed to fetch login history:', error);
+    console.error('Failed to fetch login history:');
     message.error('Erreur lors du chargement de l\'historique');
   } finally {
     loading.value = false;
@@ -174,7 +174,7 @@ const fetchStats = async () => {
       stats.value = response.data;
     }
   } catch (_error) {
-    console.error('Failed to fetch stats:', error);
+    console.error('Failed to fetch stats:');
   }
 };
 

@@ -129,7 +129,7 @@ const fetchRestaurants = async () => {
       pagination.value.total = response.data.pagination.total;
     }
   } catch {
-    console.error('Failed to fetch restaurants:', error);
+    console.error('Failed to fetch restaurants:');
     message.error('Erreur lors du chargement des restaurants');
   } finally {
     loading.value = false;
@@ -171,7 +171,7 @@ const openDrawer = async (restaurant: Restaurant) => {
       detailedStats.value = response.data.stats;
     }
   } catch {
-    console.error('Failed to fetch restaurant details:', error);
+    console.error('Failed to fetch restaurant details:');
   } finally {
     drawerLoading.value = false;
   }
@@ -215,7 +215,7 @@ const toggleRestaurantStatus = (restaurant: Restaurant) => {
           selectedRestaurant.value.isActive = !restaurant.isActive;
         }
       } catch {
-        console.error('Failed to update restaurant status:', error);
+        console.error('Failed to update restaurant status:');
         message.error('Erreur lors de la mise a jour du statut');
       }
     },
@@ -240,7 +240,7 @@ const deleteRestaurant = (restaurant: Restaurant) => {
         fetchRestaurants();
         closeDrawer();
       } catch {
-        console.error('Failed to delete restaurant:', error);
+        console.error('Failed to delete restaurant:');
         message.error('Erreur lors de la suppression');
       }
     },

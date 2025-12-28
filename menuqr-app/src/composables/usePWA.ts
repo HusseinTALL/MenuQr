@@ -29,7 +29,7 @@ export function usePWA() {
       }
     },
     onRegisterError(error) {
-      console.error('[PWA] Service Worker registration error:', error);
+      console.error('[PWA] Service Worker registration error:');
       updateError.value = error;
     },
     onOfflineReady() {
@@ -54,9 +54,9 @@ export function usePWA() {
   const acceptUpdate = async () => {
     try {
       await updateServiceWorker(true);
-    } catch (_error) {
-      console.error('[PWA] Failed to update:', error);
-      updateError.value = error as Error;
+    } catch (err) {
+      console.error('[PWA] Failed to update:', err);
+      updateError.value = err as Error;
     }
   };
 

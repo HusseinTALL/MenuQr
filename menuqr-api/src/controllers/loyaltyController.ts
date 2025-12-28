@@ -100,7 +100,7 @@ export const getLoyaltyStats = asyncHandler(async (req: Request, res: Response):
     throw new ApiError(404, 'Restaurant not found or access denied');
   }
 
-  const stats = await loyaltyService.getLoyaltyStats(restaurant._id.toString());
+  const stats = await loyaltyService.getLoyaltyStats(restaurant._id);
 
   res.json({
     success: true,
@@ -119,13 +119,12 @@ export const getCustomersLoyalty = asyncHandler(
     if (!restaurant) {
       throw new ApiError(404, 'Restaurant not found or access denied');
     }
-    const restaurantId = restaurant._id.toString();
     const { page = 1, limit = 20, tier, search, sortBy = 'totalPoints', sortOrder = 'desc' } = req.query;
 
     const pageNum = parseInt(page as string, 10);
     const limitNum = Math.min(parseInt(limit as string, 10), 100);
 
-    const result = await loyaltyService.getCustomersLoyalty(restaurantId, {
+    const result = await loyaltyService.getCustomersLoyalty(restaurant._id, {
       page: pageNum,
       limit: limitNum,
       tier: tier as string,
@@ -237,7 +236,6 @@ export const adjustCustomerPoints = asyncHandler(
     if (!restaurant) {
       throw new ApiError(404, 'Restaurant not found or access denied');
     }
-    const restaurantId = restaurant._id.toString();
     const adminId = req.user!._id;
     const { customerId } = req.params;
     const { points, reason } = req.body;
@@ -245,7 +243,7 @@ export const adjustCustomerPoints = asyncHandler(
     // Verify customer belongs to this restaurant
     const customer = await Customer.findOne({
       _id: customerId,
-      restaurantId,
+      restaurantId: restaurant._id,
     });
 
     if (!customer) {
@@ -254,7 +252,7 @@ export const adjustCustomerPoints = asyncHandler(
 
     const result = await loyaltyService.adjustPoints(
       new mongoose.Types.ObjectId(customerId),
-      restaurantId,
+      restaurant._id,
       points,
       reason,
       adminId
@@ -283,7 +281,6 @@ export const addBonusPoints = asyncHandler(async (req: Request, res: Response): 
   if (!restaurant) {
     throw new ApiError(404, 'Restaurant not found or access denied');
   }
-  const restaurantId = restaurant._id.toString();
   const adminId = req.user!._id;
   const { customerId } = req.params;
   const { points, description } = req.body;
@@ -291,7 +288,7 @@ export const addBonusPoints = asyncHandler(async (req: Request, res: Response): 
   // Verify customer belongs to this restaurant
   const customer = await Customer.findOne({
     _id: customerId,
-    restaurantId,
+    restaurantId: restaurant._id,
   });
 
   if (!customer) {
@@ -300,7 +297,7 @@ export const addBonusPoints = asyncHandler(async (req: Request, res: Response): 
 
   const result = await loyaltyService.addBonusPoints(
     new mongoose.Types.ObjectId(customerId),
-    restaurantId,
+    restaurant._id,
     points,
     description,
     adminId
@@ -329,7 +326,7 @@ export const triggerExpirePoints = asyncHandler(
       throw new ApiError(404, 'Restaurant not found or access denied');
     }
 
-    const result = await loyaltyService.processExpiredPoints(restaurant._id.toString());
+    const result = await loyaltyService.processExpiredPoints(restaurant._id);
 
     res.json({
       success: true,

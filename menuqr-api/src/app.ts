@@ -7,6 +7,7 @@ import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
 import config from './config/env.js';
 import { logger, requestIdMiddleware, httpLoggerMiddleware } from './utils/logger.js';
 import { sentryErrorHandler } from './services/sentryService.js';
+import { setupSwagger } from './docs/swagger.js';
 
 const app: Application = express();
 
@@ -25,20 +26,33 @@ app.use(httpLoggerMiddleware);
 // ===========================================
 
 // Helmet - Set security HTTP headers
+// Swagger UI CSP needs relaxed settings in development
+const swaggerCspDirectives = config.isDevelopment ? {
+  defaultSrc: ["'self'"],
+  styleSrc: ["'self'", "'unsafe-inline'"],
+  scriptSrc: ["'self'", "'unsafe-inline'"],
+  imgSrc: ["'self'", 'data:', 'https:'],
+  connectSrc: ["'self'"],
+  fontSrc: ["'self'", 'data:'],
+  objectSrc: ["'none'"],
+  mediaSrc: ["'self'"],
+  frameSrc: ["'none'"],
+} : {
+  defaultSrc: ["'self'"],
+  styleSrc: ["'self'", "'unsafe-inline'"],
+  scriptSrc: ["'self'"],
+  imgSrc: ["'self'", 'data:', 'https:'],
+  connectSrc: ["'self'"],
+  fontSrc: ["'self'"],
+  objectSrc: ["'none'"],
+  mediaSrc: ["'self'"],
+  frameSrc: ["'none'"],
+};
+
 app.use(
   helmet({
     contentSecurityPolicy: {
-      directives: {
-        defaultSrc: ["'self'"],
-        styleSrc: ["'self'", "'unsafe-inline'"],
-        scriptSrc: ["'self'"],
-        imgSrc: ["'self'", 'data:', 'https:'],
-        connectSrc: ["'self'"],
-        fontSrc: ["'self'"],
-        objectSrc: ["'none'"],
-        mediaSrc: ["'self'"],
-        frameSrc: ["'none'"],
-      },
+      directives: swaggerCspDirectives,
     },
     crossOriginEmbedderPolicy: false, // Disable for API
     hsts: {
@@ -324,6 +338,12 @@ app.use((req: Request, res: Response, next: NextFunction) => {
   }
   xssClean(req, res, next);
 });
+
+// ===========================================
+// API Documentation (Swagger)
+// ===========================================
+
+setupSwagger(app);
 
 // ===========================================
 // API Routes

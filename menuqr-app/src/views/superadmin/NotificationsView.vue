@@ -163,7 +163,7 @@ const fetchNotifications = async () => {
     const data = response.data as { notifications: typeof notifications.value };
     notifications.value = data.notifications;
   } catch {
-    console.error('Error fetching notifications:', error);
+    console.error('Error fetching notifications:');
   }
 };
 
@@ -172,7 +172,7 @@ const fetchNotificationStats = async () => {
     const response = await api.get('/superadmin/notifications/stats');
     notificationStats.value = response.data as typeof notificationStats.value;
   } catch {
-    console.error('Error fetching notification stats:', error);
+    console.error('Error fetching notification stats:');
   }
 };
 
@@ -182,7 +182,7 @@ const fetchAnnouncements = async () => {
     const data = response.data as { announcements: typeof announcements.value };
     announcements.value = data.announcements;
   } catch {
-    console.error('Error fetching announcements:', error);
+    console.error('Error fetching announcements:');
   }
 };
 
@@ -192,7 +192,7 @@ const fetchMassEmailHistory = async () => {
     const data = response.data as { emails: typeof massEmailHistory.value };
     massEmailHistory.value = data.emails;
   } catch {
-    console.error('Error fetching mass email history:', error);
+    console.error('Error fetching mass email history:');
   }
 };
 
@@ -201,7 +201,7 @@ const fetchEmailTemplates = async () => {
     const response = await api.get('/superadmin/email-templates');
     emailTemplates.value = response.data as typeof emailTemplates.value;
   } catch {
-    console.error('Error fetching email templates:', error);
+    console.error('Error fetching email templates:');
   }
 };
 
@@ -210,7 +210,7 @@ const fetchAlertRules = async () => {
     const response = await api.get('/superadmin/alert-rules');
     alertRules.value = response.data as typeof alertRules.value;
   } catch {
-    console.error('Error fetching alert rules:', error);
+    console.error('Error fetching alert rules:');
   }
 };
 
@@ -220,7 +220,7 @@ const fetchRecipients = async (type: 'restaurants' | 'users') => {
     const response = await api.get(url);
     recipients.value = response.data as typeof recipients.value;
   } catch {
-    console.error('Error fetching recipients:', error);
+    console.error('Error fetching recipients:');
   }
 };
 

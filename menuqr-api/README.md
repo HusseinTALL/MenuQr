@@ -2,22 +2,27 @@
 
 Backend API for the MenuQR restaurant menu management system.
 
+> **Full Documentation**: See [../docs/API.md](../docs/API.md) for complete API reference.
+
 ## Tech Stack
 
-- **Runtime**: Node.js with TypeScript
+- **Runtime**: Node.js 18+ with TypeScript
 - **Framework**: Express.js 5
-- **Database**: MongoDB with Mongoose
-- **Authentication**: JWT (JSON Web Tokens)
+- **Database**: MongoDB 7+ with Mongoose 9
+- **Authentication**: JWT with refresh token rotation
+- **Real-time**: Socket.IO
 - **Validation**: express-validator
-- **Security**: Helmet, CORS, bcrypt
+- **Security**: Helmet, CORS, bcrypt, rate limiting
+- **Image Storage**: Cloudinary
+- **Error Tracking**: Sentry
 
-## Getting Started
+## Quick Start
 
 ### Prerequisites
 
 - Node.js 18+
-- MongoDB 6+
-- npm or yarn
+- MongoDB 7+ (local or Docker)
+- npm 9+
 
 ### Installation
 
@@ -28,7 +33,13 @@ npm install
 # Copy environment file
 cp .env.example .env
 
-# Edit .env with your configuration
+# Edit .env with your configuration (see ../docs/ENV.md)
+```
+
+### Start MongoDB with Docker
+
+```bash
+docker-compose up -d
 ```
 
 ### Development
@@ -36,6 +47,9 @@ cp .env.example .env
 ```bash
 # Start development server with hot reload
 npm run dev
+
+# Seed database with sample data
+npm run seed
 ```
 
 ### Production
@@ -48,90 +62,53 @@ npm run build
 npm start
 ```
 
-## API Endpoints
+## Available Scripts
 
-### Authentication
+```bash
+npm run dev          # Start dev server with hot reload
+npm run build        # Build for production
+npm start            # Start production server
+npm run seed         # Seed database with sample data
+npm run lint         # Run ESLint
+npm test             # Run tests
+npm run test:watch   # Run tests in watch mode
+npm run test:coverage # Run tests with coverage
+```
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/v1/auth/register` | Register new user |
-| POST | `/api/v1/auth/login` | User login |
-| POST | `/api/v1/auth/refresh-token` | Refresh access token |
-| POST | `/api/v1/auth/logout` | User logout |
-| GET | `/api/v1/auth/profile` | Get user profile |
-| PUT | `/api/v1/auth/profile` | Update profile |
-| PUT | `/api/v1/auth/change-password` | Change password |
+## API Endpoints Overview
 
-### Restaurants
+| Domain | Base Path | Description |
+|--------|-----------|-------------|
+| Auth | `/api/v1/auth` | Admin/Staff authentication |
+| Customer Auth | `/api/v1/customer/auth` | Customer authentication |
+| Restaurants | `/api/v1/restaurants` | Restaurant management |
+| Categories | `/api/v1/categories` | Menu categories |
+| Dishes | `/api/v1/dishes` | Menu dishes |
+| Orders | `/api/v1/orders` | Order management |
+| Scheduled Orders | `/api/v1/scheduled-orders` | Pre-scheduled orders |
+| Reservations | `/api/v1/reservations` | Table reservations |
+| Tables | `/api/v1/tables` | Table management |
+| Reviews | `/api/v1/reviews` | Review system |
+| Loyalty | `/api/v1/loyalty` | Loyalty program |
+| Campaigns | `/api/v1/campaigns` | SMS campaigns |
+| Upload | `/api/v1/upload` | Image upload |
+| Customer | `/api/v1/customer/*` | Customer endpoints |
+| Super Admin | `/api/v1/superadmin` | Super admin management |
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/v1/restaurants` | List all restaurants |
-| GET | `/api/v1/restaurants/:id` | Get restaurant by ID |
-| GET | `/api/v1/restaurants/:id/menu` | Get full menu with categories and dishes |
-| GET | `/api/v1/restaurants/slug/:slug` | Get restaurant by slug |
-| POST | `/api/v1/restaurants` | Create restaurant (auth) |
-| PUT | `/api/v1/restaurants/:id` | Update restaurant (auth) |
-| DELETE | `/api/v1/restaurants/:id` | Delete restaurant (auth) |
-
-### Menu
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/v1/menu/restaurant/:id` | Get full menu by restaurant ID |
-| GET | `/api/v1/menu/slug/:slug` | Get full menu by restaurant slug |
-
-### Categories
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/v1/categories/restaurant/:restaurantId` | List categories by restaurant |
-| GET | `/api/v1/categories/:id` | Get category by ID |
-| POST | `/api/v1/categories` | Create category (auth) |
-| PUT | `/api/v1/categories/:id` | Update category (auth) |
-| DELETE | `/api/v1/categories/:id` | Delete category (auth) |
-| PUT | `/api/v1/categories/reorder` | Reorder categories (auth) |
-
-### Dishes
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/v1/dishes/restaurant/:restaurantId` | List dishes by restaurant |
-| GET | `/api/v1/dishes/:id` | Get dish by ID |
-| POST | `/api/v1/dishes` | Create dish (auth) |
-| PUT | `/api/v1/dishes/:id` | Update dish (auth) |
-| DELETE | `/api/v1/dishes/:id` | Delete dish (auth) |
-| PATCH | `/api/v1/dishes/:id/availability` | Toggle availability (auth) |
-
-### Orders
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/v1/orders` | Create order (public) |
-| GET | `/api/v1/orders` | List orders (auth) |
-| GET | `/api/v1/orders/active` | Get active orders (auth) |
-| GET | `/api/v1/orders/stats` | Get order statistics (auth) |
-| GET | `/api/v1/orders/:id` | Get order by ID |
-| GET | `/api/v1/orders/number/:orderNumber` | Get order by number |
-| PATCH | `/api/v1/orders/:id/status` | Update order status (auth) |
+> **Complete API Documentation**: [../docs/API.md](../docs/API.md)
 
 ## Environment Variables
 
+See [../docs/ENV.md](../docs/ENV.md) for complete reference.
+
+### Minimum Required
+
 ```env
-# Server
 PORT=3001
 NODE_ENV=development
-
-# MongoDB
 MONGODB_URI=mongodb://localhost:27017/menuqr
-
-# JWT
-JWT_SECRET=your-secret-key
-JWT_EXPIRES_IN=7d
-JWT_REFRESH_EXPIRES_IN=30d
-
-# CORS
-CORS_ORIGIN=http://localhost:3000
+JWT_SECRET=your-secret-key-minimum-32-characters
+CORS_ORIGIN=http://localhost:5173
 ```
 
 ## Project Structure
@@ -140,15 +117,33 @@ CORS_ORIGIN=http://localhost:3000
 src/
 ├── config/          # Configuration files
 ├── controllers/     # Route controllers
+│   └── superAdmin/  # Super admin controllers
 ├── middleware/      # Express middleware
 ├── models/          # Mongoose models
 ├── routes/          # API routes
+├── services/        # Business logic services
 ├── types/           # TypeScript types
 ├── utils/           # Utility functions
 ├── validators/      # Request validators
 ├── app.ts           # Express app setup
 └── index.ts         # Entry point
 ```
+
+## Security Features
+
+- JWT authentication with refresh token rotation
+- Token blacklisting on logout
+- Password hashing with bcrypt
+- Rate limiting on all endpoints
+- Account lockout after failed attempts
+- CAPTCHA support (reCAPTCHA, hCaptcha, Turnstile)
+- XSS protection
+- NoSQL injection prevention
+- Security headers (Helmet)
+
+## Deployment
+
+See [../docs/DEPLOYMENT.md](../docs/DEPLOYMENT.md) for deployment instructions.
 
 ## License
 

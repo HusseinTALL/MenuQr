@@ -203,7 +203,7 @@ const playSound = async (type: 'new-order' | 'order-ready' | 'urgent' | 'bump' =
       osc.stop(now + 0.4);
     }
   } catch {
-    console.warn('[KDS] Audio failed:', err);
+    console.warn('[KDS] Audio failed');
   }
 };
 
@@ -216,7 +216,7 @@ const fetchRestaurant = async () => {
       restaurantId.value = response.data._id;
     }
   } catch {
-    console.error('Error fetching restaurant:', err);
+    console.error('Error fetching restaurant');
   }
 };
 
@@ -254,9 +254,9 @@ const fetchOrders = async () => {
       kdsOrders.value = newOrders;
       lastRefresh.value = new Date();
     }
-  } catch {
+  } catch (fetchErr) {
     error.value = 'Erreur de chargement';
-    console.error('Error fetching orders:', err);
+    console.error('Error fetching orders:', fetchErr);
   } finally {
     isLoading.value = false;
   }
@@ -317,7 +317,6 @@ const updateOrderStatus = async (order: ExtendedOrder, newStatus: string) => {
     }
   } catch {
     message.error('Erreur de mise à jour');
-    console.error(err);
   } finally {
     isUpdatingStatus.value = null;
   }
@@ -502,8 +501,8 @@ const toggleFullscreen = async () => {
       await document.exitFullscreen();
       isFullscreen.value = false;
     }
-  } catch {
-    console.error('Fullscreen error:', err);
+  } catch (fsErr) {
+    console.error('Fullscreen error:', fsErr);
   }
 };
 

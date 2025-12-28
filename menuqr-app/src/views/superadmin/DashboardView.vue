@@ -122,7 +122,7 @@ const fetchData = async () => {
       chartData.value = chartsRes.data;
     }
   } catch (_error) {
-    console.error('Failed to fetch dashboard data:', error);
+    console.error('Failed to fetch dashboard data:');
   } finally {
     loading.value = false;
   }

@@ -41,7 +41,7 @@ export function useQRCode() {
       });
       return dataUrl;
     } catch (_error) {
-      console.error('Failed to generate QR code:', error);
+      console.error('Failed to generate QR code:');
       throw new Error('Impossible de générer le QR code');
     }
   };
@@ -64,7 +64,7 @@ export function useQRCode() {
         errorCorrectionLevel: 'M',
       });
     } catch (_error) {
-      console.error('Failed to generate QR code to canvas:', error);
+      console.error('Failed to generate QR code to canvas:');
       throw new Error('Impossible de générer le QR code');
     }
   };
@@ -87,7 +87,7 @@ export function useQRCode() {
       // Download using file-saver
       saveAs(blob, `${filename}.png`);
     } catch (_error) {
-      console.error('Failed to download QR code:', error);
+      console.error('Failed to download QR code:');
       throw new Error('Impossible de télécharger le QR code');
     }
   };
@@ -149,7 +149,7 @@ export function useQRCode() {
       const content = await zip.generateAsync({ type: 'blob' });
       saveAs(content, `${restaurantSlug}-qr-codes.zip`);
     } catch (_error) {
-      console.error('Failed to download all QR codes:', error);
+      console.error('Failed to download all QR codes:');
       throw new Error('Impossible de télécharger les QR codes');
     }
   };
@@ -162,7 +162,7 @@ export function useQRCode() {
       await navigator.clipboard.writeText(url);
       return true;
     } catch (_error) {
-      console.error('Failed to copy to clipboard:', error);
+      console.error('Failed to copy to clipboard:');
       return false;
     }
   };

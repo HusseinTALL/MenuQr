@@ -175,7 +175,7 @@ const fetchSubscriptions = async () => {
       pagination.value.total = response.data.pagination.total;
     }
   } catch {
-    console.error('Failed to fetch subscriptions:', error);
+    console.error('Failed to fetch subscriptions:');
     message.error('Erreur lors du chargement des abonnements');
   } finally {
     loading.value = false;
@@ -189,7 +189,7 @@ const fetchStats = async () => {
       stats.value = response.data;
     }
   } catch {
-    console.error('Failed to fetch stats:', error);
+    console.error('Failed to fetch stats:');
   }
 };
 
@@ -200,7 +200,7 @@ const fetchPlans = async () => {
       plans.value = response.data.plans;
     }
   } catch {
-    console.error('Failed to fetch plans:', error);
+    console.error('Failed to fetch plans:');
   }
 };
 
@@ -211,7 +211,7 @@ const fetchRestaurants = async () => {
       restaurants.value = response.data.restaurants;
     }
   } catch {
-    console.error('Failed to fetch restaurants:', error);
+    console.error('Failed to fetch restaurants:');
   }
 };
 
@@ -290,7 +290,7 @@ const handleEditSubmit = async () => {
       message.error(response.message || 'Une erreur est survenue');
     }
   } catch {
-    console.error('Failed to update subscription:', error);
+    console.error('Failed to update subscription:');
     message.error('Erreur lors de la modification');
   } finally {
     editModalLoading.value = false;
@@ -327,7 +327,7 @@ const handleCreateSubmit = async () => {
       message.error(response.message || 'Une erreur est survenue');
     }
   } catch {
-    console.error('Failed to create subscription:', error);
+    console.error('Failed to create subscription:');
     message.error('Erreur lors de la creation');
   } finally {
     createModalLoading.value = false;
@@ -358,7 +358,7 @@ const handleExtendSubmit = async () => {
       message.error(response.message || 'Une erreur est survenue');
     }
   } catch {
-    console.error('Failed to extend subscription:', error);
+    console.error('Failed to extend subscription:');
     message.error('Erreur lors de la prolongation');
   } finally {
     extendModalLoading.value = false;

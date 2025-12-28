@@ -446,7 +446,7 @@ export function useWhatsApp() {
       };
     } catch (_error) {
       isSending.value = false;
-      console.error('Failed to send WhatsApp order:', error);
+      console.error('Failed to send WhatsApp order:');
       return {
         success: false,
         orderNumber: null,

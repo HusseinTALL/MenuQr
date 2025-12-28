@@ -1,6 +1,6 @@
 import mongoose, { Document, Schema, Model } from 'mongoose';
 
-export type LoginStatus = 'success' | 'failed';
+export type LoginStatus = 'success' | 'failed' | 'pending_2fa';
 export type LoginFailureReason =
   | 'invalid_credentials'
   | 'account_locked'
@@ -101,7 +101,7 @@ const loginHistorySchema = new Schema<ILoginHistory>(
     status: {
       type: String,
       required: true,
-      enum: ['success', 'failed'],
+      enum: ['success', 'failed', 'pending_2fa'],
       index: true,
     },
     failureReason: {

@@ -115,6 +115,10 @@ export const config = {
     lockoutDurationMinutes: parseInt(process.env.LOCKOUT_DURATION_MINUTES || '30', 10),
     // CAPTCHA threshold - require CAPTCHA after N failed login attempts
     captchaThreshold: parseInt(process.env.CAPTCHA_THRESHOLD || '3', 10),
+    // Password expiration policy
+    passwordExpiryDays: parseInt(process.env.PASSWORD_EXPIRY_DAYS || '90', 10),
+    passwordExpiryWarningDays: parseInt(process.env.PASSWORD_EXPIRY_WARNING_DAYS || '14', 10),
+    passwordExpiryEnabled: process.env.PASSWORD_EXPIRY_ENABLED !== 'false', // Enabled by default
   },
 
   // CAPTCHA

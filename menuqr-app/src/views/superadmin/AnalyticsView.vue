@@ -128,9 +128,9 @@ const fetchData = async () => {
     if (statsResponse.data) {
       stats.value = statsResponse.data.data;
     }
-  } catch (_error) {
+  } catch (fetchError) {
     message.error('Erreur lors du chargement des donnees');
-    console.error(error);
+    console.error(fetchError);
   } finally {
     loading.value = false;
   }

@@ -5,6 +5,8 @@ import { asyncHandler, ApiError } from '../middleware/errorHandler.js';
 import logger from '../utils/logger.js';
 import config from '../config/env.js';
 import * as auditService from '../services/auditService.js';
+import * as sessionService from '../services/sessionService.js';
+import * as passwordExpiryService from '../services/passwordExpiryService.js';
 
 // Constants for account lockout
 const MAX_FAILED_ATTEMPTS = config.security.maxFailedLoginAttempts;
@@ -92,8 +94,8 @@ export const login = asyncHandler(async (req: Request, res: Response): Promise<v
   const ipAddress = req.ip || req.socket.remoteAddress;
   const userAgent = req.get('user-agent');
 
-  // Find user with password and lockout fields
-  const user = await User.findOne({ email }).select('+password +failedLoginAttempts +lockUntil');
+  // Find user with password, lockout, and password expiry fields
+  const user = await User.findOne({ email }).select('+password +failedLoginAttempts +lockUntil +passwordChangedAt');
 
   if (!user) {
     // Log failed login attempt - user not found
@@ -215,17 +217,54 @@ export const login = asyncHandler(async (req: Request, res: Response): Promise<v
     throw new ApiError(401, `Invalid email or password. ${remainingAttempts} attempt(s) remaining before account lockout.`);
   }
 
-  // Reset failed attempts on successful login
+  // Reset failed attempts on successful password verification
   user.failedLoginAttempts = 0;
   user.lockUntil = undefined;
+  await user.save();
 
-  // Generate tokens
+  // Check if 2FA is enabled
+  if (user.twoFactorEnabled) {
+    // Log 2FA challenge
+    await LoginHistory.create({
+      userId: user._id,
+      userEmail: email,
+      userName: user.name,
+      userRole: user.role,
+      loginAt: new Date(),
+      ipAddress,
+      userAgent,
+      device: parseUserAgent(userAgent),
+      status: 'pending_2fa',
+    }).catch((err) => logger.error('Failed to log 2FA challenge', { error: err }));
+
+    // Return 2FA required response
+    res.json({
+      success: true,
+      message: 'Two-factor authentication required',
+      requiresTwoFactor: true,
+      data: {
+        userId: user._id,
+        email: user.email,
+      },
+    });
+    return;
+  }
+
+  // Generate tokens (no 2FA required)
   const { accessToken, refreshToken } = generateTokens(user);
 
   // Update user
   user.refreshToken = refreshToken;
   user.lastLogin = new Date();
   await user.save();
+
+  // Create session for device tracking
+  await sessionService.createSession({
+    userId: user._id.toString(),
+    refreshToken,
+    userAgent,
+    ipAddress,
+  }).catch((err) => logger.error('Failed to create session', { error: err }));
 
   // Log successful login
   await LoginHistory.create({
@@ -246,7 +285,28 @@ export const login = asyncHandler(async (req: Request, res: Response): Promise<v
     { ip: ipAddress, userAgent }
   );
 
-  res.json({
+  // Check password expiry status
+  const passwordStatus = passwordExpiryService.getPasswordExpiryStatus(user.passwordChangedAt);
+
+  // Build response
+  const response: {
+    success: boolean;
+    message: string;
+    passwordExpired?: boolean;
+    passwordExpiryWarning?: string;
+    data: {
+      user: {
+        id: unknown;
+        email: string;
+        name: string;
+        role: string;
+        restaurantId?: unknown;
+        twoFactorEnabled: boolean;
+      };
+      accessToken: string;
+      refreshToken: string;
+    };
+  } = {
     success: true,
     message: 'Login successful',
     data: {
@@ -256,11 +316,22 @@ export const login = asyncHandler(async (req: Request, res: Response): Promise<v
         name: user.name,
         role: user.role,
         restaurantId: user.restaurantId,
+        twoFactorEnabled: user.twoFactorEnabled,
       },
       accessToken,
       refreshToken,
     },
-  });
+  };
+
+  // Add password expiry warning if applicable
+  if (passwordStatus.isExpired) {
+    response.passwordExpired = true;
+    response.passwordExpiryWarning = passwordExpiryService.getExpiryWarningMessage(0);
+  } else if (passwordStatus.isExpiringSoon) {
+    response.passwordExpiryWarning = passwordExpiryService.getExpiryWarningMessage(passwordStatus.daysUntilExpiry);
+  }
+
+  res.json(response);
 });
 
 export const refreshToken = asyncHandler(async (req: Request, res: Response): Promise<void> => {
@@ -282,8 +353,9 @@ export const refreshToken = asyncHandler(async (req: Request, res: Response): Pr
     throw new ApiError(403, 'Account is deactivated');
   }
 
-  // Blacklist the old refresh token
+  // Blacklist the old refresh token and delete old session
   await blacklistToken(token, user._id.toString(), 'refresh');
+  await sessionService.deleteSessionByToken(token);
 
   // Generate new tokens
   const { accessToken, refreshToken: newRefreshToken } = generateTokens(user);
@@ -291,6 +363,16 @@ export const refreshToken = asyncHandler(async (req: Request, res: Response): Pr
   // Update refresh token
   user.refreshToken = newRefreshToken;
   await user.save();
+
+  // Create new session
+  const ipAddress = req.ip || req.socket.remoteAddress;
+  const userAgent = req.get('user-agent');
+  await sessionService.createSession({
+    userId: user._id.toString(),
+    refreshToken: newRefreshToken,
+    userAgent,
+    ipAddress,
+  }).catch((err) => logger.error('Failed to create session on refresh', { error: err }));
 
   res.json({
     success: true,
@@ -314,9 +396,10 @@ export const logout = asyncHandler(async (req: Request, res: Response): Promise<
       await blacklistToken(accessToken, userId, 'access');
     }
 
-    // Blacklist the refresh token if provided
+    // Blacklist the refresh token if provided and delete session
     if (refreshToken) {
       await blacklistToken(refreshToken, userId, 'refresh');
+      await sessionService.deleteSessionByToken(refreshToken);
     }
 
     // Clear refresh token in database
@@ -338,7 +421,14 @@ export const logout = asyncHandler(async (req: Request, res: Response): Promise<
 });
 
 export const getProfile = asyncHandler(async (req: Request, res: Response): Promise<void> => {
-  const user = req.user!;
+  // Get user with passwordChangedAt for expiry check
+  const user = await User.findById(req.user!._id).select('+passwordChangedAt');
+  if (!user) {
+    throw new ApiError(404, 'User not found');
+  }
+
+  // Check password expiry status
+  const passwordStatus = passwordExpiryService.getPasswordExpiryStatus(user.passwordChangedAt);
 
   res.json({
     success: true,
@@ -348,8 +438,15 @@ export const getProfile = asyncHandler(async (req: Request, res: Response): Prom
       name: user.name,
       role: user.role,
       restaurantId: user.restaurantId,
+      twoFactorEnabled: user.twoFactorEnabled,
       createdAt: user.createdAt,
       lastLogin: user.lastLogin,
+      passwordExpiry: {
+        daysUntilExpiry: passwordStatus.daysUntilExpiry,
+        isExpired: passwordStatus.isExpired,
+        isExpiringSoon: passwordStatus.isExpiringSoon,
+        expiresAt: passwordStatus.expiresAt,
+      },
     },
   });
 });

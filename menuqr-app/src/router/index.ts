@@ -485,7 +485,7 @@ const router = createRouter({
 });
 
 // Navigation guard for auth and title
-router.beforeEach((to, _from, next) => {
+router.beforeEach(async (to, _from, next) => {
   const authStore = useAdminAuthStore();
   const superAdminStore = useSuperAdminAuthStore();
 
@@ -499,18 +499,44 @@ router.beforeEach((to, _from, next) => {
 
   // Check if route requires admin authentication
   if (to.matched.some((record) => record.meta.requiresAuth)) {
-    if (!authStore.isAuthenticated) {
+    // If has local token but not validated, validate with backend
+    if (authStore.isAuthenticated && !authStore.isSessionValidated) {
+      const isValid = await authStore.validateSession();
+      if (!isValid) {
+        next({
+          path: '/admin/login',
+          query: { redirect: to.fullPath },
+        });
+        return;
+      }
+    } else if (!authStore.isAuthenticated) {
       next({
         path: '/admin/login',
         query: { redirect: to.fullPath },
       });
       return;
     }
+
+    // Check if password is expired (redirect to settings to change it)
+    if (authStore.isPasswordExpired && to.name !== 'AdminSettings') {
+      next({ path: '/admin/settings', query: { passwordExpired: 'true' } });
+      return;
+    }
   }
 
   // Check if route requires super admin authentication
   if (to.matched.some((record) => record.meta.requiresSuperAdmin)) {
-    if (!superAdminStore.isAuthenticated) {
+    // If has local token but not validated, validate with backend
+    if (superAdminStore.isAuthenticated && !superAdminStore.isSessionValidated) {
+      const isValid = await superAdminStore.validateSession();
+      if (!isValid) {
+        next({
+          path: '/super-admin/login',
+          query: { redirect: to.fullPath },
+        });
+        return;
+      }
+    } else if (!superAdminStore.isAuthenticated) {
       next({
         path: '/super-admin/login',
         query: { redirect: to.fullPath },

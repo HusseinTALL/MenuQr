@@ -297,7 +297,7 @@ export const useMenuStore = defineStore('menu', {
         // Cache in IndexedDB for offline access
         await offlineStore.cacheMenu(menuData);
       } catch (_error) {
-        console.warn('Failed to load menu from API, trying local fallback:', error);
+        console.warn('Failed to load menu from API, trying local fallback:', _error);
 
         // Try local JSON file as fallback
         try {
@@ -374,7 +374,7 @@ export const useMenuStore = defineStore('menu', {
           await offlineStore.cacheMenu(data);
         }
       } catch (_error) {
-        console.error('Failed to load from cache:', error);
+        console.error('Failed to load from cache:');
       }
     },
 

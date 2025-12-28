@@ -109,7 +109,7 @@ export const useOfflineStore = defineStore('offline', () => {
       isInitialized.value = true;
       console.info('[OfflineStore] Initialized successfully');
     } catch (_error) {
-      console.error('[OfflineStore] Failed to initialize:', error);
+      console.error('[OfflineStore] Failed to initialize:');
       isInitialized.value = true;
     }
   }
@@ -145,7 +145,7 @@ export const useOfflineStore = defineStore('offline', () => {
 
       console.info('[OfflineStore] Menu cached successfully');
     } catch (_error) {
-      console.error('[OfflineStore] Failed to cache menu:', error);
+      console.error('[OfflineStore] Failed to cache menu:');
       syncError.value = 'Échec de la mise en cache du menu';
     } finally {
       isSyncing.value = false;
@@ -174,7 +174,7 @@ export const useOfflineStore = defineStore('offline', () => {
       console.info('[OfflineStore] Retrieved cached menu from', new Date(cachedData.timestamp));
       return cachedData.data;
     } catch (_error) {
-      console.error('[OfflineStore] Failed to get cached menu:', error);
+      console.error('[OfflineStore] Failed to get cached menu:');
       return null;
     }
   }
@@ -193,7 +193,7 @@ export const useOfflineStore = defineStore('offline', () => {
 
       console.info('[OfflineStore] Cache cleared');
     } catch (_error) {
-      console.error('[OfflineStore] Failed to clear cache:', error);
+      console.error('[OfflineStore] Failed to clear cache:');
     }
   }
 

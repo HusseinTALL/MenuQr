@@ -1,5 +1,7 @@
 import { Router } from 'express';
 import authRoutes from './authRoutes.js';
+import twoFactorRoutes from './twoFactorRoutes.js';
+import sessionRoutes from './sessionRoutes.js';
 import restaurantRoutes from './restaurantRoutes.js';
 import categoryRoutes from './categoryRoutes.js';
 import dishRoutes from './dishRoutes.js';
@@ -42,6 +44,8 @@ router.get('/captcha-config', (_req, res) => {
 
 // Admin/Staff API routes
 router.use('/auth', authRoutes);
+router.use('/auth/2fa', twoFactorRoutes);
+router.use('/auth/sessions', sessionRoutes);
 router.use('/restaurants', restaurantRoutes);
 router.use('/categories', categoryRoutes);
 router.use('/dishes', dishRoutes);

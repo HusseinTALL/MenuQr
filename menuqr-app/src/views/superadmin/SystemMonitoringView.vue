@@ -120,7 +120,7 @@ const fetchMetrics = async () => {
       history.value = response.data.history;
     }
   } catch (_error) {
-    console.error('Failed to fetch metrics:', error);
+    console.error('Failed to fetch metrics:');
     message.error('Erreur lors du chargement des metriques');
   } finally {
     loading.value = false;

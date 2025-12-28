@@ -171,7 +171,7 @@ const fetchUsers = async () => {
       pagination.value.total = response.data.pagination.total;
     }
   } catch {
-    console.error('Failed to fetch users:', error);
+    console.error('Failed to fetch users:');
     message.error('Erreur lors du chargement des utilisateurs');
   } finally {
     loading.value = false;
@@ -190,7 +190,7 @@ const fetchRestaurants = async () => {
       restaurants.value = response.data.restaurants;
     }
   } catch {
-    console.error('Failed to fetch restaurants:', error);
+    console.error('Failed to fetch restaurants:');
   }
 };
 
@@ -317,7 +317,7 @@ const handleSubmit = async () => {
       message.error(response.message || 'Une erreur est survenue');
     }
   } catch {
-    console.error('Failed to save user:', error);
+    console.error('Failed to save user:');
     message.error('Erreur lors de l\'enregistrement');
   } finally {
     modalLoading.value = false;
@@ -365,7 +365,7 @@ const handlePasswordReset = async () => {
       message.error(response.message || 'Une erreur est survenue');
     }
   } catch {
-    console.error('Failed to reset password:', error);
+    console.error('Failed to reset password:');
     message.error('Erreur lors de la reinitialisation');
   } finally {
     passwordModalLoading.value = false;
@@ -401,7 +401,7 @@ const toggleUserStatus = (user: User) => {
           message.error(response.message || 'Une erreur est survenue');
         }
       } catch {
-        console.error('Failed to toggle status:', error);
+        console.error('Failed to toggle status:');
         message.error('Erreur lors de la modification du statut');
       }
     },
@@ -440,7 +440,7 @@ const deleteUser = (user: User) => {
           message.error(response.message || 'Une erreur est survenue');
         }
       } catch {
-        console.error('Failed to delete user:', error);
+        console.error('Failed to delete user:');
         message.error('Erreur lors de la suppression');
       }
     },

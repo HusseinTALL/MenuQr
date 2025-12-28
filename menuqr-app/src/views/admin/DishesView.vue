@@ -129,7 +129,6 @@ const fetchData = async () => {
     }
   } catch {
     error.value = 'Erreur lors du chargement des plats';
-    console.error(err);
   } finally {
     isLoading.value = false;
   }
@@ -378,7 +377,6 @@ const handleSubmit = async () => {
     }
   } catch {
     message.error('Erreur lors de la sauvegarde');
-    console.error(err);
   } finally {
     isSubmitting.value = false;
   }
@@ -392,7 +390,6 @@ const toggleAvailability = async (dish: Dish) => {
       message.success(dish.isAvailable ? 'Plat disponible' : 'Plat indisponible');
     }
   } catch {
-    console.error(err);
   }
 };
 
@@ -413,7 +410,6 @@ const deleteDish = async () => {
     }
   } catch {
     message.error('Erreur lors de la suppression');
-    console.error(err);
   }
 };
 
@@ -447,7 +443,6 @@ const bulkToggleAvailability = async (available: boolean) => {
     selectedRowKeys.value = [];
     message.success(`${promises.length} plat(s) mis à jour`);
   } catch {
-    console.error(err);
   }
 };
 

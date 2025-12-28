@@ -117,7 +117,7 @@ const fetchPlans = async () => {
       }
     }
   } catch (_error) {
-    console.error('Failed to fetch plans:', error);
+    console.error('Failed to fetch plans:');
     message.error('Erreur lors du chargement des plans');
   } finally {
     loading.value = false;
@@ -205,7 +205,7 @@ const handleSubmit = async () => {
       message.error(response.message || 'Une erreur est survenue');
     }
   } catch (_error) {
-    console.error('Failed to save plan:', error);
+    console.error('Failed to save plan:');
     message.error('Erreur lors de l\'enregistrement');
   } finally {
     modalLoading.value = false;
@@ -225,7 +225,7 @@ const togglePlanStatus = async (plan: Plan) => {
       message.error(response.message || 'Une erreur est survenue');
     }
   } catch (_error) {
-    console.error('Failed to toggle plan status:', error);
+    console.error('Failed to toggle plan status:');
     message.error('Erreur lors de la modification');
   }
 };
@@ -259,7 +259,7 @@ const deletePlan = (plan: Plan) => {
           message.error(response.message || 'Une erreur est survenue');
         }
       } catch (_error) {
-        console.error('Failed to delete plan:', error);
+        console.error('Failed to delete plan:');
         message.error('Erreur lors de la suppression');
       }
     },

@@ -142,7 +142,7 @@ const fetchInvoices = async () => {
       pagination.value.total = response.data.pagination.total;
     }
   } catch (_error) {
-    console.error('Failed to fetch invoices:', error);
+    console.error('Failed to fetch invoices:');
     message.error('Erreur lors du chargement des factures');
   } finally {
     loading.value = false;
@@ -219,7 +219,7 @@ const markAsPaid = (invoice: Invoice) => {
           message.error(response.message || 'Une erreur est survenue');
         }
       } catch (_error) {
-        console.error('Failed to update invoice:', error);
+        console.error('Failed to update invoice:');
         message.error('Erreur lors de la mise a jour');
       }
     },
@@ -253,7 +253,7 @@ const markAsFailed = (invoice: Invoice) => {
           message.error(response.message || 'Une erreur est survenue');
         }
       } catch (_error) {
-        console.error('Failed to update invoice:', error);
+        console.error('Failed to update invoice:');
         message.error('Erreur lors de la mise a jour');
       }
     },

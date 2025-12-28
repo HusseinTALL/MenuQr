@@ -342,7 +342,7 @@ export function useKDS(restaurantId: string) {
         oscillator.stop(ctx.currentTime + 0.3);
       }
     } catch (_error) {
-      console.warn('[KDS] Audio playback failed:', error);
+      console.warn('[KDS] Audio playback failed:', _error);
     }
   };
 

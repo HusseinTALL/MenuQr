@@ -128,7 +128,7 @@ export const useRestaurantStore = defineStore('restaurant', {
           this.pagination = response.data.pagination;
         }
       } catch (_error) {
-        console.error('Failed to fetch restaurants:', error);
+        console.error('Failed to fetch restaurants:');
         this.error = 'Impossible de charger les restaurants. Veuillez réessayer.';
       } finally {
         this.isLoading = false;
@@ -176,7 +176,7 @@ export const useRestaurantStore = defineStore('restaurant', {
           return true;
         }
       } catch (_error) {
-        console.error('Failed to select restaurant:', error);
+        console.error('Failed to select restaurant:');
         this.error = 'Restaurant introuvable.';
       }
       return false;

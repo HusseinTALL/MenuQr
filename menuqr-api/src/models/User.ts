@@ -15,6 +15,13 @@ export interface IUser extends Document {
   failedLoginAttempts: number;
   lockUntil?: Date;
   isLocked: boolean;
+  // Two-Factor Authentication
+  twoFactorEnabled: boolean;
+  twoFactorSecret?: string;
+  twoFactorBackupCodes?: string[];
+  twoFactorVerifiedAt?: Date;
+  // Password expiration
+  passwordChangedAt?: Date;
   createdAt: Date;
   updatedAt: Date;
   comparePassword(candidatePassword: string): Promise<boolean>;
@@ -80,13 +87,34 @@ const userSchema = new Schema<IUser>(
     lockUntil: {
       type: Date,
     },
+    // Two-Factor Authentication
+    twoFactorEnabled: {
+      type: Boolean,
+      default: false,
+    },
+    twoFactorSecret: {
+      type: String,
+      select: false, // Don't include in queries by default
+    },
+    twoFactorBackupCodes: {
+      type: [String],
+      select: false,
+    },
+    twoFactorVerifiedAt: {
+      type: Date,
+    },
+    // Password expiration tracking
+    passwordChangedAt: {
+      type: Date,
+      default: Date.now,
+    },
   },
   {
     timestamps: true,
   }
 );
 
-// Hash password before saving
+// Hash password before saving and track password change
 userSchema.pre('save', async function () {
   if (!this.isModified('password')) {
     return;
@@ -94,6 +122,9 @@ userSchema.pre('save', async function () {
 
   const salt = await bcrypt.genSalt(12);
   this.password = await bcrypt.hash(this.password, salt);
+
+  // Track when password was changed (for expiration policy)
+  this.passwordChangedAt = new Date();
 });
 
 // Compare password method

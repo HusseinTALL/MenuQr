@@ -52,6 +52,37 @@ interface RequestOptions {
   headers?: Record<string, string>;
 }
 
+// JWT token expiry buffer (refresh 5 minutes before expiry)
+const TOKEN_EXPIRY_BUFFER_MS = 5 * 60 * 1000;
+
+/**
+ * Decode JWT token without verification (for expiry check only)
+ */
+function decodeJwtPayload(token: string): { exp?: number; iat?: number } | null {
+  try {
+    const parts = token.split('.');
+    if (parts.length !== 3) return null;
+    const base64Payload = parts[1];
+    if (!base64Payload) return null;
+    const payload = JSON.parse(atob(base64Payload));
+    return payload;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Check if token is expired or about to expire
+ */
+function isTokenExpiringSoon(token: string, bufferMs: number = TOKEN_EXPIRY_BUFFER_MS): boolean {
+  const payload = decodeJwtPayload(token);
+  if (!payload || !payload.exp) return true; // Treat as expired if can't decode
+
+  const expiryTime = payload.exp * 1000; // Convert to milliseconds
+  const now = Date.now();
+  return now >= expiryTime - bufferMs;
+}
+
 class ApiService {
   private baseUrl: string;
   // Mutex for token refresh to prevent race conditions
@@ -134,7 +165,19 @@ class ApiService {
     };
 
     // Always read token fresh from localStorage to avoid cache sync issues
-    const token = useCustomerToken ? this.getCustomerToken() : this.getAccessToken();
+    let token = useCustomerToken ? this.getCustomerToken() : this.getAccessToken();
+
+    // Proactive token refresh: if token is about to expire, refresh it before making the request
+    if (token && isTokenExpiringSoon(token)) {
+      const refreshed = useCustomerToken
+        ? await this.refreshCustomerToken()
+        : await this.refreshToken();
+      if (refreshed) {
+        // Get the new token after refresh
+        token = useCustomerToken ? this.getCustomerToken() : this.getAccessToken();
+      }
+    }
+
     if (token) {
       requestHeaders['Authorization'] = `Bearer ${token}`;
     }
@@ -164,8 +207,8 @@ class ApiService {
 
       return data;
     } catch (_error) {
-      if (error instanceof ApiError) {
-        throw error;
+      if (_error instanceof ApiError) {
+        throw _error;
       }
       throw new ApiError('Network error', 0);
     }
@@ -705,8 +748,8 @@ class ApiService {
 
       return data;
     } catch (_error) {
-      if (error instanceof ApiError) {
-        throw error;
+      if (_error instanceof ApiError) {
+        throw _error;
       }
       throw new ApiError('Network error', 0);
     }

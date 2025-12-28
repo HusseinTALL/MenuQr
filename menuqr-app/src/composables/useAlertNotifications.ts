@@ -52,7 +52,7 @@ export function useAlertNotifications() {
         lastFetchTime.value = new Date();
       }
     } catch (_error) {
-      console.error('Failed to fetch alert stats:', error);
+      console.error('Failed to fetch alert stats:');
     } finally {
       isLoading.value = false;
     }
@@ -71,7 +71,7 @@ export function useAlertNotifications() {
         );
       }
     } catch (_error) {
-      console.error('Failed to fetch recent alerts:', error);
+      console.error('Failed to fetch recent alerts:');
     }
   };
 

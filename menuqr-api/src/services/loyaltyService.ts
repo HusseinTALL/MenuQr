@@ -277,7 +277,7 @@ export const redeemPoints = async (
 
 // Process expired points for a specific restaurant (called by scheduler)
 export const processExpiredPoints = async (
-  restaurantId?: mongoose.Types.ObjectId
+  restaurantId?: mongoose.Types.ObjectId | string
 ): Promise<{ customersProcessed: number; totalPointsExpired: number }> => {
   const now = new Date();
   let totalExpired = 0;
