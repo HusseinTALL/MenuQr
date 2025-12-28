@@ -10,7 +10,7 @@
     "start": "node dist/index.js",
     "seed": "tsx src/scripts/seed.ts",
     "lint": "eslint src/",
-    "type-check": "tsc --noEmit",
+    "type-check": "tsc --noEmit -p tsconfig.check.json",
     "test": "TMPDIR=/tmp vitest run",
     "test:watch": "TMPDIR=/tmp vitest",
     "test:coverage": "TMPDIR=/tmp vitest run --coverage"
