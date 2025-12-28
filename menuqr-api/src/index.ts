@@ -7,6 +7,7 @@ import { initializeSocket } from './services/socketService.js';
 import { logger } from './utils/logger.js';
 import { initializeSentry, flushSentry, captureException } from './services/sentryService.js';
 import { initializeEmailService } from './services/emailService.js';
+import { initializeRedis, closeRedis } from './config/redis.js';
 
 // Create HTTP server for both Express and Socket.io
 const httpServer = createServer(app);
@@ -24,6 +25,14 @@ const startServer = async (): Promise<void> => {
 
     // Initialize email service
     await initializeEmailService();
+
+    // Initialize Redis for live GPS tracking (optional)
+    const redis = await initializeRedis();
+    if (redis) {
+      logger.info('Redis initialized for live tracking');
+    } else {
+      logger.info('Redis not configured, live tracking disabled');
+    }
 
     // Start campaign scheduler
     startScheduler();
@@ -72,6 +81,7 @@ process.on('unhandledRejection', async (reason: unknown) => {
 process.on('SIGTERM', async () => {
   logger.info('SIGTERM received. Shutting down gracefully...');
   stopScheduler();
+  await closeRedis();
   await flushSentry(2000);
   process.exit(0);
 });
@@ -80,6 +90,7 @@ process.on('SIGTERM', async () => {
 process.on('SIGINT', async () => {
   logger.info('SIGINT received. Shutting down gracefully...');
   stopScheduler();
+  await closeRedis();
   await flushSentry(2000);
   process.exit(0);
 });

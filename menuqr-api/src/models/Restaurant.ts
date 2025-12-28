@@ -72,6 +72,10 @@ export interface IRestaurant extends Document {
     city: string;
     postalCode: string;
     country: string;
+    coordinates?: {
+      lat: number;
+      lng: number;
+    };
   };
   phone?: string;
   email?: string;
@@ -116,6 +120,10 @@ const restaurantSchema = new Schema<IRestaurant>(
       city: String,
       postalCode: String,
       country: { type: String, default: 'FR' },
+      coordinates: {
+        lat: Number,
+        lng: Number,
+      },
     },
     phone: {
       type: String,

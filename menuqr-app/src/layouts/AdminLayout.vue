@@ -110,6 +110,7 @@ const menuGroups = computed(() => [
     items: [
       { key: '/admin', icon: HomeOutlined, label: 'Dashboard', badge: 0 },
       { key: '/admin/orders', icon: FileTextOutlined, label: 'Commandes', badge: badges.value.pendingOrders },
+      { key: '/admin/deliveries', icon: ShopOutlined, label: 'Livraisons', badge: 0 },
       { key: '/admin/kds', icon: FireOutlined, label: 'Cuisine (KDS)', badge: 0 },
       { key: '/admin/reservations', icon: CalendarOutlined, label: 'Réservations', badge: badges.value.todayReservations },
       { key: '/admin/tables', icon: TableOutlined, label: 'Tables', badge: 0 },

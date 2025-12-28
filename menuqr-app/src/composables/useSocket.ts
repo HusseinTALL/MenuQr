@@ -503,4 +503,185 @@ export function useMenuUpdates(restaurantId: string) {
   };
 }
 
+/**
+ * Hook for driver socket connection
+ */
+export function useDriverSocket() {
+  const isConnected = ref(false);
+  let driverSocket: Socket | null = null;
+
+  const connect = (token: string) => {
+    if (driverSocket?.connected) return;
+
+    if (driverSocket) {
+      driverSocket.disconnect();
+      driverSocket = null;
+    }
+
+    const apiUrl = import.meta.env.VITE_API_URL || window.location.origin;
+
+    driverSocket = io(apiUrl, {
+      auth: { token },
+      reconnectionAttempts: 10,
+      reconnectionDelay: 2000,
+      transports: ['websocket', 'polling'],
+      path: '/socket.io',
+    });
+
+    driverSocket.on('connect', () => {
+      isConnected.value = true;
+      console.info('[DriverSocket] Connected');
+    });
+
+    driverSocket.on('disconnect', (reason) => {
+      isConnected.value = false;
+      console.info('[DriverSocket] Disconnected:', reason);
+    });
+
+    driverSocket.on('connect_error', (error) => {
+      console.error('[DriverSocket] Connection error:', error.message);
+    });
+  };
+
+  const disconnect = () => {
+    if (driverSocket) {
+      driverSocket.disconnect();
+      driverSocket = null;
+      isConnected.value = false;
+    }
+  };
+
+  const sendLocation = (data: {
+    lat: number;
+    lng: number;
+    heading?: number;
+    speed?: number;
+    accuracy?: number;
+  }) => {
+    if (driverSocket?.connected) {
+      driverSocket.emit('driver:location:update', data);
+    }
+  };
+
+  const onDeliveryAssigned = (callback: (data: {
+    deliveryId: string;
+    orderId: string;
+    pickupAddress: { street: string; city: string };
+    deliveryAddress: { street: string; city: string };
+    estimatedEarnings: number;
+    restaurantName: string;
+  }) => void) => {
+    driverSocket?.on('delivery:assigned', callback);
+    return () => driverSocket?.off('delivery:assigned', callback);
+  };
+
+  onUnmounted(() => {
+    // Keep connection alive, don't disconnect on unmount
+  });
+
+  return {
+    isConnected,
+    connect,
+    disconnect,
+    sendLocation,
+    onDeliveryAssigned,
+    socket: () => driverSocket,
+  };
+}
+
+/**
+ * Hook for delivery tracking (customer view)
+ */
+export function useDeliveryTracking(deliveryId: string) {
+  const driverLocation = ref<{
+    lat: number;
+    lng: number;
+    heading?: number;
+    speed?: number;
+    timestamp: number;
+  } | null>(null);
+
+  const eta = ref<{
+    minutes: number;
+    distanceMeters: number;
+    updatedAt: number;
+  } | null>(null);
+
+  const deliveryStatus = ref<string>('pending');
+  const isCompleted = ref(false);
+
+  const joinDelivery = () => {
+    socket?.emit('join:delivery', deliveryId);
+  };
+
+  const leaveDelivery = () => {
+    socket?.emit('leave:delivery', deliveryId);
+  };
+
+  onMounted(() => {
+    joinDelivery();
+
+    // Listen for driver location updates
+    socket?.on('driver:location', (data: {
+      deliveryId: string;
+      location: {
+        lat: number;
+        lng: number;
+        heading?: number;
+        speed?: number;
+        timestamp: number;
+      };
+      eta?: {
+        minutes: number;
+        distanceMeters: number;
+        updatedAt: number;
+      } | null;
+    }) => {
+      if (data.deliveryId === deliveryId) {
+        driverLocation.value = data.location;
+        if (data.eta) {
+          eta.value = data.eta;
+        }
+      }
+    });
+
+    // Listen for delivery status updates
+    socket?.on('delivery:status', (data: {
+      status: string;
+      driverName?: string;
+      eta?: number;
+      updatedAt: Date;
+    }) => {
+      deliveryStatus.value = data.status;
+      if (data.eta && eta.value) {
+        eta.value.minutes = data.eta;
+      }
+    });
+
+    // Listen for delivery completed
+    socket?.on('delivery:completed', (data: {
+      orderId: string;
+      completedAt: Date;
+      podType?: string;
+    }) => {
+      isCompleted.value = true;
+      deliveryStatus.value = 'delivered';
+    });
+  });
+
+  onUnmounted(() => {
+    leaveDelivery();
+    socket?.off('driver:location');
+    socket?.off('delivery:status');
+    socket?.off('delivery:completed');
+  });
+
+  return {
+    driverLocation,
+    eta,
+    deliveryStatus,
+    isCompleted,
+  };
+}
+
 export default useSocket;

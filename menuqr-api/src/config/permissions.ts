@@ -85,6 +85,31 @@ export const PERMISSIONS = {
   // Billing & Subscription (Owner only)
   BILLING_READ: 'billing:read',
   BILLING_MANAGE: 'billing:manage',
+
+  // Delivery Management
+  DELIVERIES_READ: 'deliveries:read',
+  DELIVERIES_CREATE: 'deliveries:create',
+  DELIVERIES_UPDATE: 'deliveries:update',
+  DELIVERIES_ASSIGN: 'deliveries:assign',
+  DELIVERIES_CANCEL: 'deliveries:cancel',
+  DELIVERIES_STATS: 'deliveries:stats',
+
+  // Delivery Driver Management
+  DRIVERS_READ: 'drivers:read',
+  DRIVERS_CREATE: 'drivers:create',
+  DRIVERS_UPDATE: 'drivers:update',
+  DRIVERS_VERIFY: 'drivers:verify',
+  DRIVERS_SUSPEND: 'drivers:suspend',
+  DRIVERS_DELETE: 'drivers:delete',
+  DRIVERS_PAYOUTS: 'drivers:payouts',
+
+  // Driver Self-Service (for delivery drivers)
+  DRIVER_SELF_READ: 'driver:self:read',
+  DRIVER_SELF_UPDATE: 'driver:self:update',
+  DRIVER_SELF_LOCATION: 'driver:self:location',
+  DRIVER_SELF_SHIFT: 'driver:self:shift',
+  DRIVER_SELF_DELIVERIES: 'driver:self:deliveries',
+  DRIVER_SELF_EARNINGS: 'driver:self:earnings',
 } as const;
 
 export type Permission = typeof PERMISSIONS[keyof typeof PERMISSIONS];
@@ -101,6 +126,7 @@ export const ROLES = {
   KITCHEN: 'kitchen',
   CASHIER: 'cashier',
   STAFF: 'staff',
+  DELIVERY_DRIVER: 'delivery_driver',
 } as const;
 
 export type Role = typeof ROLES[keyof typeof ROLES];
@@ -118,6 +144,7 @@ export const ROLE_HIERARCHY: Record<Role, Role[]> = {
   kitchen: [],
   cashier: [],
   staff: [],
+  delivery_driver: [], // Independent role, no hierarchy inheritance
 };
 
 // ============================================
@@ -213,6 +240,23 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     // Billing (Owner only)
     PERMISSIONS.BILLING_READ,
     PERMISSIONS.BILLING_MANAGE,
+
+    // Delivery Management
+    PERMISSIONS.DELIVERIES_READ,
+    PERMISSIONS.DELIVERIES_CREATE,
+    PERMISSIONS.DELIVERIES_UPDATE,
+    PERMISSIONS.DELIVERIES_ASSIGN,
+    PERMISSIONS.DELIVERIES_CANCEL,
+    PERMISSIONS.DELIVERIES_STATS,
+
+    // Driver Management
+    PERMISSIONS.DRIVERS_READ,
+    PERMISSIONS.DRIVERS_CREATE,
+    PERMISSIONS.DRIVERS_UPDATE,
+    PERMISSIONS.DRIVERS_VERIFY,
+    PERMISSIONS.DRIVERS_SUSPEND,
+    PERMISSIONS.DRIVERS_DELETE,
+    PERMISSIONS.DRIVERS_PAYOUTS,
   ],
 
   // ========================================
@@ -286,6 +330,21 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
 
     // KDS
     PERMISSIONS.KDS_ACCESS,
+
+    // Delivery Management
+    PERMISSIONS.DELIVERIES_READ,
+    PERMISSIONS.DELIVERIES_CREATE,
+    PERMISSIONS.DELIVERIES_UPDATE,
+    PERMISSIONS.DELIVERIES_ASSIGN,
+    PERMISSIONS.DELIVERIES_CANCEL,
+    PERMISSIONS.DELIVERIES_STATS,
+
+    // Driver Management (no payouts)
+    PERMISSIONS.DRIVERS_READ,
+    PERMISSIONS.DRIVERS_CREATE,
+    PERMISSIONS.DRIVERS_UPDATE,
+    PERMISSIONS.DRIVERS_VERIFY,
+    PERMISSIONS.DRIVERS_SUSPEND,
   ],
 
   // ========================================
@@ -339,6 +398,14 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
 
     // KDS
     PERMISSIONS.KDS_ACCESS,
+
+    // Delivery Management (operational)
+    PERMISSIONS.DELIVERIES_READ,
+    PERMISSIONS.DELIVERIES_ASSIGN,
+    PERMISSIONS.DELIVERIES_STATS,
+
+    // Driver Management (read only)
+    PERMISSIONS.DRIVERS_READ,
   ],
 
   // ========================================
@@ -417,6 +484,22 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     // Reservations - Read only
     PERMISSIONS.RESERVATIONS_READ,
   ],
+
+  // ========================================
+  // DELIVERY_DRIVER: Driver self-service access
+  // ========================================
+  delivery_driver: [
+    // Driver Self-Service - Full access to own data
+    PERMISSIONS.DRIVER_SELF_READ,
+    PERMISSIONS.DRIVER_SELF_UPDATE,
+    PERMISSIONS.DRIVER_SELF_LOCATION,
+    PERMISSIONS.DRIVER_SELF_SHIFT,
+    PERMISSIONS.DRIVER_SELF_DELIVERIES,
+    PERMISSIONS.DRIVER_SELF_EARNINGS,
+
+    // Orders - Read assigned orders only (controlled via middleware)
+    PERMISSIONS.ORDERS_READ,
+  ],
 };
 
 // ============================================
@@ -478,6 +561,7 @@ export function getRoleDisplayName(role: Role): string {
     kitchen: 'Cuisine',
     cashier: 'Caissier',
     staff: 'Employé',
+    delivery_driver: 'Livreur',
   };
   return displayNames[role] || role;
 }
@@ -622,6 +706,40 @@ export const PERMISSION_GROUPS = {
       PERMISSIONS.BILLING_MANAGE,
     ],
   },
+  delivery: {
+    label: 'Livraisons',
+    permissions: [
+      PERMISSIONS.DELIVERIES_READ,
+      PERMISSIONS.DELIVERIES_CREATE,
+      PERMISSIONS.DELIVERIES_UPDATE,
+      PERMISSIONS.DELIVERIES_ASSIGN,
+      PERMISSIONS.DELIVERIES_CANCEL,
+      PERMISSIONS.DELIVERIES_STATS,
+    ],
+  },
+  drivers: {
+    label: 'Livreurs',
+    permissions: [
+      PERMISSIONS.DRIVERS_READ,
+      PERMISSIONS.DRIVERS_CREATE,
+      PERMISSIONS.DRIVERS_UPDATE,
+      PERMISSIONS.DRIVERS_VERIFY,
+      PERMISSIONS.DRIVERS_SUSPEND,
+      PERMISSIONS.DRIVERS_DELETE,
+      PERMISSIONS.DRIVERS_PAYOUTS,
+    ],
+  },
+  driverSelf: {
+    label: 'Accès Livreur',
+    permissions: [
+      PERMISSIONS.DRIVER_SELF_READ,
+      PERMISSIONS.DRIVER_SELF_UPDATE,
+      PERMISSIONS.DRIVER_SELF_LOCATION,
+      PERMISSIONS.DRIVER_SELF_SHIFT,
+      PERMISSIONS.DRIVER_SELF_DELIVERIES,
+      PERMISSIONS.DRIVER_SELF_EARNINGS,
+    ],
+  },
 };
 
 /**
@@ -688,6 +806,31 @@ export function getPermissionDisplayName(permission: Permission): string {
 
     [PERMISSIONS.BILLING_READ]: 'Voir la facturation',
     [PERMISSIONS.BILLING_MANAGE]: 'Gérer la facturation',
+
+    // Delivery permissions
+    [PERMISSIONS.DELIVERIES_READ]: 'Voir les livraisons',
+    [PERMISSIONS.DELIVERIES_CREATE]: 'Créer des livraisons',
+    [PERMISSIONS.DELIVERIES_UPDATE]: 'Modifier les livraisons',
+    [PERMISSIONS.DELIVERIES_ASSIGN]: 'Assigner des livreurs',
+    [PERMISSIONS.DELIVERIES_CANCEL]: 'Annuler des livraisons',
+    [PERMISSIONS.DELIVERIES_STATS]: 'Voir les statistiques de livraison',
+
+    // Driver management permissions
+    [PERMISSIONS.DRIVERS_READ]: 'Voir les livreurs',
+    [PERMISSIONS.DRIVERS_CREATE]: 'Ajouter des livreurs',
+    [PERMISSIONS.DRIVERS_UPDATE]: 'Modifier les livreurs',
+    [PERMISSIONS.DRIVERS_VERIFY]: 'Vérifier les livreurs',
+    [PERMISSIONS.DRIVERS_SUSPEND]: 'Suspendre des livreurs',
+    [PERMISSIONS.DRIVERS_DELETE]: 'Supprimer des livreurs',
+    [PERMISSIONS.DRIVERS_PAYOUTS]: 'Gérer les paiements livreurs',
+
+    // Driver self-service permissions
+    [PERMISSIONS.DRIVER_SELF_READ]: 'Voir son profil livreur',
+    [PERMISSIONS.DRIVER_SELF_UPDATE]: 'Modifier son profil livreur',
+    [PERMISSIONS.DRIVER_SELF_LOCATION]: 'Mettre à jour sa position',
+    [PERMISSIONS.DRIVER_SELF_SHIFT]: 'Gérer ses shifts',
+    [PERMISSIONS.DRIVER_SELF_DELIVERIES]: 'Voir ses livraisons',
+    [PERMISSIONS.DRIVER_SELF_EARNINGS]: 'Voir ses gains',
   };
   return displayNames[permission] || permission;
 }

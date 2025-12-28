@@ -50,6 +50,7 @@ interface RequestOptions {
   method?: string;
   body?: unknown;
   headers?: Record<string, string>;
+  auth?: 'admin' | 'customer' | 'driver' | 'none';
 }
 
 // Staff types
@@ -174,6 +175,13 @@ class ApiService {
     return null;
   }
 
+  /**
+   * Get driver access token from localStorage
+   */
+  private getDriverToken(): string | null {
+    return localStorage.getItem('driver_token');
+  }
+
   // Legacy methods kept for backward compatibility - they do nothing now
   // Token is always read from localStorage directly
   setToken(_token: string | null): void {
@@ -185,29 +193,41 @@ class ApiService {
   }
 
   private async request<T>(endpoint: string, options: RequestOptions = {}, useCustomerToken = false): Promise<ApiResponse<T>> {
-    const { method = 'GET', body, headers = {} } = options;
+    const { method = 'GET', body, headers = {}, auth } = options;
 
     const requestHeaders: Record<string, string> = {
       'Content-Type': 'application/json',
       ...headers,
     };
 
-    // Always read token fresh from localStorage to avoid cache sync issues
-    let token = useCustomerToken ? this.getCustomerToken() : this.getAccessToken();
+    // Determine auth type - support both legacy parameter and new auth option
+    const authType = auth || (useCustomerToken ? 'customer' : 'admin');
 
-    // Proactive token refresh: if token is about to expire, refresh it before making the request
-    if (token && isTokenExpiringSoon(token)) {
-      const refreshed = useCustomerToken
-        ? await this.refreshCustomerToken()
-        : await this.refreshToken();
-      if (refreshed) {
-        // Get the new token after refresh
-        token = useCustomerToken ? this.getCustomerToken() : this.getAccessToken();
+    // Skip auth for 'none'
+    if (authType !== 'none') {
+      // Get token based on auth type
+      let token: string | null = null;
+      if (authType === 'driver') {
+        token = this.getDriverToken();
+      } else if (authType === 'customer') {
+        token = this.getCustomerToken();
+      } else {
+        token = this.getAccessToken();
       }
-    }
 
-    if (token) {
-      requestHeaders['Authorization'] = `Bearer ${token}`;
+      // Proactive token refresh for non-driver tokens
+      if (token && authType !== 'driver' && isTokenExpiringSoon(token)) {
+        const refreshed = authType === 'customer'
+          ? await this.refreshCustomerToken()
+          : await this.refreshToken();
+        if (refreshed) {
+          token = authType === 'customer' ? this.getCustomerToken() : this.getAccessToken();
+        }
+      }
+
+      if (token) {
+        requestHeaders['Authorization'] = `Bearer ${token}`;
+      }
     }
 
     try {
@@ -1922,6 +1942,147 @@ class ApiService {
       }
     }
     return this.request<T>(url);
+  }
+
+  // ==================== DRIVER ENDPOINTS ====================
+
+  /**
+   * Driver login
+   */
+  async driverLogin(data: { email: string; password: string }) {
+    return this.request<{ token: string; driver: unknown }>('/drivers/login', {
+      method: 'POST',
+      body: data,
+      auth: 'none',
+    });
+  }
+
+  /**
+   * Get driver profile
+   */
+  async getDriverProfile() {
+    return this.request<unknown>('/driver/profile', {
+      auth: 'driver',
+    });
+  }
+
+  /**
+   * Go online (start accepting deliveries)
+   */
+  async driverGoOnline(location?: { lat: number; lng: number }) {
+    return this.request<unknown>('/driver/go-online', {
+      method: 'POST',
+      body: location ? { location } : {},
+      auth: 'driver',
+    });
+  }
+
+  /**
+   * Go offline (stop accepting deliveries)
+   */
+  async driverGoOffline() {
+    return this.request<unknown>('/driver/go-offline', {
+      method: 'POST',
+      auth: 'driver',
+    });
+  }
+
+  /**
+   * Update driver location
+   */
+  async updateDriverLocation(location: { lat: number; lng: number }) {
+    return this.request<unknown>('/driver/update-location', {
+      method: 'POST',
+      body: location,
+      auth: 'driver',
+    });
+  }
+
+  /**
+   * Get active delivery for driver
+   */
+  async getActiveDelivery() {
+    return this.request<unknown>('/driver/deliveries/active', {
+      auth: 'driver',
+    });
+  }
+
+  /**
+   * Get driver deliveries history
+   */
+  async getDriverDeliveries(params?: { page?: number; limit?: number; status?: string }) {
+    const queryString = params ? new URLSearchParams(params as Record<string, string>).toString() : '';
+    return this.request<unknown>(`/driver/deliveries${queryString ? '?' + queryString : ''}`, {
+      auth: 'driver',
+    });
+  }
+
+  /**
+   * Accept delivery assignment
+   */
+  async acceptDelivery(deliveryId: string) {
+    return this.request<unknown>(`/deliveries/${deliveryId}/accept`, {
+      method: 'POST',
+      auth: 'driver',
+    });
+  }
+
+  /**
+   * Reject delivery assignment
+   */
+  async rejectDelivery(deliveryId: string, reason?: string) {
+    return this.request<unknown>(`/deliveries/${deliveryId}/reject`, {
+      method: 'POST',
+      body: { reason },
+      auth: 'driver',
+    });
+  }
+
+  /**
+   * Update delivery status
+   */
+  async updateDeliveryStatus(deliveryId: string, status: string, data?: Record<string, unknown>) {
+    return this.request<unknown>(`/deliveries/${deliveryId}/status`, {
+      method: 'PUT',
+      body: { status, ...data },
+      auth: 'driver',
+    });
+  }
+
+  /**
+   * Complete delivery with POD
+   */
+  async completeDeliveryWithPOD(deliveryId: string, podData: {
+    photoUrl?: string;
+    signatureUrl?: string;
+    otpCode?: string;
+    deliveryNotes?: string;
+    gpsCoordinates?: { lat: number; lng: number };
+  }) {
+    return this.request<unknown>(`/deliveries/${deliveryId}/complete`, {
+      method: 'POST',
+      body: podData,
+      auth: 'driver',
+    });
+  }
+
+  /**
+   * Get driver earnings
+   */
+  async getDriverEarnings(params?: { startDate?: string; endDate?: string }) {
+    const queryString = params ? new URLSearchParams(params as Record<string, string>).toString() : '';
+    return this.request<unknown>(`/driver/earnings${queryString ? '?' + queryString : ''}`, {
+      auth: 'driver',
+    });
+  }
+
+  /**
+   * Get driver earnings summary
+   */
+  async getDriverEarningsSummary() {
+    return this.request<unknown>('/driver/earnings', {
+      auth: 'driver',
+    });
   }
 
   /**

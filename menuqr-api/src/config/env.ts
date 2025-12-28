@@ -66,6 +66,9 @@ export const config = {
   // MongoDB
   mongodbUri: process.env.MONGODB_URI || 'mongodb://menuqr:menuqr123@localhost:27017/menuqr?authSource=menuqr',
 
+  // Redis (for live GPS tracking and caching)
+  redisUrl: process.env.REDIS_URL || '', // e.g., 'redis://localhost:6379'
+
   // JWT - NEVER use default in production (validated above)
   jwtSecret: process.env.JWT_SECRET || (isProduction ? '' : 'dev-only-secret-not-for-production-use'),
   jwtExpiresIn: process.env.JWT_EXPIRES_IN || '15m', // Reduced from 7d to 15m for security

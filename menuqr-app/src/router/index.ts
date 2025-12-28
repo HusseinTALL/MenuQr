@@ -105,6 +105,15 @@ const routes: RouteRecordRaw[] = [
           title: 'Mes réservations',
         },
       },
+      {
+        path: 'track/:orderId',
+        name: 'DeliveryTracking',
+        component: () => import('@/views/customer/DeliveryTrackingView.vue'),
+        props: true,
+        meta: {
+          title: 'Suivi de livraison',
+        },
+      },
       // Info pages
       {
         path: 'about',
@@ -224,6 +233,14 @@ const routes: RouteRecordRaw[] = [
         component: () => import('@/views/admin/OrdersView.vue'),
         meta: {
           title: 'Commandes',
+        },
+      },
+      {
+        path: 'deliveries',
+        name: 'AdminDeliveries',
+        component: () => import('@/views/admin/DeliveryManagementView.vue'),
+        meta: {
+          title: 'Livraisons',
         },
       },
       {
@@ -469,6 +486,68 @@ const routes: RouteRecordRaw[] = [
   },
 
   // ============================================
+  // Driver Routes
+  // ============================================
+  {
+    path: '/driver/login',
+    name: 'DriverLogin',
+    component: () => import('@/views/driver/DriverLoginView.vue'),
+    meta: {
+      title: 'Connexion Livreur',
+    },
+  },
+  {
+    path: '/driver',
+    component: () => import('@/layouts/DriverLayout.vue'),
+    meta: {
+      requiresDriverAuth: true,
+    },
+    children: [
+      {
+        path: '',
+        name: 'DriverDashboard',
+        component: () => import('@/views/driver/DriverDashboardView.vue'),
+        meta: {
+          title: 'Tableau de bord',
+        },
+      },
+      {
+        path: 'deliveries',
+        name: 'DriverDeliveries',
+        component: () => import('@/views/driver/DriverDeliveriesView.vue'),
+        meta: {
+          title: 'Mes Livraisons',
+        },
+      },
+      {
+        path: 'earnings',
+        name: 'DriverEarnings',
+        component: () => import('@/views/driver/DriverEarningsView.vue'),
+        meta: {
+          title: 'Mes Gains',
+        },
+      },
+      {
+        path: 'profile',
+        name: 'DriverProfile',
+        component: () => import('@/views/driver/DriverDashboardView.vue'), // TODO: Create DriverProfileView
+        meta: {
+          title: 'Mon Profil',
+        },
+      },
+      {
+        path: 'delivery/:id',
+        name: 'DriverDeliveryDetail',
+        component: () => import('@/views/driver/DriverDashboardView.vue'), // TODO: Create DriverDeliveryDetailView
+        props: true,
+        meta: {
+          title: 'Détail Livraison',
+        },
+      },
+    ],
+  },
+
+  // ============================================
   // 404 Not Found
   // ============================================
   {
@@ -496,6 +575,8 @@ const router = createRouter({
 router.beforeEach(async (to, _from, next) => {
   const authStore = useAdminAuthStore();
   const superAdminStore = useSuperAdminAuthStore();
+  // Lazy import driver store only when needed for driver routes
+  const isDriverRoute = to.matched.some((record) => record.meta.requiresDriverAuth);
 
   // Set page title
   const title = to.meta.title as string | undefined;
@@ -550,6 +631,28 @@ router.beforeEach(async (to, _from, next) => {
         query: { redirect: to.fullPath },
       });
       return;
+    }
+  }
+
+  // Check if route requires driver authentication
+  if (isDriverRoute) {
+    const { useDriverAuthStore } = await import('@/stores/driverAuth');
+    const driverStore = useDriverAuthStore();
+
+    if (!driverStore.isAuthenticated) {
+      // Try to fetch profile if token exists
+      const hasToken = localStorage.getItem('driver_token');
+      if (hasToken) {
+        await driverStore.fetchProfile();
+      }
+
+      if (!driverStore.isAuthenticated) {
+        next({
+          path: '/driver/login',
+          query: { redirect: to.fullPath },
+        });
+        return;
+      }
     }
   }
 

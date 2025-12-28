@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
-import { User, IUser } from '../models/index.js';
+import { User, IUser, DeliveryDriver } from '../models/index.js';
 import { TokenBlacklist } from '../models/TokenBlacklist.js';
 import config from '../config/env.js';
 import logger from '../utils/logger.js';
@@ -16,6 +16,13 @@ interface JwtPayload {
   originalEmail?: string;
   originalRole?: string;
   impersonatedRestaurantId?: string;
+}
+
+interface DriverJwtPayload {
+  driverId: string;
+  email: string;
+  role: 'delivery_driver';
+  exp?: number;
 }
 
 /**
@@ -296,4 +303,164 @@ export const getOriginalUser = (req: Request): { userId: string; email: string; 
     return null;
   }
   return req.originalUser;
+};
+
+/**
+ * Authenticate delivery driver
+ */
+export const authenticateDriver = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const authHeader = req.headers.authorization;
+
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      res.status(401).json({
+        success: false,
+        message: 'Access denied. No token provided.',
+      });
+      return;
+    }
+
+    const token = authHeader.split(' ')[1];
+
+    // Check if token is blacklisted
+    if (await isTokenBlacklisted(token)) {
+      res.status(401).json({
+        success: false,
+        message: 'Token has been revoked.',
+      });
+      return;
+    }
+
+    const decoded = jwt.verify(token, config.jwtSecret) as DriverJwtPayload;
+
+    // Verify it's a driver token
+    if (decoded.role !== 'delivery_driver' || !decoded.driverId) {
+      res.status(401).json({
+        success: false,
+        message: 'Invalid driver token.',
+      });
+      return;
+    }
+
+    const driver = await DeliveryDriver.findById(decoded.driverId);
+
+    if (!driver) {
+      res.status(401).json({
+        success: false,
+        message: 'Driver not found.',
+      });
+      return;
+    }
+
+    if (driver.status === 'suspended' || driver.status === 'deactivated') {
+      res.status(403).json({
+        success: false,
+        message: 'Your account has been suspended or deactivated.',
+      });
+      return;
+    }
+
+    // Attach driver info to request
+    (req as any).user = {
+      driverId: driver._id.toString(),
+      email: driver.email,
+      role: 'delivery_driver',
+    };
+
+    next();
+  } catch (error) {
+    if (error instanceof jwt.TokenExpiredError) {
+      res.status(401).json({
+        success: false,
+        message: 'Token expired.',
+        code: 'TOKEN_EXPIRED',
+      });
+      return;
+    }
+
+    if (error instanceof jwt.JsonWebTokenError) {
+      res.status(401).json({
+        success: false,
+        message: 'Invalid token.',
+        code: 'INVALID_TOKEN',
+      });
+      return;
+    }
+
+    logger.error('Driver authentication error', error);
+    res.status(500).json({
+      success: false,
+      message: 'Authentication error.',
+    });
+  }
+};
+
+/**
+ * Authenticate either admin user or delivery driver
+ * Tries driver auth first, then falls back to admin auth
+ */
+export const authenticateUserOrDriver = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  const authHeader = req.headers.authorization;
+
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    res.status(401).json({
+      success: false,
+      message: 'Access denied. No token provided.',
+    });
+    return;
+  }
+
+  const token = authHeader.split(' ')[1];
+
+  try {
+    // First try to decode and check if it's a driver token
+    const decoded = jwt.verify(token, config.jwtSecret) as { role?: string; driverId?: string };
+
+    if (decoded.role === 'delivery_driver' && decoded.driverId) {
+      // It's a driver token - use driver auth
+      const driver = await DeliveryDriver.findById(decoded.driverId);
+      if (!driver) {
+        res.status(401).json({ success: false, message: 'Driver not found.' });
+        return;
+      }
+      if (driver.status === 'suspended' || driver.status === 'deactivated') {
+        res.status(403).json({ success: false, message: 'Account suspended or deactivated.' });
+        return;
+      }
+      (req as any).user = {
+        driverId: driver._id.toString(),
+        email: driver.email,
+        role: 'delivery_driver',
+      };
+      next();
+    } else {
+      // It's an admin/user token - use regular auth
+      const user = await User.findById((decoded as any).userId);
+      if (!user) {
+        res.status(401).json({ success: false, message: 'User not found.' });
+        return;
+      }
+      (req as any).user = {
+        userId: user._id.toString(),
+        email: user.email,
+        role: user.role,
+        restaurantId: user.restaurantId?.toString(),
+      };
+      next();
+    }
+  } catch (error) {
+    if (error instanceof jwt.TokenExpiredError) {
+      res.status(401).json({ success: false, message: 'Token expired.', code: 'TOKEN_EXPIRED' });
+      return;
+    }
+    res.status(401).json({ success: false, message: 'Invalid token.' });
+  }
 };

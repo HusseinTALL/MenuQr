@@ -21,6 +21,9 @@ export {
   type IOrderItem,
   type OrderStatus,
   type PaymentStatus,
+  type FulfillmentType,
+  type DeliveryTrackingStatus,
+  type IDeliveryAddress,
 } from './Order.js';
 export { Customer, type ICustomer, type IAddress } from './Customer.js';
 export { OTP, type IOTP, type IOTPModel } from './OTP.js';
@@ -139,3 +142,43 @@ export {
   type BackupType,
   type BackupStatus,
 } from './Backup.js';
+
+// Delivery System Models
+export {
+  DeliveryDriver,
+  type IDeliveryDriver,
+  type IDriverDocument,
+  type IDriverStats,
+  type VehicleType,
+  type DriverStatus,
+  type ShiftStatus,
+} from './DeliveryDriver.js';
+export {
+  Delivery,
+  type IDelivery,
+  type DeliveryStatus,
+  type IProofOfDelivery,
+  type IChatMessage,
+  type IDeliveryEarnings,
+  type IDeliveryIssue,
+  type PODType,
+  type DeliveryIssueType,
+} from './Delivery.js';
+export {
+  DriverShift,
+  type IDriverShift,
+  type IBreakPeriod,
+  type IShiftLocation,
+  type IShiftStats,
+  type ShiftEndReason,
+} from './DriverShift.js';
+export {
+  DriverPayout,
+  type IDriverPayout,
+  type IPayoutBreakdown,
+  type IPayoutDelivery,
+  type IPayoutAdjustment,
+  type PayoutStatus,
+  type PayoutMethod,
+  type PayoutType,
+} from './DriverPayout.js';
