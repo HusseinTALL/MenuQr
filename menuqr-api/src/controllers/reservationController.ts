@@ -8,6 +8,7 @@ import mongoose from 'mongoose';
 import { Restaurant, Reservation } from '../models/index.js';
 import { asyncHandler, ApiError } from '../middleware/errorHandler.js';
 import * as reservationService from '../services/reservationService.js';
+import { emitNewReservation } from '../services/socketService.js';
 import type { ReservationStatus, LocationPreference } from '../models/Reservation.js';
 
 // ============================================================================
@@ -160,6 +161,16 @@ export const createReservation = asyncHandler(
     }
 
     const reservation = await reservationService.createReservation(reservationData);
+
+    // Emit real-time event for new reservation
+    emitNewReservation(restaurantId, {
+      reservationId: reservation._id.toString(),
+      customerName: reservation.customerName,
+      partySize: reservation.partySize,
+      timeSlot: reservation.timeSlot,
+      status: reservation.status,
+      tableId: reservation.tableId?.toString(),
+    });
 
     res.status(201).json({
       success: true,
@@ -715,6 +726,16 @@ export const createReservationAdmin = asyncHandler(
     }
 
     const reservation = await reservationService.createReservation(reservationData);
+
+    // Emit real-time event for new reservation
+    emitNewReservation(restaurant._id.toString(), {
+      reservationId: reservation._id.toString(),
+      customerName: reservation.customerName,
+      partySize: reservation.partySize,
+      timeSlot: reservation.timeSlot,
+      status: reservation.status,
+      tableId: reservation.tableId?.toString(),
+    });
 
     res.status(201).json({
       success: true,

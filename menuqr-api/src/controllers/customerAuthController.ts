@@ -9,6 +9,11 @@ import {
 import { asyncHandler, ApiError } from '../middleware/errorHandler.js';
 import smsService from '../services/smsService.js';
 import config from '../config/env.js';
+import logger from '../utils/logger.js';
+
+// Constants for account lockout
+const MAX_FAILED_ATTEMPTS = config.security.maxFailedLoginAttempts;
+const LOCK_DURATION_MS = config.security.lockoutDurationMinutes * 60 * 1000;
 
 /**
  * Send OTP code to phone number
@@ -201,10 +206,16 @@ export const register = asyncHandler(async (req: Request, res: Response): Promis
 export const login = asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const { phone, restaurantId, password } = req.body;
 
-  // Find customer with password
-  const customer = await Customer.findOne({ phone, restaurantId }).select('+password');
+  // Find customer with password and lockout fields
+  const customer = await Customer.findOne({ phone, restaurantId }).select('+password +failedLoginAttempts +lockUntil');
   if (!customer) {
     throw new ApiError(401, 'Numéro de téléphone ou mot de passe incorrect');
+  }
+
+  // Check if account is locked
+  if (customer.lockUntil && customer.lockUntil > new Date()) {
+    const remainingMinutes = Math.ceil((customer.lockUntil.getTime() - Date.now()) / 60000);
+    throw new ApiError(423, `Compte verrouillé suite à trop de tentatives. Réessayez dans ${remainingMinutes} minute(s).`);
   }
 
   // Check if active
@@ -215,8 +226,33 @@ export const login = asyncHandler(async (req: Request, res: Response): Promise<v
   // Verify password
   const isPasswordValid = await customer.comparePassword(password);
   if (!isPasswordValid) {
-    throw new ApiError(401, 'Numéro de téléphone ou mot de passe incorrect');
+    // Increment failed attempts
+    customer.failedLoginAttempts = (customer.failedLoginAttempts || 0) + 1;
+
+    // Lock account if max attempts reached
+    if (customer.failedLoginAttempts >= MAX_FAILED_ATTEMPTS) {
+      customer.lockUntil = new Date(Date.now() + LOCK_DURATION_MS);
+      await customer.save();
+
+      logger.warn('Customer account locked due to too many failed attempts', {
+        phone,
+        restaurantId,
+        attempts: customer.failedLoginAttempts,
+        lockUntil: customer.lockUntil
+      });
+
+      throw new ApiError(423, `Compte verrouillé suite à ${MAX_FAILED_ATTEMPTS} tentatives échouées. Réessayez dans ${config.security.lockoutDurationMinutes} minutes.`);
+    }
+
+    await customer.save();
+
+    const remainingAttempts = MAX_FAILED_ATTEMPTS - customer.failedLoginAttempts;
+    throw new ApiError(401, `Numéro de téléphone ou mot de passe incorrect. ${remainingAttempts} tentative(s) restante(s).`);
   }
+
+  // Reset failed attempts on successful login
+  customer.failedLoginAttempts = 0;
+  customer.lockUntil = undefined;
 
   // Generate tokens
   const { accessToken, refreshToken } = generateCustomerTokens(customer);
@@ -349,10 +385,10 @@ export const updateProfile = asyncHandler(async (req: Request, res: Response): P
   }
 
   const updateData: Record<string, unknown> = {};
-  if (name !== undefined) updateData.name = name;
-  if (email !== undefined) updateData.email = email;
-  if (dietaryPreferences !== undefined) updateData.dietaryPreferences = dietaryPreferences;
-  if (allergens !== undefined) updateData.allergens = allergens;
+  if (name !== undefined) {updateData.name = name;}
+  if (email !== undefined) {updateData.email = email;}
+  if (dietaryPreferences !== undefined) {updateData.dietaryPreferences = dietaryPreferences;}
+  if (allergens !== undefined) {updateData.allergens = allergens;}
 
   const updatedCustomer = await Customer.findByIdAndUpdate(customer._id, updateData, {
     new: true,

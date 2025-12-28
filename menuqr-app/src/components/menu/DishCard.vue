@@ -1,5 +1,14 @@
 <script setup lang="ts">
 import { computed, ref, onMounted } from 'vue';
+import { Rate, Tag, Skeleton } from 'ant-design-vue';
+import {
+  HeartOutlined,
+  HeartFilled,
+  ClockCircleOutlined,
+  StarFilled,
+  FireFilled,
+  PlusOutlined,
+} from '@ant-design/icons-vue';
 import type { Dish } from '@/types';
 import { useCart } from '@/composables/useCart';
 import { useLocale } from '@/composables/useI18n';
@@ -8,9 +17,23 @@ import { useCustomerAuthStore } from '@/stores/customerAuth';
 import api from '@/services/api';
 import LazyImage from '@/components/common/LazyImage.vue';
 
-const props = defineProps<{
-  dish: Dish;
-}>();
+/**
+ * DishCard - Unified dish card component using Ant Design Vue
+ * Displays dish info with image, badges, ratings, and quick-add functionality
+ */
+const props = withDefaults(
+  defineProps<{
+    dish: Dish;
+    showFavorites?: boolean;
+    showRating?: boolean;
+    loading?: boolean;
+  }>(),
+  {
+    showFavorites: true,
+    showRating: true,
+    loading: false,
+  }
+);
 
 const emit = defineEmits<{
   select: [dish: Dish];
@@ -22,17 +45,18 @@ const { localize, t } = useLocale();
 const { formatPrice } = useCurrency();
 const customerAuthStore = useCustomerAuthStore();
 
+// Computed values
 const dishName = computed(() => localize(props.dish.name));
 const dishDescription = computed(() => localize(props.dish.description));
 const quantityInCart = computed(() => getDishQuantity(props.dish.id));
 
-// Favorites
+// Favorites state
 const isFavorite = ref(false);
 const isTogglingFavorite = ref(false);
 
 // Check if dish is in favorites on mount
 onMounted(async () => {
-  if (customerAuthStore.isAuthenticated) {
+  if (props.showFavorites && customerAuthStore.isAuthenticated) {
     try {
       const response = await api.customerCheckFavorite(props.dish.id);
       if (response.success && response.data) {
@@ -52,7 +76,7 @@ const handleFavoriteClick = async (event: Event) => {
     return;
   }
 
-  if (isTogglingFavorite.value) return;
+  if (isTogglingFavorite.value) {return;}
 
   isTogglingFavorite.value = true;
   const wasInFavorites = isFavorite.value;
@@ -85,239 +109,492 @@ const handleAddClick = (event: Event) => {
     quickAdd(props.dish);
   }
 };
+
+const handleCardClick = () => {
+  if (props.dish.isAvailable) {
+    emit('select', props.dish);
+  }
+};
 </script>
 
 <template>
-  <article
-    class="group relative flex flex-col overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-gray-200/60 transition-all duration-300 ease-out cursor-pointer hover:shadow-lg hover:-translate-y-0.5 active:scale-[0.985] active:duration-100"
+  <!-- Skeleton Loading State -->
+  <div v-if="loading" class="dish-card dish-card--skeleton">
+    <div class="dish-card__image-skeleton">
+      <Skeleton.Image :style="{ width: '100%', height: '100%' }" active />
+    </div>
+    <div class="dish-card__content">
+      <Skeleton active :paragraph="{ rows: 2, width: ['100%', '70%'] }" :title="{ width: '80%' }" />
+    </div>
+  </div>
+
+  <!-- Main Card -->
+  <div
+    v-else
+    class="dish-card"
     :class="{
-      'opacity-60 grayscale pointer-events-none': !dish.isAvailable,
-      'ring-2 ring-primary-500': quantityInCart > 0 && dish.isAvailable,
+      'dish-card--unavailable': !dish.isAvailable,
+      'dish-card--in-cart': quantityInCart > 0 && dish.isAvailable,
     }"
     role="button"
     tabindex="0"
     :aria-label="`${dishName}, ${formatPrice(dish.price)}${!dish.isAvailable ? ', non disponible' : ''}${quantityInCart > 0 ? `, ${quantityInCart} dans le panier` : ''}`"
-    @click="emit('select', dish)"
-    @keydown.enter="emit('select', dish)"
-    @keydown.space.prevent="emit('select', dish)"
+    @click="handleCardClick"
+    @keydown.enter="handleCardClick"
+    @keydown.space.prevent="handleCardClick"
   >
     <!-- Image Container -->
-    <div class="relative aspect-[4/3] overflow-hidden bg-gray-100">
-      <LazyImage
-        :src="dish.image"
-        :alt="dishName"
-        class="h-full w-full object-cover transition-transform duration-500 ease-out will-change-transform group-hover:scale-[1.03]"
-      />
+    <div class="dish-card__image-container">
+      <LazyImage :src="dish.image" :alt="dishName" class="dish-card__image" />
 
-      <!-- Ambient gradient overlay -->
-      <div
-        class="absolute inset-0 bg-gradient-to-t from-black/40 via-black/5 to-transparent opacity-60 transition-opacity duration-300 group-hover:opacity-80"
-      />
+      <!-- Gradient Overlay -->
+      <div class="dish-card__gradient" />
 
-      <!-- Badges Container (Top Left) -->
-      <div class="absolute left-3 top-3 flex flex-col items-start gap-1.5">
-        <span
-          v-if="dish.isPopular"
-          class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold uppercase tracking-wide backdrop-blur-sm shadow-md bg-gradient-to-br from-amber-100 to-amber-200 text-amber-700"
-          role="status"
-        >
-          <svg class="h-3 w-3" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
-            <path
-              d="M8 1.5l2.1 4.3 4.7.7-3.4 3.3.8 4.7L8 12.3l-4.2 2.2.8-4.7L1.2 6.5l4.7-.7L8 1.5z"
-            />
-          </svg>
-          {{ t('menu.popular') }}
-        </span>
-        <span
-          v-if="dish.isNew"
-          class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold uppercase tracking-wide backdrop-blur-sm shadow-md bg-gradient-to-br from-violet-100 to-violet-200 text-violet-700"
-          role="status"
-        >
-          <svg class="h-3 w-3" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
-            <path d="M8 0l1.5 5.5H15l-4.5 3.3 1.7 5.2L8 10.7 3.8 14l1.7-5.2L1 5.5h5.5L8 0z" />
-          </svg>
-          {{ t('menu.new') }}
-        </span>
+      <!-- Badges (Top Left) -->
+      <div class="dish-card__badges">
+        <Tag v-if="dish.isPopular" class="dish-card__badge dish-card__badge--popular">
+          <StarFilled /> {{ t('menu.popular') }}
+        </Tag>
+        <Tag v-if="dish.isNew" class="dish-card__badge dish-card__badge--new">
+          <FireFilled /> {{ t('menu.new') }}
+        </Tag>
       </div>
 
       <!-- Estimated Time (Bottom Left) -->
-      <div
-        v-if="dish.estimatedTime"
-        class="absolute bottom-3 left-3 flex items-center gap-1.5 rounded-full bg-white/95 px-2.5 py-1 text-xs font-medium text-gray-700 shadow-sm backdrop-blur-sm"
-        :aria-label="`Temps de préparation: ${dish.estimatedTime} minutes`"
-      >
-        <svg
-          class="h-3.5 w-3.5 text-gray-500"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          viewBox="0 0 24 24"
-          aria-hidden="true"
-        >
-          <circle cx="12" cy="12" r="10" />
-          <path d="M12 6v6l4 2" />
-        </svg>
-        <span aria-hidden="true">{{ dish.estimatedTime }} min</span>
+      <div v-if="dish.estimatedTime" class="dish-card__time">
+        <ClockCircleOutlined />
+        <span>{{ dish.estimatedTime }} min</span>
       </div>
 
       <!-- Favorite Button (Bottom Right) -->
       <button
-        v-if="dish.isAvailable"
+        v-if="showFavorites && dish.isAvailable"
         type="button"
-        class="absolute bottom-3 right-3 flex items-center justify-center w-8 h-8 rounded-full transition-all duration-200 shadow-sm backdrop-blur-sm"
-        :class="[
-          isFavorite
-            ? 'bg-red-500 text-white'
-            : 'bg-white/90 text-gray-400 hover:text-red-500 hover:bg-white',
-          isTogglingFavorite ? 'animate-pulse' : ''
-        ]"
+        class="dish-card__favorite"
+        :class="{
+          'dish-card__favorite--active': isFavorite,
+          'dish-card__favorite--loading': isTogglingFavorite,
+        }"
         :aria-label="isFavorite ? 'Retirer des favoris' : 'Ajouter aux favoris'"
         @click="handleFavoriteClick"
       >
-        <svg
-          class="w-4 h-4 transition-transform duration-200"
-          :class="{ 'scale-110': isFavorite }"
-          :fill="isFavorite ? 'currentColor' : 'none'"
-          stroke="currentColor"
-          stroke-width="2"
-          viewBox="0 0 24 24"
-        >
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
-          />
-        </svg>
+        <HeartFilled v-if="isFavorite" />
+        <HeartOutlined v-else />
       </button>
 
       <!-- Cart Quantity Badge (Top Right) -->
       <transition name="badge-pop">
-        <div
-          v-if="quantityInCart > 0 && dish.isAvailable"
-          class="absolute right-3 top-3 flex h-7 min-w-7 items-center justify-center rounded-full bg-primary-600 px-2 text-sm font-bold text-white shadow-lg ring-2 ring-white"
-        >
+        <div v-if="quantityInCart > 0 && dish.isAvailable" class="dish-card__quantity">
           {{ quantityInCart }}
         </div>
       </transition>
 
       <!-- Unavailable Overlay -->
-      <div
-        v-if="!dish.isAvailable"
-        class="absolute inset-0 flex items-center justify-center bg-white/85 backdrop-blur-[2px]"
-      >
-        <span
-          class="rounded-full bg-gray-900 px-4 py-2 text-sm font-semibold text-white shadow-lg"
-        >
-          {{ t('menu.unavailable') }}
-        </span>
+      <div v-if="!dish.isAvailable" class="dish-card__unavailable-overlay">
+        <Tag class="dish-card__unavailable-tag">{{ t('menu.unavailable') }}</Tag>
       </div>
     </div>
 
     <!-- Content -->
-    <div class="flex flex-1 flex-col p-4">
+    <div class="dish-card__content">
       <!-- Title -->
-      <h3 class="truncate text-[15px] font-semibold leading-tight text-gray-900">
-        {{ dishName }}
-      </h3>
+      <h3 class="dish-card__title">{{ dishName }}</h3>
 
       <!-- Rating -->
-      <div
-        v-if="dish.reviewStats && dish.reviewStats.totalReviews > 0"
-        class="flex items-center gap-1.5 mt-1"
-      >
-        <div class="flex items-center gap-0.5">
-          <svg
-            class="w-3.5 h-3.5 text-amber-400"
-            fill="currentColor"
-            viewBox="0 0 20 20"
-          >
-            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-          </svg>
-          <span class="text-xs font-medium text-gray-700">
-            {{ dish.reviewStats.averageRating.toFixed(1) }}
-          </span>
-        </div>
-        <span class="text-xs text-gray-400">
-          ({{ dish.reviewStats.totalReviews }})
-        </span>
+      <div v-if="showRating && dish.reviewStats && dish.reviewStats.totalReviews > 0" class="dish-card__rating">
+        <Rate :value="dish.reviewStats.averageRating" disabled allow-half :count="1" />
+        <span class="dish-card__rating-value">{{ dish.reviewStats.averageRating.toFixed(1) }}</span>
+        <span class="dish-card__rating-count">({{ dish.reviewStats.totalReviews }})</span>
       </div>
 
       <!-- Description -->
-      <p
-        v-if="dishDescription"
-        class="mt-1.5 line-clamp-2 text-[13px] leading-snug text-gray-500"
-      >
+      <p v-if="dishDescription" class="dish-card__description">
         {{ dishDescription }}
       </p>
 
       <!-- Dietary Icons -->
-      <div v-if="dish.isVegetarian || dish.isSpicy" class="mt-2.5 flex items-center gap-1.5">
-        <span
-          v-if="dish.isVegetarian"
-          class="inline-flex items-center justify-center w-[22px] h-[22px] rounded-md bg-green-100 text-green-600"
-          title="Végétarien"
-        >
-          <svg class="h-3 w-3" viewBox="0 0 16 16" fill="currentColor">
-            <path
-              d="M8 1c3.9 0 7 3.1 7 7s-3.1 7-7 7-7-3.1-7-7 3.1-7 7-7zm0 2C5.2 3 3 5.2 3 8s2.2 5 5 5 5-2.2 5-5-2.2-5-5-5zm0 1.5c.4 0 .8.3.8.8v2h2c.4 0 .8.3.8.7 0 .4-.3.8-.8.8h-2v2c0 .4-.3.8-.8.8-.4 0-.7-.4-.7-.8v-2h-2c-.5 0-.8-.4-.8-.8s.3-.7.8-.7h2v-2c0-.5.3-.8.7-.8z"
-            />
-          </svg>
-        </span>
-        <div
+      <div v-if="dish.isVegetarian || dish.isSpicy" class="dish-card__dietary">
+        <Tag v-if="dish.isVegetarian" color="green" class="dish-card__dietary-tag" :bordered="false">
+          Végé
+        </Tag>
+        <Tag
           v-if="dish.isSpicy"
-          class="flex items-center gap-0.5"
+          color="red"
+          class="dish-card__dietary-tag"
+          :bordered="false"
           :title="`Pimenté niveau ${dish.spicyLevel}`"
         >
-          <span
-            v-for="n in dish.spicyLevel || 1"
-            :key="n"
-            class="inline-flex items-center justify-center w-[22px] h-[22px] rounded-md bg-red-100 text-red-600"
-          >
-            <svg class="h-3 w-3" viewBox="0 0 16 16" fill="currentColor">
-              <path
-                d="M8.5 1c.3 0 .5.2.5.5v1c0 .3-.2.5-.5.5S8 2.8 8 2.5v-1c0-.3.2-.5.5-.5zM5 3.5c0-.3.2-.5.5-.5s.5.2.5.5v2c0 .3-.2.5-.5.5S5 5.8 5 5.5v-2zm6 0c0-.3.2-.5.5-.5s.5.2.5.5v2c0 .3-.2.5-.5.5s-.5-.2-.5-.5v-2zM8.5 5C10.4 5 12 6.6 12 8.5c0 2.5-1.5 5-3.5 6.5-2-1.5-3.5-4-3.5-6.5C5 6.6 6.6 5 8.5 5z"
-              />
-            </svg>
-          </span>
-        </div>
+          {{ '🌶️'.repeat(dish.spicyLevel || 1) }}
+        </Tag>
       </div>
 
       <!-- Spacer -->
-      <div class="flex-1 min-h-3" />
+      <div class="dish-card__spacer" />
 
       <!-- Price & Add Button -->
-      <div class="flex items-center justify-between pt-2">
-        <div class="flex flex-col">
-          <span class="text-base font-bold tracking-tight text-gray-900">
-            {{ formatPrice(dish.price) }}
-          </span>
-        </div>
+      <div class="dish-card__footer">
+        <span class="dish-card__price">{{ formatPrice(dish.price) }}</span>
 
         <button
           v-if="dish.isAvailable"
           type="button"
-          class="flex items-center justify-center w-11 h-11 rounded-xl bg-gradient-to-br from-primary-500 to-primary-600 text-white shadow-lg shadow-primary-500/35 transition-all duration-200 hover:scale-105 hover:shadow-xl hover:shadow-primary-500/45 active:scale-90 active:duration-100"
-          @click.stop="handleAddClick"
+          class="dish-card__add-btn"
           :aria-label="`${t('menu.addToCart')}: ${dishName}`"
+          @click="handleAddClick"
         >
-          <svg
-            class="h-5 w-5"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2.5"
-            viewBox="0 0 24 24"
-            aria-hidden="true"
-          >
-            <path stroke-linecap="round" stroke-linejoin="round" d="M12 5v14m-7-7h14" />
-          </svg>
+          <PlusOutlined />
         </button>
       </div>
     </div>
-  </article>
+  </div>
 </template>
 
 <style scoped>
-/* Badge Pop Animation - only keeping animations that can't be done with Tailwind */
+/* Base Card - ensure visibility and override stagger-children opacity */
+.dish-card {
+  display: block;
+  visibility: visible;
+  opacity: 1; /* Override stagger-children opacity:0 */
+  overflow: hidden;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06), 0 2px 8px rgba(0, 0, 0, 0.04);
+  transition: all 0.3s ease;
+  cursor: pointer;
+  /* Animation for stagger effect */
+  animation: dishCardFadeIn 0.3s ease-out forwards;
+}
+
+@keyframes dishCardFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.dish-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08), 0 8px 24px rgba(0, 0, 0, 0.06);
+}
+
+.dish-card:active {
+  transform: scale(0.985);
+  transition-duration: 100ms;
+}
+
+.dish-card--in-cart {
+  box-shadow: 0 0 0 2px #14b8a6, 0 4px 12px rgba(20, 184, 166, 0.2);
+}
+
+.dish-card--unavailable {
+  opacity: 0.7;
+  pointer-events: none;
+  filter: grayscale(0.6);
+}
+
+/* Image Container */
+.dish-card__image-container {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  background: #f5f5f5;
+}
+
+.dish-card__image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.5s ease;
+}
+
+.dish-card:hover .dish-card__image {
+  transform: scale(1.03);
+}
+
+.dish-card__gradient {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.4), transparent 50%);
+  opacity: 0.6;
+  transition: opacity 0.3s;
+}
+
+.dish-card:hover .dish-card__gradient {
+  opacity: 0.8;
+}
+
+/* Badges */
+.dish-card__badges {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.dish-card__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border: none;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+}
+
+.dish-card__badge--popular {
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  color: #b45309;
+}
+
+.dish-card__badge--new {
+  background: linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%);
+  color: #7c3aed;
+}
+
+/* Time Badge */
+.dish-card__time {
+  position: absolute;
+  bottom: 12px;
+  left: 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.95);
+  font-size: 12px;
+  font-weight: 500;
+  color: #374151;
+  backdrop-filter: blur(4px);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+/* Favorite Button */
+.dish-card__favorite {
+  position: absolute;
+  bottom: 12px;
+  right: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.9);
+  color: #9ca3af;
+  font-size: 16px;
+  cursor: pointer;
+  transition: all 0.2s;
+  backdrop-filter: blur(4px);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+.dish-card__favorite:hover {
+  background: #fff;
+  color: #ef4444;
+  transform: scale(1.1);
+}
+
+.dish-card__favorite--active {
+  background: #ef4444;
+  color: #fff;
+}
+
+.dish-card__favorite--active:hover {
+  background: #dc2626;
+  color: #fff;
+}
+
+.dish-card__favorite--loading {
+  animation: pulse 1s infinite;
+}
+
+/* Cart Quantity Badge */
+.dish-card__quantity {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  height: 28px;
+  padding: 0 8px;
+  border-radius: 14px;
+  background: #14b8a6;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  box-shadow: 0 2px 8px rgba(20, 184, 166, 0.4), 0 0 0 2px #fff;
+}
+
+/* Unavailable Overlay */
+.dish-card__unavailable-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(2px);
+}
+
+.dish-card__unavailable-tag {
+  padding: 8px 20px;
+  border-radius: 20px;
+  background: #1f2937;
+  color: #fff;
+  font-weight: 600;
+  font-size: 13px;
+}
+
+/* Content */
+.dish-card__content {
+  display: flex;
+  flex-direction: column;
+  padding: 16px;
+  min-height: 140px;
+}
+
+.dish-card__title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: #1f2937;
+  line-height: 1.3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Rating */
+.dish-card__rating {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 6px;
+}
+
+.dish-card__rating :deep(.ant-rate) {
+  font-size: 14px;
+}
+
+.dish-card__rating :deep(.ant-rate-star-full .anticon) {
+  color: #f59e0b;
+}
+
+.dish-card__rating-value {
+  font-size: 12px;
+  font-weight: 600;
+  color: #374151;
+}
+
+.dish-card__rating-count {
+  font-size: 12px;
+  color: #9ca3af;
+}
+
+/* Description */
+.dish-card__description {
+  margin: 8px 0 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #6b7280;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Dietary Tags */
+.dish-card__dietary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.dish-card__dietary-tag {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 6px;
+}
+
+/* Spacer */
+.dish-card__spacer {
+  flex: 1;
+  min-height: 12px;
+}
+
+/* Footer */
+.dish-card__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 8px;
+}
+
+.dish-card__price {
+  font-size: 16px;
+  font-weight: 700;
+  color: #1f2937;
+}
+
+.dish-card__add-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border: none;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #14b8a6 0%, #0d9488 100%);
+  color: #fff;
+  font-size: 18px;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 4px 12px rgba(20, 184, 166, 0.35);
+}
+
+.dish-card__add-btn:hover {
+  transform: scale(1.05);
+  box-shadow: 0 6px 16px rgba(20, 184, 166, 0.45);
+}
+
+.dish-card__add-btn:active {
+  transform: scale(0.92);
+  transition-duration: 100ms;
+}
+
+/* Skeleton */
+.dish-card--skeleton {
+  pointer-events: none;
+}
+
+.dish-card__image-skeleton {
+  aspect-ratio: 4 / 3;
+  background: #f5f5f5;
+}
+
+.dish-card__image-skeleton :deep(.ant-skeleton-image) {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+/* Animations */
 .badge-pop-enter-active {
   animation: badge-pop-in 300ms cubic-bezier(0.34, 1.56, 0.64, 1);
 }
@@ -348,8 +625,50 @@ const handleAddClick = (event: Event) => {
   }
 }
 
-/* Reduced motion preference */
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/* Touch Device Optimizations */
+@media (hover: none) or (pointer: coarse) {
+  .dish-card:hover {
+    transform: none;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06), 0 2px 8px rgba(0, 0, 0, 0.04);
+  }
+
+  .dish-card:hover .dish-card__image {
+    transform: none;
+  }
+
+  .dish-card:active {
+    transform: scale(0.98);
+  }
+
+  .dish-card__add-btn:hover {
+    transform: none;
+  }
+
+  .dish-card__add-btn:active {
+    transform: scale(0.9);
+  }
+}
+
+/* Reduced Motion */
 @media (prefers-reduced-motion: reduce) {
+  .dish-card,
+  .dish-card__image,
+  .dish-card__add-btn,
+  .dish-card__favorite {
+    transition: none !important;
+    animation: none !important;
+  }
+
   .badge-pop-enter-active,
   .badge-pop-leave-active {
     animation: none;

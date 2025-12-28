@@ -407,5 +407,236 @@ describe('cartStore', () => {
         expect(store.restaurantId).toBeNull();
       });
     });
+
+    describe('setOrderType', () => {
+      it('sets order type to scheduled', () => {
+        const store = useCartStore();
+        store.setOrderType('scheduled');
+        expect(store.orderType).toBe('scheduled');
+      });
+
+      it('resets scheduling when switching to immediate', () => {
+        const store = useCartStore();
+        store.setOrderType('scheduled');
+        store.setScheduledDate('2024-12-25');
+        store.setScheduledTime('12:00');
+        store.setFulfillmentType('delivery');
+        store.setDeliveryAddress({ street: '123 Main St', city: 'Paris', postalCode: '75001' });
+
+        store.setOrderType('immediate');
+        expect(store.orderType).toBe('immediate');
+        expect(store.scheduledDate).toBeNull();
+        expect(store.scheduledTime).toBeNull();
+        expect(store.fulfillmentType).toBe('dine_in');
+        expect(store.deliveryAddress).toBeNull();
+      });
+
+      it('sets fulfillment to pickup when switching from dine_in to scheduled', () => {
+        const store = useCartStore();
+        expect(store.fulfillmentType).toBe('dine_in');
+        store.setOrderType('scheduled');
+        expect(store.fulfillmentType).toBe('pickup');
+      });
+
+      it('keeps existing fulfillment type when already pickup or delivery', () => {
+        const store = useCartStore();
+        store.setFulfillmentType('delivery');
+        store.setOrderType('scheduled');
+        expect(store.fulfillmentType).toBe('delivery');
+      });
+    });
+
+    describe('setFulfillmentType', () => {
+      it('sets fulfillment type', () => {
+        const store = useCartStore();
+        store.setFulfillmentType('pickup');
+        expect(store.fulfillmentType).toBe('pickup');
+      });
+
+      it('clears delivery address when switching away from delivery', () => {
+        const store = useCartStore();
+        store.setFulfillmentType('delivery');
+        store.setDeliveryAddress({ street: '123 Main St', city: 'Paris', postalCode: '75001' });
+        store.setFulfillmentType('pickup');
+        expect(store.deliveryAddress).toBeNull();
+      });
+
+      it('keeps delivery address when setting to delivery', () => {
+        const store = useCartStore();
+        store.setDeliveryAddress({ street: '123 Main St', city: 'Paris', postalCode: '75001' });
+        store.setFulfillmentType('delivery');
+        expect(store.deliveryAddress).not.toBeNull();
+      });
+    });
+
+    describe('setScheduledDate', () => {
+      it('sets scheduled date', () => {
+        const store = useCartStore();
+        store.setScheduledDate('2024-12-25');
+        expect(store.scheduledDate).toBe('2024-12-25');
+      });
+
+      it('can be set to null', () => {
+        const store = useCartStore();
+        store.setScheduledDate('2024-12-25');
+        store.setScheduledDate(null);
+        expect(store.scheduledDate).toBeNull();
+      });
+    });
+
+    describe('setScheduledTime', () => {
+      it('sets scheduled time', () => {
+        const store = useCartStore();
+        store.setScheduledTime('14:30');
+        expect(store.scheduledTime).toBe('14:30');
+      });
+
+      it('can be set to null', () => {
+        const store = useCartStore();
+        store.setScheduledTime('14:30');
+        store.setScheduledTime(null);
+        expect(store.scheduledTime).toBeNull();
+      });
+    });
+
+    describe('setDeliveryAddress', () => {
+      it('sets delivery address', () => {
+        const store = useCartStore();
+        const address = { street: '123 Main St', city: 'Paris', postalCode: '75001' };
+        store.setDeliveryAddress(address);
+        expect(store.deliveryAddress).toEqual(address);
+      });
+
+      it('can be set to null', () => {
+        const store = useCartStore();
+        store.setDeliveryAddress({ street: '123 Main St', city: 'Paris', postalCode: '75001' });
+        store.setDeliveryAddress(null);
+        expect(store.deliveryAddress).toBeNull();
+      });
+    });
+
+    describe('clearScheduling', () => {
+      it('resets all scheduling state', () => {
+        const store = useCartStore();
+        store.setOrderType('scheduled');
+        store.setFulfillmentType('delivery');
+        store.setScheduledDate('2024-12-25');
+        store.setScheduledTime('14:30');
+        store.setDeliveryAddress({ street: '123 Main St', city: 'Paris', postalCode: '75001' });
+
+        store.clearScheduling();
+        expect(store.orderType).toBe('immediate');
+        expect(store.fulfillmentType).toBe('dine_in');
+        expect(store.scheduledDate).toBeNull();
+        expect(store.scheduledTime).toBeNull();
+        expect(store.deliveryAddress).toBeNull();
+      });
+    });
+  });
+
+  describe('scheduling getters', () => {
+    describe('isScheduled', () => {
+      it('returns false for immediate orders', () => {
+        const store = useCartStore();
+        expect(store.isScheduled).toBe(false);
+      });
+
+      it('returns true for scheduled orders', () => {
+        const store = useCartStore();
+        store.setOrderType('scheduled');
+        expect(store.isScheduled).toBe(true);
+      });
+    });
+
+    describe('isDelivery', () => {
+      it('returns false for dine_in', () => {
+        const store = useCartStore();
+        expect(store.isDelivery).toBe(false);
+      });
+
+      it('returns false for pickup', () => {
+        const store = useCartStore();
+        store.setFulfillmentType('pickup');
+        expect(store.isDelivery).toBe(false);
+      });
+
+      it('returns true for delivery', () => {
+        const store = useCartStore();
+        store.setFulfillmentType('delivery');
+        expect(store.isDelivery).toBe(true);
+      });
+    });
+
+    describe('isSchedulingComplete', () => {
+      it('returns true for immediate orders', () => {
+        const store = useCartStore();
+        expect(store.isSchedulingComplete).toBe(true);
+      });
+
+      it('returns false for scheduled orders without date', () => {
+        const store = useCartStore();
+        store.setOrderType('scheduled');
+        expect(store.isSchedulingComplete).toBe(false);
+      });
+
+      it('returns false for scheduled orders with date but no time', () => {
+        const store = useCartStore();
+        store.setOrderType('scheduled');
+        store.setScheduledDate('2024-12-25');
+        expect(store.isSchedulingComplete).toBe(false);
+      });
+
+      it('returns true for scheduled pickup orders with date and time', () => {
+        const store = useCartStore();
+        store.setOrderType('scheduled');
+        store.setScheduledDate('2024-12-25');
+        store.setScheduledTime('14:30');
+        expect(store.isSchedulingComplete).toBe(true);
+      });
+
+      it('returns false for delivery orders without address', () => {
+        const store = useCartStore();
+        store.setOrderType('scheduled');
+        store.setFulfillmentType('delivery');
+        store.setScheduledDate('2024-12-25');
+        store.setScheduledTime('14:30');
+        expect(store.isSchedulingComplete).toBe(false);
+      });
+
+      it('returns true for delivery orders with date, time, and address', () => {
+        const store = useCartStore();
+        store.setOrderType('scheduled');
+        store.setFulfillmentType('delivery');
+        store.setScheduledDate('2024-12-25');
+        store.setScheduledTime('14:30');
+        store.setDeliveryAddress({ street: '123 Main St', city: 'Paris', postalCode: '75001' });
+        expect(store.isSchedulingComplete).toBe(true);
+      });
+    });
+
+    describe('formattedScheduledDateTime', () => {
+      it('returns null when no date set', () => {
+        const store = useCartStore();
+        expect(store.formattedScheduledDateTime).toBeNull();
+      });
+
+      it('returns null when date set but no time', () => {
+        const store = useCartStore();
+        store.setScheduledDate('2024-12-25');
+        expect(store.formattedScheduledDateTime).toBeNull();
+      });
+
+      it('returns formatted date and time in French', () => {
+        const store = useCartStore();
+        store.setScheduledDate('2024-12-25');
+        store.setScheduledTime('14:30');
+        const formatted = store.formattedScheduledDateTime;
+        expect(formatted).not.toBeNull();
+        // Should contain day, month, and time
+        expect(formatted).toContain('25');
+        expect(formatted).toContain('14');
+        expect(formatted).toContain('30');
+      });
+    });
   });
 });

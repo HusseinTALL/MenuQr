@@ -44,8 +44,12 @@ export const customerRegisterValidator = [
   phoneValidator,
   restaurantIdValidator,
   body('password')
-    .isLength({ min: 6 })
-    .withMessage('Le mot de passe doit contenir au moins 6 caractères')
+    .isLength({ min: 8 })
+    .withMessage('Le mot de passe doit contenir au moins 8 caractères')
+    .matches(/[a-z]/)
+    .withMessage('Le mot de passe doit contenir au moins une minuscule')
+    .matches(/[A-Z]/)
+    .withMessage('Le mot de passe doit contenir au moins une majuscule')
     .matches(/\d/)
     .withMessage('Le mot de passe doit contenir au moins un chiffre'),
   body('name')
@@ -119,8 +123,12 @@ export const customerChangePasswordValidator = [
     .notEmpty()
     .withMessage('Le mot de passe actuel est requis'),
   body('newPassword')
-    .isLength({ min: 6 })
-    .withMessage('Le nouveau mot de passe doit contenir au moins 6 caractères')
+    .isLength({ min: 8 })
+    .withMessage('Le nouveau mot de passe doit contenir au moins 8 caractères')
+    .matches(/[a-z]/)
+    .withMessage('Le nouveau mot de passe doit contenir au moins une minuscule')
+    .matches(/[A-Z]/)
+    .withMessage('Le nouveau mot de passe doit contenir au moins une majuscule')
     .matches(/\d/)
     .withMessage('Le nouveau mot de passe doit contenir au moins un chiffre'),
 ];
@@ -142,8 +150,12 @@ export const customerResetPasswordValidator = [
     .isLength({ min: 6, max: 6 })
     .withMessage('Le code OTP doit contenir 6 chiffres'),
   body('newPassword')
-    .isLength({ min: 6 })
-    .withMessage('Le nouveau mot de passe doit contenir au moins 6 caractères')
+    .isLength({ min: 8 })
+    .withMessage('Le nouveau mot de passe doit contenir au moins 8 caractères')
+    .matches(/[a-z]/)
+    .withMessage('Le nouveau mot de passe doit contenir au moins une minuscule')
+    .matches(/[A-Z]/)
+    .withMessage('Le nouveau mot de passe doit contenir au moins une majuscule')
     .matches(/\d/)
     .withMessage('Le nouveau mot de passe doit contenir au moins un chiffre'),
 ];

@@ -103,8 +103,12 @@ export const updateRestaurant = asyncHandler(
       throw new ApiError(404, 'Restaurant not found');
     }
 
-    // Check ownership
-    if (restaurant.ownerId.toString() !== user._id.toString() && user.role !== 'admin') {
+    // Check authorization - must be owner, super admin, or admin assigned to THIS restaurant
+    const isOwner = restaurant.ownerId.toString() === user._id.toString();
+    const isSuperAdmin = user.role === 'superadmin';
+    const isAssignedAdmin = user.role === 'admin' && user.restaurantId?.toString() === restaurant._id.toString();
+
+    if (!isOwner && !isSuperAdmin && !isAssignedAdmin) {
       throw new ApiError(403, 'Not authorized to update this restaurant');
     }
 
@@ -133,8 +137,12 @@ export const deleteRestaurant = asyncHandler(
       throw new ApiError(404, 'Restaurant not found');
     }
 
-    // Check ownership
-    if (restaurant.ownerId.toString() !== user._id.toString() && user.role !== 'admin') {
+    // Check authorization - only owner or super admin can delete
+    // Admins assigned to restaurant cannot delete (too destructive)
+    const isOwner = restaurant.ownerId.toString() === user._id.toString();
+    const isSuperAdmin = user.role === 'superadmin';
+
+    if (!isOwner && !isSuperAdmin) {
       throw new ApiError(403, 'Not authorized to delete this restaurant');
     }
 

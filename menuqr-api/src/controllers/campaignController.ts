@@ -148,8 +148,8 @@ export const updateCampaign = asyncHandler(async (req: Request, res: Response): 
     throw new ApiError(400, 'Cannot update campaign that is already being sent or completed');
   }
 
-  if (name) campaign.name = name;
-  if (message) campaign.message = message;
+  if (name) {campaign.name = name;}
+  if (message) {campaign.message = message;}
   if (scheduledAt !== undefined) {
     campaign.scheduledAt = scheduledAt ? new Date(scheduledAt) : undefined;
   }

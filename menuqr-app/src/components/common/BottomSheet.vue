@@ -1,166 +1,241 @@
 <script setup lang="ts">
-import { ref, watch, onMounted, onUnmounted } from 'vue';
-import BaseIcon from './BaseIcon.vue';
+import { ref, watch, computed } from 'vue';
+import { Drawer } from 'ant-design-vue';
+import { CloseOutlined } from '@ant-design/icons-vue';
 
 /**
- * BottomSheet component
- * Modal that slides up from the bottom (mobile-friendly)
+ * BottomSheet - Wrapper around Ant Design Drawer
+ * Mobile-friendly bottom sheet that slides up
  */
 const props = defineProps<{
   open: boolean;
   title?: string;
-  snapPoints?: number[]; // Percentage heights
+  height?: number | string;
   closeOnBackdrop?: boolean;
+  showDragHandle?: boolean;
 }>();
 
 const emit = defineEmits<{
   close: [];
 }>();
 
+// Drag state
 const isDragging = ref(false);
 const startY = ref(0);
 const currentY = ref(0);
 
-// Close on Escape key
-const handleKeydown = (e: KeyboardEvent) => {
-  if (e.key === 'Escape' && props.open) {
-    emit('close');
+// Compute drawer height
+const drawerHeight = computed(() => {
+  if (props.height) {
+    return typeof props.height === 'number' ? props.height : props.height;
+  }
+  return 'auto';
+});
+
+// Handle close
+const handleClose = () => {
+  emit('close');
+};
+
+// Touch/drag handlers for swipe-to-close
+const handleTouchStart = (e: TouchEvent) => {
+  const touch = e.touches[0];
+  if (!touch) {return;}
+  isDragging.value = true;
+  startY.value = touch.clientY;
+  currentY.value = 0;
+};
+
+const handleTouchMove = (e: TouchEvent) => {
+  if (!isDragging.value) {return;}
+  const touch = e.touches[0];
+  if (!touch) {return;}
+
+  const delta = touch.clientY - startY.value;
+  // Only allow dragging down
+  if (delta > 0) {
+    currentY.value = delta;
+    e.preventDefault();
   }
 };
 
-// Handle backdrop click
-const handleBackdropClick = () => {
-  if (props.closeOnBackdrop !== false) {
+const handleTouchEnd = () => {
+  isDragging.value = false;
+  // Close if dragged down more than 100px
+  if (currentY.value > 100) {
     emit('close');
   }
+  currentY.value = 0;
 };
 
 // Prevent body scroll when open
 watch(
   () => props.open,
-  (open) => {
-    if (open) {
+  (isOpen) => {
+    if (isOpen) {
       document.body.style.overflow = 'hidden';
     } else {
       document.body.style.overflow = '';
     }
   }
 );
-
-onMounted(() => {
-  window.addEventListener('keydown', handleKeydown);
-});
-
-onUnmounted(() => {
-  window.removeEventListener('keydown', handleKeydown);
-  document.body.style.overflow = '';
-});
-
-// Touch/drag handlers
-const handleTouchStart = (e: TouchEvent) => {
-  const touch = e.touches[0];
-  if (!touch) {
-    return;
-  }
-  isDragging.value = true;
-  startY.value = touch.clientY;
-};
-
-const handleTouchMove = (e: TouchEvent) => {
-  if (!isDragging.value) {
-    return;
-  }
-  const touch = e.touches[0];
-  if (!touch) {
-    return;
-  }
-  currentY.value = touch.clientY - startY.value;
-  if (currentY.value < 0) {
-    currentY.value = 0;
-  } // Prevent dragging up
-};
-
-const handleTouchEnd = () => {
-  isDragging.value = false;
-  if (currentY.value > 100) {
-    // Close if dragged down more than 100px
-    emit('close');
-  }
-  currentY.value = 0;
-};
 </script>
 
 <template>
-  <Transition name="fade">
+  <Drawer
+    :open="open"
+    :title="title"
+    placement="bottom"
+    :height="drawerHeight"
+    :closable="!!title"
+    :mask-closable="closeOnBackdrop !== false"
+    :destroy-on-close="true"
+    class="bottom-sheet"
+    @close="handleClose"
+  >
+    <!-- Custom close icon -->
+    <template #closeIcon>
+      <CloseOutlined />
+    </template>
+
+    <!-- Extra header content (drag handle) -->
+    <template #extra>
+      <slot name="extra" />
+    </template>
+
+    <!-- Drag handle when no title -->
     <div
-      v-if="open"
-      class="fixed inset-0 z-50 flex items-end justify-center"
-      @click.self="handleBackdropClick"
+      v-if="showDragHandle !== false"
+      class="bottom-sheet__drag-handle"
+      @touchstart.passive="handleTouchStart"
+      @touchmove="handleTouchMove"
+      @touchend="handleTouchEnd"
     >
-      <!-- Backdrop -->
-      <div class="absolute inset-0 bg-black bg-opacity-50 backdrop-blur-sm" />
-
-      <!-- Sheet -->
-      <Transition name="slide-up">
-        <div
-          v-if="open"
-          class="relative w-full max-w-2xl bg-white rounded-t-2xl shadow-2xl max-h-[90vh] flex flex-col"
-          :style="{ transform: `translateY(${currentY}px)` }"
-        >
-          <!-- Drag handle -->
-          <div
-            class="flex justify-center pt-3 pb-2 cursor-grab active:cursor-grabbing"
-            @touchstart="handleTouchStart"
-            @touchmove="handleTouchMove"
-            @touchend="handleTouchEnd"
-          >
-            <div class="w-12 h-1.5 bg-gray-300 rounded-full" />
-          </div>
-
-          <!-- Header -->
-          <div v-if="title" class="flex items-center justify-between px-6 py-3 border-b">
-            <h2 class="text-lg font-semibold text-gray-900">{{ title }}</h2>
-            <button
-              class="tap-target p-2 text-gray-500 hover:text-gray-700 rounded-lg transition-colors"
-              @click="emit('close')"
-            >
-              <BaseIcon name="close" size="md" />
-            </button>
-          </div>
-
-          <!-- Content -->
-          <div class="flex-1 overflow-y-auto px-6 py-4">
-            <slot />
-          </div>
-
-          <!-- Footer slot -->
-          <div v-if="$slots.footer" class="border-t px-6 py-4">
-            <slot name="footer" />
-          </div>
-        </div>
-      </Transition>
+      <div class="bottom-sheet__drag-bar" />
     </div>
-  </Transition>
+
+    <!-- Content wrapper with drag transform -->
+    <div
+      class="bottom-sheet__content"
+      :style="{
+        transform: isDragging ? `translateY(${currentY}px)` : 'translateY(0)',
+        transition: isDragging ? 'none' : 'transform 0.2s ease-out',
+      }"
+    >
+      <slot />
+    </div>
+
+    <!-- Footer slot -->
+    <template v-if="$slots.footer" #footer>
+      <div class="bottom-sheet__footer">
+        <slot name="footer" />
+      </div>
+    </template>
+  </Drawer>
 </template>
 
+<style>
+/* Global drawer styles (unscoped for Ant Design overrides) */
+.bottom-sheet .ant-drawer-content-wrapper {
+  border-radius: 20px 20px 0 0 !important;
+  overflow: hidden;
+}
+
+.bottom-sheet .ant-drawer-content {
+  border-radius: 20px 20px 0 0;
+}
+
+.bottom-sheet .ant-drawer-header {
+  padding: 12px 16px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.bottom-sheet .ant-drawer-header-title {
+  flex-direction: row-reverse;
+}
+
+.bottom-sheet .ant-drawer-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.bottom-sheet .ant-drawer-close {
+  padding: 8px;
+  margin-right: 0;
+  color: #64748b;
+}
+
+.bottom-sheet .ant-drawer-close:hover {
+  color: #1e293b;
+}
+
+.bottom-sheet .ant-drawer-body {
+  padding: 0;
+  overflow-y: auto;
+}
+
+.bottom-sheet .ant-drawer-footer {
+  padding: 12px 16px;
+  padding-bottom: calc(12px + env(safe-area-inset-bottom));
+  border-top: 1px solid #f1f5f9;
+}
+
+/* Animation */
+.bottom-sheet .ant-drawer-content-wrapper {
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+/* Backdrop blur */
+.bottom-sheet .ant-drawer-mask {
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+/* Max height */
+.bottom-sheet .ant-drawer-content-wrapper {
+  max-height: 90vh !important;
+}
+</style>
+
 <style scoped>
-.fade-enter-active,
-.fade-leave-active {
-  transition: opacity 0.3s ease;
+.bottom-sheet__drag-handle {
+  display: flex;
+  justify-content: center;
+  padding: 12px 0 8px;
+  cursor: grab;
+  touch-action: none;
 }
 
-.fade-enter-from,
-.fade-leave-to {
-  opacity: 0;
+.bottom-sheet__drag-handle:active {
+  cursor: grabbing;
 }
 
-.slide-up-enter-active,
-.slide-up-leave-active {
-  transition: transform 0.3s ease;
+.bottom-sheet__drag-bar {
+  width: 40px;
+  height: 4px;
+  background: #d1d5db;
+  border-radius: 2px;
+  transition: background 0.2s ease;
 }
 
-.slide-up-enter-from,
-.slide-up-leave-to {
-  transform: translateY(100%);
+.bottom-sheet__drag-handle:hover .bottom-sheet__drag-bar {
+  background: #9ca3af;
+}
+
+.bottom-sheet__content {
+  padding: 0 16px 16px;
+  will-change: transform;
+}
+
+.bottom-sheet__footer {
+  display: flex;
+  gap: 12px;
+}
+
+/* When no title, add top padding */
+:deep(.ant-drawer-body:first-child) .bottom-sheet__content {
+  padding-top: 0;
 }
 </style>

@@ -253,11 +253,11 @@ export async function getReviewsWithPagination(
   // Build query
   const query: Record<string, unknown> = {};
 
-  if (filters.restaurantId) query.restaurantId = filters.restaurantId;
-  if (filters.dishId) query.dishId = filters.dishId;
-  if (filters.customerId) query.customerId = filters.customerId;
-  if (filters.status) query.status = filters.status;
-  if (filters.rating) query.rating = filters.rating;
+  if (filters.restaurantId) {query.restaurantId = filters.restaurantId;}
+  if (filters.dishId) {query.dishId = filters.dishId;}
+  if (filters.customerId) {query.customerId = filters.customerId;}
+  if (filters.status) {query.status = filters.status;}
+  if (filters.rating) {query.rating = filters.rating;}
   if (filters.hasResponse !== undefined) {
     query.response = filters.hasResponse ? { $exists: true } : { $exists: false };
   }

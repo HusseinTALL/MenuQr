@@ -15,6 +15,7 @@ import {
 } from '../controllers/customerAuthController.js';
 import { authenticateCustomer } from '../middleware/customerAuth.js';
 import { validate } from '../middleware/validate.js';
+import { requireCaptcha } from '../middleware/captcha.js';
 import {
   sendOtpValidator,
   verifyOtpValidator,
@@ -30,9 +31,11 @@ import {
 const router = Router();
 
 // Public routes (no auth required)
-router.post('/send-otp', validate(sendOtpValidator), sendOtp);
+// CAPTCHA required for OTP send (prevents SMS bombing)
+router.post('/send-otp', requireCaptcha, validate(sendOtpValidator), sendOtp);
 router.post('/verify-otp', validate(verifyOtpValidator), verifyOtp);
-router.post('/register', validate(customerRegisterValidator), register);
+// CAPTCHA required for registration
+router.post('/register', requireCaptcha, validate(customerRegisterValidator), register);
 router.post('/login', validate(customerLoginValidator), login);
 router.post('/refresh-token', validate(customerRefreshTokenValidator), refreshToken);
 router.post('/forgot-password', validate(customerForgotPasswordValidator), forgotPassword);

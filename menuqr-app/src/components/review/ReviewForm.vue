@@ -37,7 +37,7 @@ const maxCharacters = 1000;
 const handleFileSelect = async (event: Event) => {
   const target = event.target as HTMLInputElement;
   const files = target.files;
-  if (!files || files.length === 0) return;
+  if (!files || files.length === 0) {return;}
 
   if (images.value.length >= 3) {
     error.value = 'Maximum 3 photos autorisees';
@@ -45,7 +45,7 @@ const handleFileSelect = async (event: Event) => {
   }
 
   const file = files[0];
-  if (!file) return;
+  if (!file) {return;}
 
   if (!file.type.startsWith('image/')) {
     error.value = 'Seules les images sont autorisees';
@@ -78,7 +78,7 @@ const handleFileSelect = async (event: Event) => {
 
 const removeImage = async (index: number) => {
   const image = images.value[index];
-  if (!image) return;
+  if (!image) {return;}
   try {
     await api.deleteImage(image.url);
   } catch {
@@ -88,7 +88,7 @@ const removeImage = async (index: number) => {
 };
 
 const handleSubmit = async () => {
-  if (!canSubmit.value) return;
+  if (!canSubmit.value) {return;}
 
   submitting.value = true;
   error.value = '';
@@ -99,11 +99,11 @@ const handleSubmit = async () => {
       rating: rating.value,
     };
 
-    if (props.dishId) data.dishId = props.dishId;
-    if (props.orderId) data.orderId = props.orderId;
-    if (title.value.trim()) data.title = title.value.trim();
-    if (comment.value.trim()) data.comment = comment.value.trim();
-    if (images.value.length > 0) data.images = images.value;
+    if (props.dishId) {data.dishId = props.dishId;}
+    if (props.orderId) {data.orderId = props.orderId;}
+    if (title.value.trim()) {data.title = title.value.trim();}
+    if (comment.value.trim()) {data.comment = comment.value.trim();}
+    if (images.value.length > 0) {data.images = images.value;}
 
     await api.createReview(data);
     emit('success');

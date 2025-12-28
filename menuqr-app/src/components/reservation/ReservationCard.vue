@@ -42,7 +42,7 @@ const hasPreOrder = computed(() => {
 });
 
 const preOrderTotal = computed(() => {
-  if (!props.reservation.preOrder) return 0;
+  if (!props.reservation.preOrder) {return 0;}
   return props.reservation.preOrder.subtotal;
 });
 </script>

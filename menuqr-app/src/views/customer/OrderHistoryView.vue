@@ -75,7 +75,7 @@ onMounted(async () => {
         orders.value = (data as { orders: Order[] }).orders;
       }
     }
-  } catch (err) {
+  } catch {
     error.value = 'Impossible de charger vos commandes';
   } finally {
     isLoading.value = false;

@@ -7,6 +7,14 @@ declare global {
       user?: IUser;
       customer?: ICustomer;
       restaurantId?: string;
+      // Impersonation context
+      isImpersonating?: boolean;
+      originalUser?: {
+        userId: string;
+        email: string;
+        role: string;
+      };
+      impersonatedRestaurantId?: string;
     }
   }
 }

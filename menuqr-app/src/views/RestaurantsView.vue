@@ -117,7 +117,7 @@ const handleScanResult = (result: string) => {
   showScanner.value = false;
 
   // Try to extract slug from URL
-  const urlMatch = result.match(/\/r\/([^\/\?]+)/);
+  const urlMatch = result.match(/\/r\/([^/?]+)/);
   if (urlMatch && urlMatch[1]) {
     router.push(`/r/${urlMatch[1]}`);
   } else {

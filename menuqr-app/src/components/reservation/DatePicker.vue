@@ -44,7 +44,7 @@ const calendarDays = computed(() => {
 
   // Get the day of week for first day (0 = Sunday, we want 0 = Monday)
   let startDayOfWeek = firstDay.getDay() - 1;
-  if (startDayOfWeek < 0) startDayOfWeek = 6;
+  if (startDayOfWeek < 0) {startDayOfWeek = 6;}
 
   const days: Array<{
     date: Date | null;
@@ -136,7 +136,7 @@ function nextMonth() {
 }
 
 function selectDate(day: (typeof calendarDays.value)[0]) {
-  if (!day.isCurrentMonth || day.isPast || !day.isAvailable) return;
+  if (!day.isCurrentMonth || day.isPast || !day.isAvailable) {return;}
   emit('update:modelValue', day.dateString);
 }
 

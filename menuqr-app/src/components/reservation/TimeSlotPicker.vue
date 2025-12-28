@@ -30,15 +30,16 @@ const groupedSlots = computed(() => {
   ];
 
   props.slots.forEach((slot) => {
-    const hour = parseInt(slot.time.split(':')[0], 10);
+    const hourStr = slot.time.split(':')[0] ?? '12';
+    const hour = parseInt(hourStr, 10);
     if (hour >= 6 && hour < 11) {
-      groups[0].slots.push(slot);
+      groups[0]?.slots.push(slot);
     } else if (hour >= 11 && hour < 14) {
-      groups[1].slots.push(slot);
+      groups[1]?.slots.push(slot);
     } else if (hour >= 14 && hour < 18) {
-      groups[2].slots.push(slot);
+      groups[2]?.slots.push(slot);
     } else {
-      groups[3].slots.push(slot);
+      groups[3]?.slots.push(slot);
     }
   });
 
@@ -50,7 +51,7 @@ const hasAvailableSlots = computed(() => {
 });
 
 function selectSlot(slot: TimeSlot) {
-  if (!slot.available) return;
+  if (!slot.available) {return;}
   emit('update:modelValue', slot.time);
 }
 </script>

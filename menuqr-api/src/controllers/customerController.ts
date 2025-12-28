@@ -409,10 +409,10 @@ export const reorder = asyncHandler(async (req: Request, res: Response): Promise
 
   for (const item of originalOrder.items) {
     const dish = availableDishes.find((d) => d._id.toString() === item.dishId.toString());
-    if (!dish) continue;
+    if (!dish) {continue;}
 
     // Use current prices
-    let itemPrice = item.variant ? item.variant.price : dish.price;
+    const itemPrice = item.variant ? item.variant.price : dish.price;
     let optionsTotal = 0;
 
     if (item.options && item.options.length > 0) {

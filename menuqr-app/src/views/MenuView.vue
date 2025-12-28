@@ -14,7 +14,6 @@ import CategoryTabs from '@/components/menu/CategoryTabs.vue';
 import SearchBar from '@/components/menu/SearchBar.vue';
 import MenuFilters from '@/components/menu/MenuFilters.vue';
 import DishCard from '@/components/menu/DishCard.vue';
-import DishCardSkeleton from '@/components/menu/DishCardSkeleton.vue';
 import DishModal from '@/components/menu/DishModal.vue';
 import CartFab from '@/components/cart/CartFab.vue';
 import CustomerAuthModal from '@/components/customer/CustomerAuthModal.vue';
@@ -211,7 +210,7 @@ const handleClearAll = () => {
       </div>
       <div class="px-4 py-4">
         <div class="grid-responsive-cards">
-          <DishCardSkeleton v-for="n in 6" :key="n" />
+          <DishCard v-for="n in 6" :key="n" :dish="{} as any" loading />
         </div>
       </div>
     </template>

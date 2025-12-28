@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 import { Campaign } from '../models/index.js';
 import { smsService } from './smsService.js';
+import { logger } from '../utils/logger.js';
 
 /**
  * Send campaign messages to all recipients
@@ -15,7 +16,7 @@ export async function sendCampaignMessages(
     throw new Error(`Campaign ${campaignId} not found`);
   }
 
-  console.log(`[Campaign ${campaignId}] Starting to send ${campaign.recipients.length} messages`);
+  logger.info(`[Campaign] Starting to send messages`, { campaignId: campaignId.toString(), recipientCount: campaign.recipients.length });
 
   // Prefix message with restaurant name
   const fullMessage = `[${restaurantName}] ${campaign.message}`;
@@ -62,7 +63,7 @@ export async function sendCampaignMessages(
   campaign.completedAt = new Date();
   await campaign.save();
 
-  console.log(`[Campaign ${campaignId}] Completed. Success: ${campaign.stats.success}, Failed: ${campaign.stats.failed}`);
+  logger.info('[Campaign] Completed', { campaignId: campaignId.toString(), success: campaign.stats.success, failed: campaign.stats.failed });
 }
 
 /**
@@ -80,7 +81,7 @@ export async function processScheduledCampaigns(): Promise<void> {
   for (const campaign of dueCampaigns) {
     const restaurant = campaign.restaurantId as unknown as { name: string };
 
-    console.log(`[Scheduler] Processing due campaign: ${campaign._id}`);
+    logger.info('[Scheduler] Processing due campaign', { campaignId: campaign._id.toString() });
 
     campaign.status = 'sending';
     campaign.startedAt = new Date();

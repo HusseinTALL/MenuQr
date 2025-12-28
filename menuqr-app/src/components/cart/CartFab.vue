@@ -1,12 +1,16 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { useRouter } from 'vue-router';
+import { Badge } from 'ant-design-vue';
+import { ShoppingCartOutlined, RightOutlined } from '@ant-design/icons-vue';
 import { useCart } from '@/composables/useCart';
 import { useI18n } from 'vue-i18n';
 import { useCurrency } from '@/composables/useCurrency';
-import BaseIcon from '@/components/common/BaseIcon.vue';
-import BaseBadge from '@/components/common/BaseBadge.vue';
 
+/**
+ * CartFab - Floating action button for cart navigation
+ * Shows cart item count and subtotal, fixed at bottom of screen
+ */
 const router = useRouter();
 const { itemCount, subtotal } = useCart();
 const { t } = useI18n();
@@ -21,76 +25,134 @@ const goToCart = () => {
 
 <template>
   <Transition name="slide-up">
-    <button
-      v-if="showFab"
-      class="cart-fab fixed z-40 flex items-center justify-between gap-3 bg-primary-600 text-white rounded-2xl shadow-2xl hover:bg-primary-700 active:scale-[0.97] transition-all duration-300 tap-target"
-      @click="goToCart"
-    >
+    <button v-if="showFab" class="cart-fab" @click="goToCart">
       <!-- Left: Cart Icon + Badge -->
-      <div class="relative flex-shrink-0">
-        <BaseIcon name="cart" size="lg" class="drop-shadow-md" />
-        <BaseBadge
-          variant="danger"
-          size="sm"
-          rounded
-          class="absolute -top-2 -right-2 min-w-5 h-5 text-xs font-bold flex items-center justify-center shadow-md"
-        >
-          {{ itemCount }}
-        </BaseBadge>
+      <div class="cart-fab__icon">
+        <Badge :count="itemCount" :offset="[-2, 2]" color="#ef4444">
+          <ShoppingCartOutlined class="cart-fab__cart-icon" />
+        </Badge>
       </div>
 
-      <!-- Center/Right: Text Info -->
-      <div class="flex flex-col items-start flex-1 min-w-0">
-        <span class="text-xs opacity-90 truncate">
+      <!-- Center: Text Info -->
+      <div class="cart-fab__info">
+        <span class="cart-fab__count">
           {{ itemCount }} {{ itemCount > 1 ? t('cart.items') : t('cart.item') }}
         </span>
-        <span class="text-base font-bold truncate">{{ formatPrice(subtotal) }}</span>
+        <span class="cart-fab__total">{{ formatPrice(subtotal) }}</span>
       </div>
 
       <!-- Right: Arrow Icon -->
-      <div class="flex-shrink-0 w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
-        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2.5"
-            d="M9 5l7 7-7 7"
-          />
-        </svg>
+      <div class="cart-fab__arrow">
+        <RightOutlined />
       </div>
     </button>
   </Transition>
 </template>
 
 <style scoped>
-/* Base FAB positioning with safe area support */
+/* Base FAB */
 .cart-fab {
+  position: fixed;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
   bottom: 1.5rem;
   left: 50%;
   transform: translateX(-50%);
   width: calc(100% - 2rem);
   max-width: 24rem;
-  padding: 0.875rem 1rem;
+  padding: 14px 16px;
+  background: linear-gradient(135deg, #14b8a6 0%, #0d9488 100%);
+  color: white;
+  border: none;
+  border-radius: 16px;
+  cursor: pointer;
+  box-shadow: 0 10px 40px -10px rgba(20, 184, 166, 0.5),
+              0 4px 12px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
 }
 
-/* Safe area support for devices with bottom bars */
+.cart-fab:hover {
+  background: linear-gradient(135deg, #0d9488 0%, #0f766e 100%);
+}
+
+.cart-fab:active {
+  transform: translateX(-50%) scale(0.97);
+}
+
+/* Safe area support */
 @supports (padding: max(0px)) {
   .cart-fab {
     bottom: max(1.5rem, calc(1rem + env(safe-area-inset-bottom)));
   }
 }
 
-/* Larger screens - wider FAB */
+/* Icon */
+.cart-fab__icon {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.cart-fab__cart-icon {
+  font-size: 24px;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+}
+
+.cart-fab__icon :deep(.ant-badge-count) {
+  box-shadow: 0 2px 6px rgba(239, 68, 68, 0.4);
+}
+
+/* Info */
+.cart-fab__info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  flex: 1;
+  min-width: 0;
+}
+
+.cart-fab__count {
+  font-size: 12px;
+  opacity: 0.9;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cart-fab__total {
+  font-size: 16px;
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Arrow */
+.cart-fab__arrow {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+  font-size: 14px;
+}
+
+/* Larger screens */
 @media (min-width: 640px) {
   .cart-fab {
     width: auto;
     min-width: 16rem;
     max-width: 20rem;
-    padding: 1rem 1.25rem;
+    padding: 16px 20px;
   }
 }
 
-/* Landscape mobile - compact FAB on the right */
+/* Landscape mobile */
 @media (orientation: landscape) and (max-height: 500px) {
   .cart-fab {
     left: auto;
@@ -100,7 +162,11 @@ const goToCart = () => {
     width: auto;
     min-width: 12rem;
     max-width: 14rem;
-    padding: 0.75rem 1rem;
+    padding: 12px 16px;
+  }
+
+  .cart-fab:active {
+    transform: scale(0.97);
   }
 
   @supports (padding: max(0px)) {
@@ -111,21 +177,21 @@ const goToCart = () => {
   }
 }
 
-/* Desktop - hover effect */
+/* Desktop */
 @media (min-width: 1024px) {
   .cart-fab {
     right: 2rem;
     left: auto;
     transform: none;
-    transition:
-      transform 0.2s ease-out,
-      box-shadow 0.2s ease-out,
-      background-color 0.15s ease;
   }
 
   .cart-fab:hover {
     transform: translateY(-2px);
-    box-shadow: 0 20px 40px -10px rgba(22, 163, 74, 0.4);
+    box-shadow: 0 20px 50px -10px rgba(20, 184, 166, 0.5);
+  }
+
+  .cart-fab:active {
+    transform: translateY(0) scale(0.98);
   }
 }
 
@@ -141,7 +207,6 @@ const goToCart = () => {
   opacity: 0;
 }
 
-/* Fix transform for landscape/desktop when animating */
 @media (orientation: landscape) and (max-height: 500px), (min-width: 1024px) {
   .slide-up-enter-from,
   .slide-up-leave-to {

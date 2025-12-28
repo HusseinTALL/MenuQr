@@ -4,6 +4,7 @@
  */
 
 import config from '../config/env.js';
+import logger from '../utils/logger.js';
 
 export interface SMSResult {
   success: boolean;
@@ -17,16 +18,12 @@ export interface SMSProvider {
 
 /**
  * Mock SMS Provider for development
- * Logs SMS to console instead of sending
+ * Logs SMS to console only in development mode
  */
 class MockSMSProvider implements SMSProvider {
   async sendSMS(phone: string, message: string): Promise<SMSResult> {
-    console.log('\n========================================');
-    console.log('📱 MOCK SMS SERVICE');
-    console.log('========================================');
-    console.log(`📞 To: ${phone}`);
-    console.log(`📝 Message: ${message}`);
-    console.log('========================================\n');
+    // Only log in development mode via logger utility
+    logger.sms('Mock SMS sent', { phone, content: message });
 
     return {
       success: true,
@@ -69,17 +66,20 @@ class TwilioSMSProvider implements SMSProvider {
       const data = await response.json() as { message?: string; sid?: string };
 
       if (!response.ok) {
+        logger.error('Twilio SMS failed', { error: data.message });
         return {
           success: false,
           error: data.message || 'Failed to send SMS via Twilio',
         };
       }
 
+      logger.info('Twilio SMS sent successfully', { messageId: data.sid });
       return {
         success: true,
         messageId: data.sid,
       };
     } catch (error) {
+      logger.error('Twilio SMS error', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error',
@@ -91,12 +91,6 @@ class TwilioSMSProvider implements SMSProvider {
 /**
  * Orange SMS API Provider (for African markets)
  * Uses OAuth2 authentication
- *
- * To get credentials:
- * 1. Go to https://developer.orange.com/
- * 2. Create an account and app
- * 3. Subscribe to "SMS Burkina Faso" (or your country) API
- * 4. Get your Client ID and Client Secret
  */
 class OrangeSMSProvider implements SMSProvider {
   private clientId: string;
@@ -144,13 +138,12 @@ class OrangeSMSProvider implements SMSProvider {
       }
 
       this.accessToken = data.access_token;
-      // Token expires in seconds, convert to timestamp
       this.tokenExpiresAt = Date.now() + (data.expires_in || 3600) * 1000;
 
-      console.log('🔑 Orange SMS: Access token obtained');
+      logger.info('Orange SMS: Access token obtained');
       return this.accessToken;
     } catch (error) {
-      console.error('❌ Orange SMS: Failed to get access token:', error);
+      logger.error('Orange SMS: Failed to get access token', error);
       throw error;
     }
   }
@@ -160,16 +153,12 @@ class OrangeSMSProvider implements SMSProvider {
    * Must be in format: tel:+226XXXXXXXX
    */
   private formatPhoneNumber(phone: string): string {
-    // Remove spaces and dashes
     let cleaned = phone.replace(/[\s-]/g, '');
 
-    // If doesn't start with +, assume it needs country code
     if (!cleaned.startsWith('+')) {
-      // If starts with 00, replace with +
       if (cleaned.startsWith('00')) {
         cleaned = '+' + cleaned.slice(2);
       } else if (cleaned.startsWith('0')) {
-        // Local number, add Burkina Faso code
         cleaned = '+226' + cleaned.slice(1);
       } else {
         cleaned = '+' + cleaned;
@@ -184,11 +173,10 @@ class OrangeSMSProvider implements SMSProvider {
       const accessToken = await this.getAccessToken();
       const formattedPhone = this.formatPhoneNumber(phone);
 
-      // URL encode the sender address for the endpoint
       const encodedSender = encodeURIComponent(this.senderId);
       const url = `https://api.orange.com/smsmessaging/v1/outbound/${encodedSender}/requests`;
 
-      console.log(`📤 Orange SMS: Sending to ${formattedPhone}`);
+      logger.debug('Orange SMS: Sending message', { to: formattedPhone });
 
       const response = await fetch(url, {
         method: 'POST',
@@ -228,21 +216,21 @@ class OrangeSMSProvider implements SMSProvider {
         const errorMsg = data.requestError?.serviceException?.text
           || data.requestError?.policyException?.text
           || 'Failed to send SMS via Orange';
-        console.error('❌ Orange SMS Error:', errorMsg);
+        logger.error('Orange SMS Error', { error: errorMsg });
         return {
           success: false,
           error: errorMsg,
         };
       }
 
-      console.log('✅ Orange SMS: Message sent successfully');
+      logger.info('Orange SMS: Message sent successfully');
       return {
         success: true,
         messageId: data.outboundSMSMessageRequest?.resourceURL || `orange-${Date.now()}`,
       };
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : 'Unknown error';
-      console.error('❌ Orange SMS Error:', errorMsg);
+      logger.error('Orange SMS Error', { error: errorMsg });
       return {
         success: false,
         error: errorMsg,
@@ -266,14 +254,14 @@ class SMSService {
 
     switch (providerType) {
       case 'twilio':
-        console.log('📱 SMS Provider: Twilio');
+        logger.info('SMS Provider initialized: Twilio');
         return new TwilioSMSProvider();
       case 'orange':
-        console.log('📱 SMS Provider: Orange');
+        logger.info('SMS Provider initialized: Orange');
         return new OrangeSMSProvider();
       case 'mock':
       default:
-        console.log('📱 SMS Provider: Mock (development mode)');
+        logger.info('SMS Provider initialized: Mock (development mode)');
         return new MockSMSProvider();
     }
   }

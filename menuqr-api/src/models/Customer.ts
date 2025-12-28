@@ -21,6 +21,11 @@ export interface ICustomer extends Document {
   password: string;
   isPhoneVerified: boolean;
 
+  // Account security
+  failedLoginAttempts: number;
+  lockUntil?: Date;
+  isLocked: boolean;
+
   // Preferences
   defaultAddress?: IAddress;
   savedAddresses: IAddress[];
@@ -127,12 +132,30 @@ const customerSchema = new Schema<ICustomer>(
     password: {
       type: String,
       required: [true, 'Password is required'],
-      minlength: [6, 'Password must be at least 6 characters'],
+      minlength: [8, 'Password must be at least 8 characters'],
+      validate: {
+        validator: function (password: string) {
+          // At least 1 uppercase, 1 lowercase, 1 number
+          const hasUppercase = /[A-Z]/.test(password);
+          const hasLowercase = /[a-z]/.test(password);
+          const hasNumber = /\d/.test(password);
+          return hasUppercase && hasLowercase && hasNumber;
+        },
+        message:
+          'Password must contain at least one uppercase letter, one lowercase letter, and one number',
+      },
       select: false,
     },
     isPhoneVerified: {
       type: Boolean,
       default: false,
+    },
+    failedLoginAttempts: {
+      type: Number,
+      default: 0,
+    },
+    lockUntil: {
+      type: Date,
     },
     defaultAddress: {
       type: addressSchema,
@@ -242,9 +265,15 @@ customerSchema.methods.comparePassword = async function (
 
 // Virtual for full address string
 customerSchema.virtual('fullDefaultAddress').get(function () {
-  if (!this.defaultAddress) return null;
+  if (!this.defaultAddress) {return null;}
   const { street, city, postalCode, country } = this.defaultAddress;
   return [street, city, postalCode, country].filter(Boolean).join(', ');
+});
+
+// Virtual for account lock status
+customerSchema.virtual('isLocked').get(function () {
+  // Check if lockUntil exists and is in the future
+  return !!(this.lockUntil && this.lockUntil > new Date());
 });
 
 // Ensure virtuals are included in JSON

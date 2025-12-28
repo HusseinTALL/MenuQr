@@ -10,6 +10,7 @@ import {
 } from '../controllers/authController.js';
 import { authenticate } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
+import { requireCaptcha, requireCaptchaAfterFailedAttempts } from '../middleware/captcha.js';
 import {
   registerValidator,
   loginValidator,
@@ -20,8 +21,9 @@ import {
 const router = Router();
 
 // Public routes
-router.post('/register', validate(registerValidator), register);
-router.post('/login', validate(loginValidator), login);
+router.post('/register', requireCaptcha, validate(registerValidator), register);
+// Login requires CAPTCHA after 3 failed attempts (configurable via CAPTCHA_THRESHOLD)
+router.post('/login', requireCaptchaAfterFailedAttempts, validate(loginValidator), login);
 router.post('/refresh-token', validate(refreshTokenValidator), refreshToken);
 
 // Protected routes

@@ -43,7 +43,7 @@ onMounted(async () => {
       // Map API response to Dish type
       favorites.value = (response.data as unknown[]).map((dish: unknown) => dish as Dish);
     }
-  } catch (err) {
+  } catch {
     error.value = 'Impossible de charger vos favoris';
   } finally {
     isLoading.value = false;

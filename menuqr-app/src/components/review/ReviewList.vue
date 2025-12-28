@@ -49,7 +49,7 @@ const ratingOptions = [
 ];
 
 const hasMore = computed(() => {
-  if (!props.pagination) return false;
+  if (!props.pagination) {return false;}
   return props.pagination.page < props.pagination.pages;
 });
 

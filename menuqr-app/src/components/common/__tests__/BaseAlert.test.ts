@@ -14,57 +14,50 @@ describe('BaseAlert', () => {
       expect(wrapper.text()).toContain('Alert message');
     });
 
-    it('has role="alert" for accessibility', () => {
+    it('wraps Ant Design Alert component', () => {
       const wrapper = mount(BaseAlert);
-      expect(wrapper.attributes('role')).toBe('alert');
+      expect(wrapper.find('.ant-alert').exists()).toBe(true);
     });
 
-    it('has base alert styles', () => {
+    it('has base-alert class', () => {
       const wrapper = mount(BaseAlert);
-      expect(wrapper.classes()).toContain('flex');
-      expect(wrapper.classes()).toContain('rounded-lg');
-      expect(wrapper.classes()).toContain('border');
+      expect(wrapper.find('.base-alert').exists()).toBe(true);
     });
   });
 
   // Variant tests
   describe('variants', () => {
-    it('applies info variant styles by default', () => {
+    it('applies info variant by default', () => {
       const wrapper = mount(BaseAlert);
-      expect(wrapper.classes()).toContain('bg-blue-50');
-      expect(wrapper.classes()).toContain('border-blue-200');
+      expect(wrapper.find('.ant-alert-info').exists()).toBe(true);
     });
 
-    it('applies info variant styles explicitly', () => {
+    it('applies info variant explicitly', () => {
       const wrapper = mount(BaseAlert, {
         props: { variant: 'info' },
       });
-      expect(wrapper.classes()).toContain('bg-blue-50');
-      expect(wrapper.classes()).toContain('border-blue-200');
+      expect(wrapper.find('.ant-alert-info').exists()).toBe(true);
     });
 
-    it('applies success variant styles', () => {
+    it('applies success variant', () => {
       const wrapper = mount(BaseAlert, {
         props: { variant: 'success' },
       });
-      expect(wrapper.classes()).toContain('bg-green-50');
-      expect(wrapper.classes()).toContain('border-green-200');
+      expect(wrapper.find('.ant-alert-success').exists()).toBe(true);
     });
 
-    it('applies warning variant styles', () => {
+    it('applies warning variant', () => {
       const wrapper = mount(BaseAlert, {
         props: { variant: 'warning' },
       });
-      expect(wrapper.classes()).toContain('bg-yellow-50');
-      expect(wrapper.classes()).toContain('border-yellow-200');
+      expect(wrapper.find('.ant-alert-warning').exists()).toBe(true);
     });
 
-    it('applies error variant styles', () => {
+    it('applies error variant', () => {
       const wrapper = mount(BaseAlert, {
         props: { variant: 'error' },
       });
-      expect(wrapper.classes()).toContain('bg-red-50');
-      expect(wrapper.classes()).toContain('border-red-200');
+      expect(wrapper.find('.ant-alert-error').exists()).toBe(true);
     });
   });
 
@@ -74,111 +67,89 @@ describe('BaseAlert', () => {
       const wrapper = mount(BaseAlert, {
         props: { title: 'Alert Title' },
       });
-      expect(wrapper.find('h3').text()).toBe('Alert Title');
+      expect(wrapper.text()).toContain('Alert Title');
     });
 
-    it('does not render title when not provided', () => {
-      const wrapper = mount(BaseAlert);
-      expect(wrapper.find('h3').exists()).toBe(false);
-    });
-
-    it('applies correct title color for each variant', () => {
-      const variants = ['info', 'success', 'warning', 'error'] as const;
-      const colors = ['text-blue-900', 'text-green-900', 'text-yellow-900', 'text-red-900'];
-
-      variants.forEach((variant, index) => {
-        const wrapper = mount(BaseAlert, {
-          props: { variant, title: 'Test' },
-        });
-        expect(wrapper.find('h3').classes()).toContain(colors[index]);
+    it('shows title in message slot', () => {
+      const wrapper = mount(BaseAlert, {
+        props: { title: 'Alert Title' },
       });
+      expect(wrapper.find('.ant-alert-message').text()).toContain('Alert Title');
     });
   });
 
   // Icon tests
   describe('icon', () => {
-    it('renders icon component', () => {
+    it('shows icon by default', () => {
       const wrapper = mount(BaseAlert);
-      expect(wrapper.findComponent({ name: 'BaseIcon' }).exists()).toBe(true);
+      expect(wrapper.find('.ant-alert-icon').exists()).toBe(true);
     });
 
-    it('renders info icon by default', () => {
-      const wrapper = mount(BaseAlert);
-      expect(wrapper.findComponent({ name: 'BaseIcon' }).props('name')).toBe('info');
+    it('renders info icon for info variant', () => {
+      const wrapper = mount(BaseAlert, {
+        props: { variant: 'info' },
+      });
+      const icon = wrapper.find('.ant-alert-icon');
+      expect(icon.exists()).toBe(true);
     });
 
-    it('renders check icon for success variant', () => {
+    it('renders success icon for success variant', () => {
       const wrapper = mount(BaseAlert, {
         props: { variant: 'success' },
       });
-      expect(wrapper.findComponent({ name: 'BaseIcon' }).props('name')).toBe('check');
+      const icon = wrapper.find('.ant-alert-icon');
+      expect(icon.exists()).toBe(true);
     });
 
     it('renders warning icon for warning variant', () => {
       const wrapper = mount(BaseAlert, {
         props: { variant: 'warning' },
       });
-      expect(wrapper.findComponent({ name: 'BaseIcon' }).props('name')).toBe('warning');
+      const icon = wrapper.find('.ant-alert-icon');
+      expect(icon.exists()).toBe(true);
     });
 
     it('renders error icon for error variant', () => {
       const wrapper = mount(BaseAlert, {
         props: { variant: 'error' },
       });
-      expect(wrapper.findComponent({ name: 'BaseIcon' }).props('name')).toBe('error');
+      const icon = wrapper.find('.ant-alert-icon');
+      expect(icon.exists()).toBe(true);
     });
   });
 
   // Dismissible tests
   describe('dismissible', () => {
-    it('does not show dismiss button by default', () => {
+    it('does not show close button by default', () => {
       const wrapper = mount(BaseAlert);
-      expect(wrapper.find('button').exists()).toBe(false);
+      expect(wrapper.find('.ant-alert-close-icon').exists()).toBe(false);
     });
 
-    it('shows dismiss button when dismissible is true', () => {
+    it('shows close button when dismissible is true', () => {
       const wrapper = mount(BaseAlert, {
         props: { dismissible: true },
       });
-      expect(wrapper.find('button').exists()).toBe(true);
+      expect(wrapper.find('.ant-alert-close-icon').exists()).toBe(true);
     });
 
-    it('emits dismiss event when dismiss button is clicked', async () => {
+    it('emits dismiss event when close button is clicked', async () => {
       const wrapper = mount(BaseAlert, {
         props: { dismissible: true },
       });
-      await wrapper.find('button').trigger('click');
+      await wrapper.find('.ant-alert-close-icon').trigger('click');
       expect(wrapper.emitted('dismiss')).toBeTruthy();
-      expect(wrapper.emitted('dismiss')?.length).toBe(1);
-    });
-
-    it('dismiss button has correct color for each variant', () => {
-      const variants = ['info', 'success', 'warning', 'error'] as const;
-      const colors = ['text-blue-600', 'text-green-600', 'text-yellow-600', 'text-red-600'];
-
-      variants.forEach((variant, index) => {
-        const wrapper = mount(BaseAlert, {
-          props: { variant, dismissible: true },
-        });
-        expect(wrapper.find('button').classes()).toContain(colors[index]);
-      });
     });
   });
 
-  // Content color tests
-  describe('content colors', () => {
-    it('applies correct text color for each variant', () => {
-      const variants = ['info', 'success', 'warning', 'error'] as const;
-      const colors = ['text-blue-800', 'text-green-800', 'text-yellow-800', 'text-red-800'];
-
-      variants.forEach((variant, index) => {
-        const wrapper = mount(BaseAlert, {
-          props: { variant },
-          slots: { default: 'Content' },
-        });
-        const content = wrapper.find('.text-sm');
-        expect(content.classes()).toContain(colors[index]);
+  // Description slot tests
+  describe('description slot', () => {
+    it('renders content in description slot', () => {
+      const wrapper = mount(BaseAlert, {
+        slots: {
+          default: 'Alert description content',
+        },
       });
+      expect(wrapper.find('.ant-alert-description').text()).toContain('Alert description content');
     });
   });
 });

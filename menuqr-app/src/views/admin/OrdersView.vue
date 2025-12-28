@@ -1,16 +1,13 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, watch, h } from 'vue';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { message } from 'ant-design-vue';
 import {
   ReloadOutlined,
-  SearchOutlined,
   ExportOutlined,
   EyeOutlined,
   PrinterOutlined,
   EditOutlined,
   CloseOutlined,
-  CheckOutlined,
-  ClockCircleOutlined,
   SoundOutlined,
   SoundFilled,
 } from '@ant-design/icons-vue';
@@ -124,7 +121,7 @@ const playNotificationSound = () => {
 
 const fetchOrders = async (showRefreshIndicator = true) => {
   try {
-    if (showRefreshIndicator) isRefreshing.value = true;
+    if (showRefreshIndicator) {isRefreshing.value = true;}
 
     if (!restaurant.value) {
       const restaurantResponse = await api.getMyRestaurant();
@@ -261,8 +258,10 @@ const filteredOrders = computed(() => {
   // Sort: pending first, then by creation time
   return filtered.sort((a, b) => {
     const statusPriority: Record<string, number> = { pending: 0, confirmed: 1, preparing: 2, ready: 3, served: 4, completed: 5, cancelled: 6 };
-    if (statusPriority[a.status] !== statusPriority[b.status]) {
-      return statusPriority[a.status] - statusPriority[b.status];
+    const aPriority = statusPriority[a.status] ?? 99;
+    const bPriority = statusPriority[b.status] ?? 99;
+    if (aPriority !== bPriority) {
+      return aPriority - bPriority;
     }
     return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
   });
@@ -295,21 +294,21 @@ const getTimeSinceCreation = (dateString: string) => {
   const now = new Date();
   const diff = Math.floor((now.getTime() - created.getTime()) / 1000 / 60);
 
-  if (diff < 1) return "À l'instant";
-  if (diff < 60) return `${diff} min`;
-  if (diff < 1440) return `${Math.floor(diff / 60)}h ${diff % 60}min`;
+  if (diff < 1) {return "À l'instant";}
+  if (diff < 60) {return `${diff} min`;}
+  if (diff < 1440) {return `${Math.floor(diff / 60)}h ${diff % 60}min`;}
   return `${Math.floor(diff / 1440)}j`;
 };
 
 const getUrgencyLevel = (order: Order): 'normal' | 'warning' | 'danger' => {
-  if (!['pending', 'confirmed', 'preparing'].includes(order.status)) return 'normal';
+  if (!['pending', 'confirmed', 'preparing'].includes(order.status)) {return 'normal';}
 
   const created = new Date(order.createdAt);
   const now = new Date();
   const diffMinutes = Math.floor((now.getTime() - created.getTime()) / 1000 / 60);
 
-  if (diffMinutes >= 20) return 'danger';
-  if (diffMinutes >= 10) return 'warning';
+  if (diffMinutes >= 20) {return 'danger';}
+  if (diffMinutes >= 10) {return 'warning';}
   return 'normal';
 };
 
@@ -384,8 +383,9 @@ const closeDetailModal = () => {
   selectedOrder.value = null;
 };
 
-const openCancelModal = (order: Order) => {
-  orderToCancel.value = order;
+ 
+const _openCancelModal = (_order: Order) => {
+  orderToCancel.value = _order;
   cancelReason.value = '';
   showCancelModal.value = true;
 };
@@ -397,7 +397,7 @@ const closeCancelModal = () => {
 };
 
 const confirmCancelOrder = async () => {
-  if (!orderToCancel.value) return;
+  if (!orderToCancel.value) {return;}
   await updateOrderStatus(orderToCancel.value, 'cancelled', cancelReason.value || undefined);
   closeCancelModal();
 };
@@ -415,7 +415,7 @@ const updateOrderStatus = async (order: Order, newStatus: string, cancelReasonTe
       if (selectedOrder.value?._id === order._id) {
         selectedOrder.value = response.data;
       }
-      message.success(`Commande #${order.orderNumber} ${statusConfig[newStatus].label.toLowerCase()}`);
+      message.success(`Commande #${order.orderNumber} ${statusConfig[newStatus]?.label?.toLowerCase() ?? 'mise à jour'}`);
     }
   } catch (err) {
     error.value = 'Erreur lors de la mise à jour du statut';
@@ -436,7 +436,7 @@ const handleQuickStatusUpdate = async (order: Order) => {
 
 // Bulk actions
 const bulkAdvanceStatus = async () => {
-  if (selectedRowKeys.value.length === 0) return;
+  if (selectedRowKeys.value.length === 0) {return;}
 
   const ordersToUpdate = orders.value.filter(o => selectedRowKeys.value.includes(o._id));
   let successCount = 0;
@@ -474,8 +474,8 @@ const exportToCSV = () => {
     order.customerName || '-',
     order.items.map(i => `${i.quantity}x ${i.name}`).join('; '),
     order.total,
-    statusConfig[order.status].label,
-    paymentStatusConfig[order.paymentStatus]?.label || order.paymentStatus,
+    statusConfig[order.status]?.label ?? order.status,
+    paymentStatusConfig[order.paymentStatus]?.label ?? order.paymentStatus,
   ]);
 
   const csvContent = [
@@ -542,7 +542,7 @@ const loadAvailableDishes = async () => {
 };
 
 const filteredDishes = computed(() => {
-  if (!dishSearchQuery.value) return availableDishes.value;
+  if (!dishSearchQuery.value) {return availableDishes.value;}
   const query = dishSearchQuery.value.toLowerCase();
   return availableDishes.value.filter(dish =>
     dish.name.fr.toLowerCase().includes(query) ||
@@ -552,6 +552,7 @@ const filteredDishes = computed(() => {
 
 const updateItemQuantity = (index: number, delta: number) => {
   const item = editableItems.value[index];
+  if (!item) {return;}
   const newQuantity = item.quantity + delta;
   if (newQuantity >= 1 && newQuantity <= 99) {
     item.quantity = newQuantity;
@@ -561,6 +562,7 @@ const updateItemQuantity = (index: number, delta: number) => {
 
 const recalculateItemSubtotal = (index: number) => {
   const item = editableItems.value[index];
+  if (!item) {return;}
   const optionsTotal = item.options?.reduce((sum, opt) => sum + (opt.price || 0), 0) || 0;
   const basePrice = item.variant?.price || item.price;
   item.subtotal = (basePrice + optionsTotal) * item.quantity;
@@ -599,7 +601,7 @@ const editTotal = computed(() => {
 });
 
 const saveOrderChanges = async () => {
-  if (!orderToEdit.value) return;
+  if (!orderToEdit.value) {return;}
   if (editableItems.value.length === 0) {
     message.error('La commande doit contenir au moins un article');
     return;
@@ -707,7 +709,7 @@ const printOrder = (order: Order) => {
 
 const timeSinceRefresh = computed(() => {
   const diff = Math.floor((new Date().getTime() - lastRefresh.value.getTime()) / 1000);
-  if (diff < 60) return "À l'instant";
+  if (diff < 60) {return "À l'instant";}
   return `Il y a ${Math.floor(diff / 60)} min`;
 });
 
@@ -760,8 +762,8 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
-  if (pollInterval) clearInterval(pollInterval);
-  if (timeUpdateInterval) clearInterval(timeUpdateInterval);
+  if (pollInterval) {clearInterval(pollInterval);}
+  if (timeUpdateInterval) {clearInterval(timeUpdateInterval);}
 });
 </script>
 
@@ -815,7 +817,7 @@ onUnmounted(() => {
 
     <!-- Stats Cards -->
     <a-row :gutter="[16, 16]">
-      <a-col :xs="24" :sm="12" :lg="6">
+      <a-col :xs="24" :sm="12" :md="12" :lg="6">
         <a-card>
           <a-statistic
             title="Commandes aujourd'hui"
@@ -833,13 +835,11 @@ onUnmounted(() => {
         </a-card>
       </a-col>
 
-      <a-col :xs="24" :sm="12" :lg="6">
+      <a-col :xs="24" :sm="12" :md="12" :lg="6">
         <a-card>
           <a-statistic
             title="Revenus du jour"
-            :value="stats.revenueToday"
-            :precision="0"
-            suffix="FCFA"
+            :value="formatCurrency(stats.revenueToday ?? 0)"
             :value-style="{ color: '#22c55e' }"
           >
             <template #prefix>💰</template>
@@ -850,13 +850,11 @@ onUnmounted(() => {
         </a-card>
       </a-col>
 
-      <a-col :xs="24" :sm="12" :lg="6">
+      <a-col :xs="24" :sm="12" :md="12" :lg="6">
         <a-card>
           <a-statistic
             title="Panier moyen"
-            :value="stats.avgOrderValue"
-            :precision="0"
-            suffix="FCFA"
+            :value="formatCurrency(stats.avgOrderValue ?? 0)"
             :value-style="{ color: '#3b82f6' }"
           >
             <template #prefix>📊</template>
@@ -867,7 +865,7 @@ onUnmounted(() => {
         </a-card>
       </a-col>
 
-      <a-col :xs="24" :sm="12" :lg="6">
+      <a-col :xs="24" :sm="12" :md="12" :lg="6">
         <a-card>
           <a-statistic
             title="Temps d'attente moyen"
@@ -886,25 +884,25 @@ onUnmounted(() => {
 
     <!-- Filters -->
     <a-card>
-      <a-space wrap class="w-full justify-between">
-        <a-space wrap>
+      <div class="admin-filters-row">
+        <div class="flex flex-wrap items-center gap-2">
           <span class="text-gray-600">Période:</span>
-          <a-radio-group v-model:value="dateFilter" button-style="solid">
+          <a-radio-group v-model:value="dateFilter" button-style="solid" size="small">
             <a-radio-button v-for="opt in dateFilterOptions" :key="opt.value" :value="opt.value">
               {{ opt.label }}
             </a-radio-button>
           </a-radio-group>
-        </a-space>
+        </div>
 
-        <a-space>
+        <div class="flex items-center gap-2">
           <span class="text-gray-600">Paiement:</span>
-          <a-select v-model:value="paymentFilter" style="width: 160px">
+          <a-select v-model:value="paymentFilter" class="min-w-[140px]">
             <a-select-option v-for="opt in paymentFilterOptions" :key="opt.value" :value="opt.value">
               {{ opt.label }}
             </a-select-option>
           </a-select>
-        </a-space>
-      </a-space>
+        </div>
+      </div>
     </a-card>
 
     <!-- Status Tabs + Search + Table -->
@@ -995,7 +993,7 @@ onUnmounted(() => {
             size="large"
             @click="handleQuickStatusUpdate(order)"
           >
-            {{ statusConfig[order.status].icon }} {{ getNextStatusLabel(order.status) }}
+            {{ statusConfig[order.status]?.icon }} {{ getNextStatusLabel(order.status) }}
           </a-button>
         </a-card>
       </div>
@@ -1017,8 +1015,8 @@ onUnmounted(() => {
           </template>
 
           <template v-else-if="column.key === 'status'">
-            <a-tag :color="statusConfig[record.status].color">
-              {{ statusConfig[record.status].icon }} {{ statusConfig[record.status].label }}
+            <a-tag :color="statusConfig[record.status]?.color">
+              {{ statusConfig[record.status]?.icon }} {{ statusConfig[record.status]?.label }}
             </a-tag>
             <a-tag v-if="getUrgencyLevel(record) === 'danger'" color="red">🚨 Urgent</a-tag>
             <a-tag v-else-if="getUrgencyLevel(record) === 'warning'" color="orange">⚠️ +10min</a-tag>
@@ -1112,14 +1110,14 @@ onUnmounted(() => {
     <a-modal
       v-model:open="showDetailModal"
       :title="`Commande #${selectedOrder?.orderNumber}`"
-      width="700px"
+      :width="720"
       :footer="null"
     >
       <template v-if="selectedOrder">
         <a-descriptions bordered :column="2" size="small" class="mb-4">
           <a-descriptions-item label="Statut">
-            <a-tag :color="statusConfig[selectedOrder.status].color">
-              {{ statusConfig[selectedOrder.status].icon }} {{ statusConfig[selectedOrder.status].label }}
+            <a-tag :color="statusConfig[selectedOrder.status]?.color">
+              {{ statusConfig[selectedOrder.status]?.icon }} {{ statusConfig[selectedOrder.status]?.label }}
             </a-tag>
           </a-descriptions-item>
           <a-descriptions-item label="Paiement">
@@ -1194,7 +1192,7 @@ onUnmounted(() => {
     <a-modal
       v-model:open="showEditModal"
       :title="`Modifier commande #${orderToEdit?.orderNumber}`"
-      width="600px"
+      :width="640"
       :confirm-loading="isSavingOrder"
       @ok="saveOrderChanges"
       @cancel="closeEditModal"

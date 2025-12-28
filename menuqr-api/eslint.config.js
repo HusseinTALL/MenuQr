@@ -24,7 +24,11 @@ export default tseslint.config(
       '@typescript-eslint/no-explicit-any': 'warn',
       '@typescript-eslint/explicit-function-return-type': 'off',
       '@typescript-eslint/no-empty-object-type': 'off',
-      'no-console': 'off',
+      'no-console': ['warn', { allow: ['warn', 'error', 'info'] }],
+      'curly': ['error', 'all'],
+      'eqeqeq': ['error', 'always'],
+      'prefer-const': 'error',
+      'no-var': 'error',
     },
   },
   {

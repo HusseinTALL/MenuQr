@@ -207,7 +207,7 @@ export const useCustomerAuthStore = defineStore('customerAuth', () => {
 
   // Fetch profile
   async function fetchProfile(): Promise<boolean> {
-    if (!isAuthenticated.value) return false;
+    if (!isAuthenticated.value) {return false;}
 
     try {
       const response = await api.customerGetProfile();

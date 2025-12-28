@@ -241,7 +241,7 @@ onUnmounted(() => {
 
 <template>
   <div
-    class="lazy-image-container relative w-full h-full overflow-hidden"
+    class="lazy-image-container"
     :style="{ aspectRatio: aspectRatio }"
   >
     <!-- LQIP Blur Placeholder -->
@@ -250,13 +250,13 @@ onUnmounted(() => {
       :src="lqipSrc"
       alt=""
       aria-hidden="true"
-      class="absolute inset-0 w-full h-full object-cover lqip-blur"
+      class="lazy-image-lqip"
     />
 
     <!-- Fallback Shimmer Placeholder (when no LQIP or image not yet loaded) -->
     <div
       v-show="!isLoaded"
-      class="absolute inset-0 lazy-image-placeholder"
+      class="lazy-image-placeholder"
       :style="{ backgroundColor: placeholderColor }"
       aria-hidden="true"
     />
@@ -264,14 +264,14 @@ onUnmounted(() => {
     <!-- Error state with fallback placeholder -->
     <div
       v-if="hasError"
-      class="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200"
+      class="lazy-image-error"
       role="img"
       :aria-label="`Image non disponible: ${alt}`"
     >
       <img
         src="/images/dish-placeholder.svg"
         :alt="alt"
-        class="w-full h-full object-cover opacity-60"
+        class="lazy-image-fallback"
         loading="lazy"
       />
     </div>
@@ -285,7 +285,7 @@ onUnmounted(() => {
       :loading="priority ? 'eager' : eager ? 'eager' : 'lazy'"
       decoding="async"
       :fetchpriority="priority ? 'high' : 'auto'"
-      class="lazy-image w-full h-full object-cover"
+      class="lazy-image"
       :class="{ 'is-loaded': isLoaded }"
       @load="handleLoad"
       @error="handleError"
@@ -294,14 +294,38 @@ onUnmounted(() => {
 </template>
 
 <style scoped>
-/* LQIP Blur Placeholder */
-.lqip-blur {
+/* Container - replaces Tailwind relative w-full h-full overflow-hidden */
+.lazy-image-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  contain: layout style paint;
+  isolation: isolate;
+  min-height: 100px; /* Ensure container has height for IntersectionObserver */
+}
+
+/* LQIP Blur Placeholder - replaces absolute inset-0 w-full h-full object-cover */
+.lazy-image-lqip {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
   filter: blur(20px);
   transform: scale(1.1); /* Prevent blur edges from showing */
 }
 
-/* Shimmer placeholder effect (fallback when no LQIP) */
+/* Shimmer placeholder effect - replaces absolute inset-0 */
 .lazy-image-placeholder {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
   background: linear-gradient(
     90deg,
     var(--placeholder-color, #e5e7eb) 0%,
@@ -321,8 +345,33 @@ onUnmounted(() => {
   }
 }
 
-/* Image transition with smooth reveal */
+/* Error state - replaces absolute inset-0 flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200 */
+.lazy-image-error {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(to bottom right, #f3f4f6, #e5e7eb);
+}
+
+/* Fallback image - replaces w-full h-full object-cover opacity-60 */
+.lazy-image-fallback {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.6;
+}
+
+/* Main image - replaces w-full h-full object-cover */
 .lazy-image {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
   opacity: 0;
   transition: opacity 400ms ease-out;
   will-change: opacity;
@@ -330,13 +379,6 @@ onUnmounted(() => {
 
 .lazy-image.is-loaded {
   opacity: 1;
-}
-
-/* Container GPU acceleration */
-.lazy-image-container {
-  contain: layout style paint;
-  isolation: isolate;
-  min-height: 100px; /* Ensure container has height for IntersectionObserver */
 }
 
 /* Reduce motion */
@@ -353,7 +395,7 @@ onUnmounted(() => {
     opacity: 1;
   }
 
-  .lqip-blur {
+  .lazy-image-lqip {
     filter: none;
     transform: none;
   }

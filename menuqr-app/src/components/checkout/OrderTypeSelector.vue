@@ -6,9 +6,10 @@ interface Props {
   scheduledOrdersEnabled?: boolean;
 }
 
-const props = withDefaults(defineProps<Props>(), {
+const _props = withDefaults(defineProps<Props>(), {
   scheduledOrdersEnabled: true,
 });
+void _props; // Props auto-unwrapped by Vue compiler in template
 
 const emit = defineEmits<{
   'update:modelValue': [value: OrderType];
@@ -21,20 +22,19 @@ interface OrderTypeOption {
   description: string;
 }
 
-const options: OrderTypeOption[] = [
-  {
-    value: 'immediate',
-    label: 'Maintenant',
-    icon: '⚡',
-    description: 'Commander pour tout de suite',
-  },
-  {
-    value: 'scheduled',
-    label: 'Planifier',
-    icon: '📅',
-    description: 'Choisir une date et heure',
-  },
-];
+const immediateOption: OrderTypeOption = {
+  value: 'immediate',
+  label: 'Maintenant',
+  icon: '⚡',
+  description: 'Commander pour tout de suite',
+};
+
+const scheduledOption: OrderTypeOption = {
+  value: 'scheduled',
+  label: 'Planifier',
+  icon: '📅',
+  description: 'Choisir une date et heure',
+};
 
 const selectOption = (value: OrderType) => {
   emit('update:modelValue', value);
@@ -62,7 +62,7 @@ const selectOption = (value: OrderType) => {
           class="mb-3 flex h-16 w-16 items-center justify-center rounded-xl text-4xl transition-transform group-hover:scale-110"
           :class="modelValue === 'immediate' ? 'bg-teal-100' : 'bg-gray-100'"
         >
-          {{ options[0].icon }}
+          {{ immediateOption.icon }}
         </div>
 
         <!-- Label -->
@@ -70,12 +70,12 @@ const selectOption = (value: OrderType) => {
           class="text-lg font-semibold"
           :class="modelValue === 'immediate' ? 'text-teal-700' : 'text-gray-900'"
         >
-          {{ options[0].label }}
+          {{ immediateOption.label }}
         </span>
 
         <!-- Description -->
         <span class="mt-1 text-sm text-gray-500">
-          {{ options[0].description }}
+          {{ immediateOption.description }}
         </span>
 
         <!-- Checkmark -->
@@ -114,7 +114,7 @@ const selectOption = (value: OrderType) => {
                 : 'bg-gray-100 group-hover:scale-110',
           ]"
         >
-          {{ options[1].icon }}
+          {{ scheduledOption.icon }}
         </div>
 
         <!-- Label -->
@@ -128,12 +128,12 @@ const selectOption = (value: OrderType) => {
                 : 'text-gray-900',
           ]"
         >
-          {{ options[1].label }}
+          {{ scheduledOption.label }}
         </span>
 
         <!-- Description -->
         <span class="mt-1 text-sm" :class="scheduledOrdersEnabled ? 'text-gray-500' : 'text-gray-400'">
-          {{ scheduledOrdersEnabled ? options[1].description : 'Non disponible' }}
+          {{ scheduledOrdersEnabled ? scheduledOption.description : 'Non disponible' }}
         </span>
 
         <!-- Checkmark -->

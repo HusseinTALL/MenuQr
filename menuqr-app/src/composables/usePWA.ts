@@ -54,7 +54,7 @@ export function usePWA() {
   const acceptUpdate = async () => {
     try {
       await updateServiceWorker(true);
-    } catch (error) {
+    } catch (_error) {
       console.error('[PWA] Failed to update:', error);
       updateError.value = error as Error;
     }

@@ -3,6 +3,7 @@ import mongoose from 'mongoose';
 import { Customer } from '../models/index.js';
 import { asyncHandler, ApiError } from '../middleware/errorHandler.js';
 import * as loyaltyService from '../services/loyaltyService.js';
+import { getAuthenticatedRestaurant } from '../middleware/restaurantContext.js';
 
 // ============================================
 // CUSTOMER ENDPOINTS
@@ -93,12 +94,13 @@ export const getExpiringPoints = asyncHandler(async (req: Request, res: Response
  * GET /loyalty/stats
  */
 export const getLoyaltyStats = asyncHandler(async (req: Request, res: Response): Promise<void> => {
-  const restaurantId = req.user!.restaurantId;
-  if (!restaurantId) {
-    throw new ApiError(400, 'Restaurant ID required');
+  // Use verified restaurant context instead of trusting req.user.restaurantId
+  const restaurant = await getAuthenticatedRestaurant(req);
+  if (!restaurant) {
+    throw new ApiError(404, 'Restaurant not found or access denied');
   }
 
-  const stats = await loyaltyService.getLoyaltyStats(restaurantId);
+  const stats = await loyaltyService.getLoyaltyStats(restaurant._id.toString());
 
   res.json({
     success: true,
@@ -112,10 +114,12 @@ export const getLoyaltyStats = asyncHandler(async (req: Request, res: Response):
  */
 export const getCustomersLoyalty = asyncHandler(
   async (req: Request, res: Response): Promise<void> => {
-    const restaurantId = req.user!.restaurantId;
-    if (!restaurantId) {
-      throw new ApiError(400, 'Restaurant ID required');
+    // Use verified restaurant context
+    const restaurant = await getAuthenticatedRestaurant(req);
+    if (!restaurant) {
+      throw new ApiError(404, 'Restaurant not found or access denied');
     }
+    const restaurantId = restaurant._id.toString();
     const { page = 1, limit = 20, tier, search, sortBy = 'totalPoints', sortOrder = 'desc' } = req.query;
 
     const pageNum = parseInt(page as string, 10);
@@ -143,7 +147,12 @@ export const getCustomersLoyalty = asyncHandler(
  */
 export const getCustomerLoyaltyAdmin = asyncHandler(
   async (req: Request, res: Response): Promise<void> => {
-    const restaurantId = req.user!.restaurantId;
+    // Use verified restaurant context
+    const restaurant = await getAuthenticatedRestaurant(req);
+    if (!restaurant) {
+      throw new ApiError(404, 'Restaurant not found or access denied');
+    }
+    const restaurantId = restaurant._id.toString();
     const { customerId } = req.params;
 
     // Verify customer belongs to this restaurant
@@ -181,7 +190,12 @@ export const getCustomerLoyaltyAdmin = asyncHandler(
  */
 export const getCustomerHistoryAdmin = asyncHandler(
   async (req: Request, res: Response): Promise<void> => {
-    const restaurantId = req.user!.restaurantId;
+    // Use verified restaurant context
+    const restaurant = await getAuthenticatedRestaurant(req);
+    if (!restaurant) {
+      throw new ApiError(404, 'Restaurant not found or access denied');
+    }
+    const restaurantId = restaurant._id.toString();
     const { customerId } = req.params;
     const { page = 1, limit = 20, type } = req.query;
 
@@ -218,10 +232,12 @@ export const getCustomerHistoryAdmin = asyncHandler(
  */
 export const adjustCustomerPoints = asyncHandler(
   async (req: Request, res: Response): Promise<void> => {
-    const restaurantId = req.user!.restaurantId;
-    if (!restaurantId) {
-      throw new ApiError(400, 'Restaurant ID required');
+    // Use verified restaurant context
+    const restaurant = await getAuthenticatedRestaurant(req);
+    if (!restaurant) {
+      throw new ApiError(404, 'Restaurant not found or access denied');
     }
+    const restaurantId = restaurant._id.toString();
     const adminId = req.user!._id;
     const { customerId } = req.params;
     const { points, reason } = req.body;
@@ -262,10 +278,12 @@ export const adjustCustomerPoints = asyncHandler(
  * POST /loyalty/customers/:customerId/bonus
  */
 export const addBonusPoints = asyncHandler(async (req: Request, res: Response): Promise<void> => {
-  const restaurantId = req.user!.restaurantId;
-  if (!restaurantId) {
-    throw new ApiError(400, 'Restaurant ID required');
+  // Use verified restaurant context
+  const restaurant = await getAuthenticatedRestaurant(req);
+  if (!restaurant) {
+    throw new ApiError(404, 'Restaurant not found or access denied');
   }
+  const restaurantId = restaurant._id.toString();
   const adminId = req.user!._id;
   const { customerId } = req.params;
   const { points, description } = req.body;
@@ -305,9 +323,13 @@ export const addBonusPoints = asyncHandler(async (req: Request, res: Response): 
  */
 export const triggerExpirePoints = asyncHandler(
   async (req: Request, res: Response): Promise<void> => {
-    const restaurantId = req.user!.restaurantId;
+    // Use verified restaurant context
+    const restaurant = await getAuthenticatedRestaurant(req);
+    if (!restaurant) {
+      throw new ApiError(404, 'Restaurant not found or access denied');
+    }
 
-    const result = await loyaltyService.processExpiredPoints(restaurantId);
+    const result = await loyaltyService.processExpiredPoints(restaurant._id.toString());
 
     res.json({
       success: true,

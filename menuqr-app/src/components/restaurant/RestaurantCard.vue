@@ -17,10 +17,10 @@ const handleClick = () => {
 
 // Compute full address
 const fullAddress = () => {
-  if (!props.restaurant.address) return null;
+  if (!props.restaurant.address) {return null;}
   const parts = [];
-  if (props.restaurant.address.street) parts.push(props.restaurant.address.street);
-  if (props.restaurant.address.city) parts.push(props.restaurant.address.city);
+  if (props.restaurant.address.street) {parts.push(props.restaurant.address.street);}
+  if (props.restaurant.address.city) {parts.push(props.restaurant.address.city);}
   return parts.length > 0 ? parts.join(', ') : null;
 };
 </script>

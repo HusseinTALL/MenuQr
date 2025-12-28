@@ -49,7 +49,7 @@ const generateLocalDates = (days: number): AvailableDate[] => {
     const date = new Date(today);
     date.setDate(today.getDate() + i);
 
-    const dateStr = date.toISOString().split('T')[0];
+    const dateStr = date.toISOString().split('T')[0] ?? '';
     const dayKey = dayKeysFromSunday[date.getDay()];
     const dayOfWeek = t(`days.${dayKey}`);
 
@@ -94,7 +94,7 @@ const generateLocalTimeSlots = (): ScheduledOrderSlot[] => {
   // Morning slots: 10:00 - 11:30
   for (let hour = 10; hour <= 11; hour++) {
     for (const minute of ['00', '30']) {
-      if (hour === 11 && minute === '30') continue; // Skip 11:30
+      if (hour === 11 && minute === '30') {continue;} // Skip 11:30
       slots.push({
         time: `${hour.toString().padStart(2, '0')}:${minute}`,
         available: true,
@@ -106,7 +106,7 @@ const generateLocalTimeSlots = (): ScheduledOrderSlot[] => {
   // Lunch slots: 12:00 - 14:00
   for (let hour = 12; hour <= 14; hour++) {
     for (const minute of ['00', '30']) {
-      if (hour === 14 && minute === '30') continue;
+      if (hour === 14 && minute === '30') {continue;}
       slots.push({
         time: `${hour.toString().padStart(2, '0')}:${minute}`,
         available: true,
@@ -129,7 +129,7 @@ const generateLocalTimeSlots = (): ScheduledOrderSlot[] => {
   // Evening slots: 18:00 - 21:00
   for (let hour = 18; hour <= 21; hour++) {
     for (const minute of ['00', '30']) {
-      if (hour === 21 && minute === '30') continue;
+      if (hour === 21 && minute === '30') {continue;}
       slots.push({
         time: `${hour.toString().padStart(2, '0')}:${minute}`,
         available: true,
@@ -143,7 +143,12 @@ const generateLocalTimeSlots = (): ScheduledOrderSlot[] => {
 
 // Load time slots for selected date
 const loadTimeSlots = async (date: string) => {
-  if (props.fulfillmentType === 'dine_in') return;
+  // For dine_in, we don't need time slots (immediate orders)
+  if (props.fulfillmentType === 'dine_in') {
+    // Still generate local slots as fallback for scheduled dine-in
+    timeSlots.value = generateLocalTimeSlots();
+    return;
+  }
 
   isLoadingSlots.value = true;
 
@@ -153,10 +158,12 @@ const loadTimeSlots = async (date: string) => {
       date,
       props.fulfillmentType as 'pickup' | 'delivery'
     );
-    if (response.success && response.data) {
+    // Check if response has data AND data is not empty
+    if (response.success && response.data && response.data.length > 0) {
       timeSlots.value = response.data;
     } else {
-      // Fallback to local generation
+      // Fallback to local generation if API returns empty or no data
+      console.info('No slots from API, using local fallback');
       timeSlots.value = generateLocalTimeSlots();
     }
   } catch (err) {
@@ -202,7 +209,7 @@ const calendarDays = computed(() => {
   // First day of month (0 = Sunday, adjust to Monday = 0)
   const firstDay = new Date(year, month, 1);
   let startDay = firstDay.getDay() - 1;
-  if (startDay < 0) startDay = 6;
+  if (startDay < 0) {startDay = 6;}
 
   // Days in month
   const daysInMonth = new Date(year, month + 1, 0).getDate();
@@ -228,7 +235,7 @@ const calendarDays = computed(() => {
       date: dateStr,
       day: d,
       isCurrentMonth: true,
-      isAvailable: availableDate?.isOpen && (availableDate?.slotsAvailable ?? 0) > 0,
+      isAvailable: Boolean(availableDate?.isOpen && (availableDate?.slotsAvailable ?? 0) > 0),
       slotsCount: availableDate?.slotsAvailable ?? 0,
     });
   }
@@ -293,15 +300,16 @@ const groupedSlots = computed(() => {
   ];
 
   for (const slot of timeSlots.value) {
-    const hour = parseInt(slot.time.split(':')[0], 10);
+    const hourStr = slot.time.split(':')[0] ?? '12';
+    const hour = parseInt(hourStr, 10);
     if (hour >= 6 && hour < 11) {
-      groups[0].slots.push(slot);
+      groups[0]?.slots.push(slot);
     } else if (hour >= 11 && hour < 14) {
-      groups[1].slots.push(slot);
+      groups[1]?.slots.push(slot);
     } else if (hour >= 14 && hour < 18) {
-      groups[2].slots.push(slot);
+      groups[2]?.slots.push(slot);
     } else {
-      groups[3].slots.push(slot);
+      groups[3]?.slots.push(slot);
     }
   }
 

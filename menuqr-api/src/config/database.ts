@@ -1,24 +1,25 @@
 import mongoose from 'mongoose';
+import logger from '../utils/logger.js';
 
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/menuqr';
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://menuqr:menuqr123@localhost:27017/menuqr?authSource=menuqr';
 
 export async function connectDatabase(): Promise<void> {
   try {
     mongoose.connection.on('connected', () => {
-      console.log('MongoDB connected successfully');
+      logger.info('MongoDB connected successfully');
     });
 
     mongoose.connection.on('error', (err) => {
-      console.error('MongoDB connection error:', err);
+      logger.error('MongoDB connection error', err);
     });
 
     mongoose.connection.on('disconnected', () => {
-      console.log('MongoDB disconnected');
+      logger.warn('MongoDB disconnected');
     });
 
     await mongoose.connect(MONGODB_URI);
   } catch (error) {
-    console.error('Failed to connect to MongoDB:', error);
+    logger.error('Failed to connect to MongoDB', error);
     process.exit(1);
   }
 }

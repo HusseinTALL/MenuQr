@@ -18,6 +18,20 @@ export const useAdminAuthStore = defineStore('adminAuth', () => {
   const isAuthenticated = computed(() => !!user.value);
   const hasRestaurant = computed(() => !!user.value?.restaurantId);
 
+  // Get current access token from localStorage
+  const token = computed(() => {
+    const stored = localStorage.getItem('menuqr_admin_auth');
+    if (stored) {
+      try {
+        const { accessToken } = JSON.parse(stored);
+        return accessToken;
+      } catch {
+        return null;
+      }
+    }
+    return null;
+  });
+
   // Load from localStorage on init
   function loadFromStorage() {
     const stored = localStorage.getItem('menuqr_admin_auth');
@@ -109,7 +123,7 @@ export const useAdminAuthStore = defineStore('adminAuth', () => {
   }
 
   async function fetchProfile(): Promise<boolean> {
-    if (!isAuthenticated.value) return false;
+    if (!isAuthenticated.value) {return false;}
 
     try {
       const response = await api.getProfile();
@@ -125,6 +139,58 @@ export const useAdminAuthStore = defineStore('adminAuth', () => {
     }
   }
 
+  async function updateProfile(data: { name?: string; email?: string }): Promise<boolean> {
+    if (!isAuthenticated.value) {return false;}
+
+    isLoading.value = true;
+    error.value = null;
+
+    try {
+      const response = await api.updateAdminProfile(data);
+      if (response.success && response.data) {
+        user.value = response.data;
+        localStorage.setItem('menuqr_admin_user', JSON.stringify(response.data));
+        return true;
+      }
+      error.value = response.message || 'Erreur lors de la mise à jour du profil';
+      return false;
+    } catch (err) {
+      if (err instanceof ApiError) {
+        error.value = err.message;
+      } else {
+        error.value = 'Une erreur inattendue est survenue';
+      }
+      return false;
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  async function changePassword(currentPassword: string, newPassword: string): Promise<boolean> {
+    if (!isAuthenticated.value) {return false;}
+
+    isLoading.value = true;
+    error.value = null;
+
+    try {
+      const response = await api.changeAdminPassword(currentPassword, newPassword);
+      if (response.success) {
+        return true;
+      }
+      error.value = response.message || 'Erreur lors du changement de mot de passe';
+      return false;
+    } catch (err) {
+      if (err instanceof ApiError) {
+        error.value = err.message;
+      } else {
+        error.value = 'Une erreur inattendue est survenue';
+      }
+      return false;
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
   function updateUserRestaurant(restaurantId: string) {
     if (user.value) {
       user.value.restaurantId = restaurantId;
@@ -137,6 +203,7 @@ export const useAdminAuthStore = defineStore('adminAuth', () => {
 
   return {
     user,
+    token,
     isLoading,
     error,
     isAuthenticated,
@@ -145,6 +212,8 @@ export const useAdminAuthStore = defineStore('adminAuth', () => {
     register,
     logout,
     fetchProfile,
+    updateProfile,
+    changePassword,
     updateUserRestaurant,
     clearAuth,
   };

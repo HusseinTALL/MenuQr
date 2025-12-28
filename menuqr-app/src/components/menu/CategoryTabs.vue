@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref } from 'vue';
 import type { Category } from '@/types';
 import { useLocale } from '@/composables/useI18n';
 

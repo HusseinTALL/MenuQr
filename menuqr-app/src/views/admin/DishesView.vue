@@ -3,7 +3,6 @@ import { ref, computed, onMounted, watch } from 'vue';
 import { message } from 'ant-design-vue';
 import {
   PlusOutlined,
-  SearchOutlined,
   EditOutlined,
   DeleteOutlined,
   EyeOutlined,
@@ -14,12 +13,11 @@ import {
   SortDescendingOutlined,
   UploadOutlined,
   CloseOutlined,
-  CheckOutlined,
   StarOutlined,
   ClockCircleOutlined,
   FireOutlined,
 } from '@ant-design/icons-vue';
-import type { UploadProps, ColumnsType } from 'ant-design-vue';
+import type { ColumnsType } from 'ant-design-vue/es/table';
 import api, { type Dish, type Category, type Restaurant } from '@/services/api';
 import { formatPrice } from '@/utils/formatters';
 
@@ -92,7 +90,8 @@ const dietOptions = [
   { id: 'spicy', label: 'Épicé', icon: '🌶️', key: 'isSpicy' },
 ];
 
-const categoryOptions = [
+ 
+const _categoryOptions = [
   { value: '', label: 'Toutes les catégories' },
 ];
 
@@ -128,7 +127,7 @@ const fetchData = async () => {
     if (restaurantResponse.success && restaurantResponse.data) {
       restaurant.value = restaurantResponse.data;
     }
-  } catch (err) {
+  } catch {
     error.value = 'Erreur lors du chargement des plats';
     console.error(err);
   } finally {
@@ -197,7 +196,7 @@ const formatCurrency = (value: number) => {
 };
 
 const getCategoryName = (categoryId: string | { _id: string; name: { fr: string } }) => {
-  if (typeof categoryId === 'object') return categoryId.name.fr;
+  if (typeof categoryId === 'object') {return categoryId.name.fr;}
   const category = categories.value.find((c) => c._id === categoryId);
   return category?.name.fr || 'Sans catégorie';
 };
@@ -345,7 +344,7 @@ const handleSubmit = async () => {
         if (uploadResponse.success && uploadResponse.data) {
           imageUrl = uploadResponse.data.url;
         }
-      } catch (uploadErr) {
+      } catch {
         message.error('Erreur lors de l\'upload de l\'image');
         return;
       } finally {
@@ -377,7 +376,7 @@ const handleSubmit = async () => {
         message.success('Plat créé avec succès');
       }
     }
-  } catch (err) {
+  } catch {
     message.error('Erreur lors de la sauvegarde');
     console.error(err);
   } finally {
@@ -392,7 +391,7 @@ const toggleAvailability = async (dish: Dish) => {
       dish.isAvailable = response.data.isAvailable;
       message.success(dish.isAvailable ? 'Plat disponible' : 'Plat indisponible');
     }
-  } catch (err) {
+  } catch {
     console.error(err);
   }
 };
@@ -403,7 +402,7 @@ const confirmDelete = (dish: Dish) => {
 };
 
 const deleteDish = async () => {
-  if (!dishToDelete.value) return;
+  if (!dishToDelete.value) {return;}
 
   try {
     const response = await api.deleteDish(dishToDelete.value._id);
@@ -412,7 +411,7 @@ const deleteDish = async () => {
       closeDeleteModal();
       message.success('Plat supprimé avec succès');
     }
-  } catch (err) {
+  } catch {
     message.error('Erreur lors de la suppression');
     console.error(err);
   }
@@ -420,8 +419,8 @@ const deleteDish = async () => {
 
 const toggleAllergen = (allergen: string) => {
   const index = formData.value.allergens.indexOf(allergen);
-  if (index === -1) formData.value.allergens.push(allergen);
-  else formData.value.allergens.splice(index, 1);
+  if (index === -1) {formData.value.allergens.push(allergen);}
+  else {formData.value.allergens.splice(index, 1);}
 };
 
 const clearFilters = () => {
@@ -447,7 +446,7 @@ const bulkToggleAvailability = async (available: boolean) => {
     await fetchData();
     selectedRowKeys.value = [];
     message.success(`${promises.length} plat(s) mis à jour`);
-  } catch (err) {
+  } catch {
     console.error(err);
   }
 };
@@ -491,21 +490,21 @@ watch(selectedCategory, fetchData);
             </a-button>
           </div>
 
-          <a-row :gutter="[16, 16]" class="stats-row">
-            <a-col :xs="12" :sm="4">
-              <div class="stat-card"><a-statistic :value="stats.total" title="Total" :value-style="{ color: '#fff', fontSize: '24px', fontWeight: 'bold' }" /></div>
+          <a-row :gutter="[12, 12]" class="stats-row">
+            <a-col :xs="12" :sm="8" :md="5">
+              <div class="stat-card"><a-statistic :value="stats.total" title="Total" :value-style="{ color: '#fff', fontSize: '20px', fontWeight: 'bold' }" /></div>
             </a-col>
-            <a-col :xs="12" :sm="5">
-              <div class="stat-card success"><a-statistic :value="stats.available" title="Disponibles" :value-style="{ color: '#fff', fontSize: '24px', fontWeight: 'bold' }" /></div>
+            <a-col :xs="12" :sm="8" :md="5">
+              <div class="stat-card success"><a-statistic :value="stats.available" title="Disponibles" :value-style="{ color: '#fff', fontSize: '20px', fontWeight: 'bold' }" /></div>
             </a-col>
-            <a-col :xs="12" :sm="5">
-              <div class="stat-card warning"><a-statistic :value="stats.unavailable" title="Indisponibles" :value-style="{ color: '#fff', fontSize: '24px', fontWeight: 'bold' }" /></div>
+            <a-col :xs="12" :sm="8" :md="5">
+              <div class="stat-card warning"><a-statistic :value="stats.unavailable" title="Indisponibles" :value-style="{ color: '#fff', fontSize: '20px', fontWeight: 'bold' }" /></div>
             </a-col>
-            <a-col :xs="12" :sm="5">
-              <div class="stat-card"><a-statistic :value="stats.popular" title="Populaires" :value-style="{ color: '#fff', fontSize: '24px', fontWeight: 'bold' }"><template #prefix><StarOutlined /></template></a-statistic></div>
+            <a-col :xs="12" :sm="8" :md="5">
+              <div class="stat-card"><a-statistic :value="stats.popular" title="Populaires" :value-style="{ color: '#fff', fontSize: '20px', fontWeight: 'bold' }"><template #prefix><StarOutlined /></template></a-statistic></div>
             </a-col>
-            <a-col :xs="12" :sm="5">
-              <div class="stat-card"><a-statistic :value="stats.newDishes" title="Nouveaux" :value-style="{ color: '#fff', fontSize: '24px', fontWeight: 'bold' }" /></div>
+            <a-col :xs="12" :sm="8" :md="4">
+              <div class="stat-card"><a-statistic :value="stats.newDishes" title="Nouveaux" :value-style="{ color: '#fff', fontSize: '20px', fontWeight: 'bold' }" /></div>
             </a-col>
           </a-row>
         </div>
@@ -631,8 +630,8 @@ watch(selectedCategory, fetchData);
 
     <!-- List View -->
     <a-card v-else-if="filteredDishes.length > 0 && viewMode === 'list'" :bordered="false">
-      <a-table :data-source="filteredDishes" :columns="columns" :row-key="(record) => record._id" :row-selection="rowSelection" :pagination="{ pageSize: 20 }">
-        <template #bodyCell="{ column, record }">
+      <a-table :data-source="filteredDishes" :columns="columns" :row-key="(record: Dish) => record._id" :row-selection="rowSelection" :pagination="{ pageSize: 20 }">
+        <template #bodyCell="{ column, record }: { column: { key: string }, record: Dish }">
           <template v-if="column.key === 'image'">
             <a-avatar shape="square" :size="48" :src="record.image">
               <template #icon v-if="!record.image">🍽️</template>
@@ -685,7 +684,7 @@ watch(selectedCategory, fetchData);
     </a-card>
 
     <!-- Create/Edit Modal -->
-    <a-modal v-model:open="showModal" :title="editingDish ? 'Modifier le plat' : 'Nouveau plat'" width="700px" :footer="null" :destroy-on-close="true">
+    <a-modal v-model:open="showModal" :title="editingDish ? 'Modifier le plat' : 'Nouveau plat'" :width="720" :footer="null" :destroy-on-close="true">
       <a-form layout="vertical" @finish="handleSubmit">
         <!-- Image Upload -->
         <a-form-item label="Image du plat">
@@ -794,10 +793,10 @@ watch(selectedCategory, fetchData);
     </a-modal>
 
     <!-- Preview Modal -->
-    <a-modal v-model:open="showPreviewModal" :footer="null" width="500px" :destroy-on-close="true">
+    <a-modal v-model:open="showPreviewModal" :footer="null" :width="520" :destroy-on-close="true">
       <template v-if="previewDish">
         <div class="preview-image">
-          <a-image v-if="previewDish.image" :src="previewDish.image" :width="'100%'" />
+          <a-image v-if="previewDish.image" :src="previewDish.image" width="100%" />
           <div v-else class="preview-placeholder">🍽️</div>
           <div class="preview-badges">
             <a-tag v-if="previewDish.isPopular" color="gold"><StarOutlined /> Populaire</a-tag>

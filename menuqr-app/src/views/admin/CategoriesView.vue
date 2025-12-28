@@ -8,11 +8,10 @@ import {
   EyeOutlined,
   CopyOutlined,
   AppstoreOutlined,
-  BarsOutlined,
   HolderOutlined,
   CloseOutlined,
 } from '@ant-design/icons-vue';
-import type { ColumnsType } from 'ant-design-vue';
+import type { ColumnsType } from 'ant-design-vue/es/table';
 import api, { type Category, type Dish } from '@/services/api';
 
 const isLoading = ref(true);
@@ -69,7 +68,7 @@ const stats = computed(() => ({
 }));
 
 const filteredCategories = computed(() => {
-  if (!searchQuery.value) return categories.value;
+  if (!searchQuery.value) {return categories.value;}
   const query = searchQuery.value.toLowerCase();
   return categories.value.filter(c =>
     c.name.fr.toLowerCase().includes(query) || c.name.en?.toLowerCase().includes(query)
@@ -84,8 +83,8 @@ const fetchData = async () => {
   error.value = null;
   try {
     const [catRes, dishRes] = await Promise.all([api.getMyCategories(), api.getMyDishes()]);
-    if (catRes.success) categories.value = catRes.data?.sort((a, b) => a.order - b.order) || [];
-    if (dishRes.success) dishes.value = dishRes.data || [];
+    if (catRes.success) {categories.value = catRes.data?.sort((a, b) => a.order - b.order) || [];}
+    if (dishRes.success) {dishes.value = dishRes.data || [];}
   } catch { error.value = 'Erreur de chargement'; }
   finally { isLoading.value = false; }
 };
@@ -154,7 +153,7 @@ const handleSubmit = async () => {
 const confirmDelete = (cat: Category) => { categoryToDelete.value = cat; showDeleteModal.value = true; };
 
 const deleteCategory = async () => {
-  if (!categoryToDelete.value) return;
+  if (!categoryToDelete.value) {return;}
   try {
     await api.deleteCategory(categoryToDelete.value._id);
     message.success('Catégorie supprimée');
@@ -179,8 +178,10 @@ const handleDragStart = (e: DragEvent, index: number) => {
 const handleDrop = async (e: DragEvent, targetIndex: number) => {
   e.preventDefault();
   const fromIndex = parseInt(e.dataTransfer?.getData('text/plain') || '0');
-  if (fromIndex === targetIndex) return;
-  const item = categories.value.splice(fromIndex, 1)[0];
+  if (fromIndex === targetIndex) {return;}
+  const items = categories.value.splice(fromIndex, 1);
+  const item = items[0];
+  if (!item) {return;}
   categories.value.splice(targetIndex, 0, item);
   try {
     await api.reorderCategories(categories.value.map((c, i) => ({ id: c._id, order: i })));
@@ -222,18 +223,18 @@ onMounted(fetchData);
             </a-button>
           </div>
 
-          <a-row :gutter="[16, 16]" class="stats-row">
-            <a-col :xs="12" :sm="6">
-              <div class="stat-card"><a-statistic :value="stats.total" title="Total" :value-style="{ color: '#fff', fontSize: '24px', fontWeight: 'bold' }" /></div>
+          <a-row :gutter="[12, 12]" class="stats-row">
+            <a-col :xs="12" :sm="12" :md="6">
+              <div class="stat-card"><a-statistic :value="stats.total" title="Total" :value-style="{ color: '#fff', fontSize: '20px', fontWeight: 'bold' }" /></div>
             </a-col>
-            <a-col :xs="12" :sm="6">
-              <div class="stat-card success"><a-statistic :value="stats.active" title="Actives" :value-style="{ color: '#fff', fontSize: '24px', fontWeight: 'bold' }" /></div>
+            <a-col :xs="12" :sm="12" :md="6">
+              <div class="stat-card success"><a-statistic :value="stats.active" title="Actives" :value-style="{ color: '#fff', fontSize: '20px', fontWeight: 'bold' }" /></div>
             </a-col>
-            <a-col :xs="12" :sm="6">
-              <div class="stat-card warning"><a-statistic :value="stats.inactive" title="Inactives" :value-style="{ color: '#fff', fontSize: '24px', fontWeight: 'bold' }" /></div>
+            <a-col :xs="12" :sm="12" :md="6">
+              <div class="stat-card warning"><a-statistic :value="stats.inactive" title="Inactives" :value-style="{ color: '#fff', fontSize: '20px', fontWeight: 'bold' }" /></div>
             </a-col>
-            <a-col :xs="12" :sm="6">
-              <div class="stat-card"><a-statistic :value="stats.totalDishes" title="Plats total" :value-style="{ color: '#fff', fontSize: '24px', fontWeight: 'bold' }" /></div>
+            <a-col :xs="12" :sm="12" :md="6">
+              <div class="stat-card"><a-statistic :value="stats.totalDishes" title="Plats total" :value-style="{ color: '#fff', fontSize: '20px', fontWeight: 'bold' }" /></div>
             </a-col>
           </a-row>
         </div>
@@ -316,7 +317,7 @@ onMounted(fetchData);
 
     <!-- List View -->
     <a-card v-else-if="filteredCategories.length > 0 && viewMode === 'list'" :bordered="false">
-      <a-table :data-source="filteredCategories" :columns="columns" :row-key="(r) => r._id" :pagination="false">
+      <a-table :data-source="filteredCategories" :columns="columns" :row-key="(r: Category) => r._id" :pagination="false">
         <template #bodyCell="{ column, record, index }">
           <template v-if="column.key === 'drag'">
             <HolderOutlined class="drag-icon" />
@@ -362,7 +363,7 @@ onMounted(fetchData);
     </a-card>
 
     <!-- Create/Edit Modal -->
-    <a-modal v-model:open="showModal" :title="editingCategory ? 'Modifier' : 'Nouvelle catégorie'" width="600px" :footer="null" :destroy-on-close="true">
+    <a-modal v-model:open="showModal" :title="editingCategory ? 'Modifier' : 'Nouvelle catégorie'" :width="620" :footer="null" :destroy-on-close="true">
       <a-form layout="vertical" @finish="handleSubmit">
         <a-row :gutter="16">
           <a-col :span="12">
@@ -417,7 +418,7 @@ onMounted(fetchData);
     </a-modal>
 
     <!-- Preview Modal -->
-    <a-modal v-model:open="showPreviewModal" :footer="null" width="500px">
+    <a-modal v-model:open="showPreviewModal" :footer="null" :width="520">
       <template v-if="previewCategory">
         <div class="preview-header">
           <span class="preview-icon">{{ previewCategory.icon || '📁' }}</span>

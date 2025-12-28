@@ -80,7 +80,9 @@ async function loadReservations() {
     loading.value = true;
     error.value = '';
     const response = await api.getMyReservations();
-    reservations.value = response.reservations;
+    if (response.success && response.data) {
+      reservations.value = response.data.reservations;
+    }
   } catch (err) {
     console.error('Failed to load reservations:', err);
     error.value = 'Impossible de charger vos réservations';
@@ -110,7 +112,7 @@ function closeCancelModal() {
 }
 
 async function confirmCancel() {
-  if (!cancellingId.value) return;
+  if (!cancellingId.value) {return;}
 
   try {
     cancelling.value = true;

@@ -18,6 +18,8 @@ import {
   adminRouter as scheduledOrderAdminRouter,
   customerRouter as scheduledOrderCustomerRouter,
 } from './scheduledOrderRoutes.js';
+import superAdminRoutes from './superAdminRoutes.js';
+import { getCaptchaConfig } from '../services/captchaService.js';
 
 const router = Router();
 
@@ -27,6 +29,14 @@ router.get('/health', (_req, res) => {
     success: true,
     message: 'MenuQR API is running',
     timestamp: new Date().toISOString(),
+  });
+});
+
+// CAPTCHA configuration (for frontend)
+router.get('/captcha-config', (_req, res) => {
+  res.json({
+    success: true,
+    data: getCaptchaConfig(),
   });
 });
 
@@ -55,5 +65,8 @@ router.use('/customer/reservations', customerReservationRouter);
 router.use('/customer/reviews', reviewCustomerRoutes);
 router.use('/customer/scheduled-orders', scheduledOrderCustomerRouter);
 router.use('/customer', customerRoutes);
+
+// Super Admin routes
+router.use('/superadmin', superAdminRoutes);
 
 export default router;

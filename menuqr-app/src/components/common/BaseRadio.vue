@@ -1,7 +1,9 @@
 <script setup lang="ts">
+import { Radio } from 'ant-design-vue';
+
 /**
- * BaseRadio component
- * Reusable radio input with label
+ * BaseRadio - Wrapper around Ant Design Radio
+ * Maintains backwards compatibility with existing API
  */
 const props = defineProps<{
   modelValue: string | number | boolean;
@@ -21,22 +23,63 @@ const handleChange = () => {
 </script>
 
 <template>
-  <div class="flex items-start">
-    <div class="flex items-center h-5">
-      <input
-        type="radio"
-        :name="name"
-        :value="value"
-        :checked="modelValue === value"
-        :disabled="disabled"
-        class="w-4 h-4 text-primary-600 border-gray-300 focus:ring-2 focus:ring-primary-500 focus:ring-offset-0 disabled:cursor-not-allowed disabled:opacity-50"
-        @change="handleChange"
-      />
-    </div>
-    <div v-if="label" class="ml-3 text-sm">
-      <label class="font-medium text-gray-700 cursor-pointer select-none">
+  <div class="base-radio">
+    <Radio
+      :checked="modelValue === value"
+      :disabled="disabled"
+      :name="name"
+      class="base-radio__input"
+      @change="handleChange"
+    >
+      <span v-if="label" class="base-radio__label">
         {{ label }}
-      </label>
-    </div>
+      </span>
+    </Radio>
   </div>
 </template>
+
+<style scoped>
+.base-radio {
+  display: flex;
+  align-items: flex-start;
+}
+
+.base-radio__input {
+  align-items: flex-start;
+}
+
+.base-radio__input :deep(.ant-radio) {
+  top: 2px;
+}
+
+.base-radio__input :deep(.ant-radio-inner) {
+  width: 18px;
+  height: 18px;
+}
+
+.base-radio__input :deep(.ant-radio-checked .ant-radio-inner) {
+  border-color: #14b8a6;
+  background-color: #14b8a6;
+}
+
+.base-radio__input :deep(.ant-radio-checked .ant-radio-inner::after) {
+  background-color: #fff;
+}
+
+.base-radio__input :deep(.ant-radio:hover .ant-radio-inner) {
+  border-color: #14b8a6;
+}
+
+.base-radio__label {
+  font-size: 14px;
+  font-weight: 500;
+  color: #374151;
+  user-select: none;
+  cursor: pointer;
+}
+
+.base-radio__input :deep(.ant-radio-disabled + span) {
+  color: #9ca3af;
+  cursor: not-allowed;
+}
+</style>

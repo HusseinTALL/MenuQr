@@ -15,32 +15,36 @@ router.post(
   '/image',
   authenticate,
   authorize('owner', 'admin'),
-  (req: Request, res: Response, next: NextFunction) => {
-    uploadImage.single('image')(req, res, (err) => {
+  (req: Request, res: Response, next: NextFunction): void => {
+    uploadImage.single('image')(req, res, (err): void => {
       if (err) {
         if (err.code === 'LIMIT_FILE_SIZE') {
-          return res.status(400).json({
+          res.status(400).json({
             success: false,
             message: 'Le fichier est trop volumineux. Taille maximale: 5MB',
           });
+          return;
         }
-        return res.status(400).json({
+        res.status(400).json({
           success: false,
           message: err.message || 'Erreur lors de l\'upload',
         });
+        return;
       }
       next();
+      return;
     });
   },
-  async (req: Request, res: Response) => {
+  async (req: Request, res: Response): Promise<void> => {
     try {
       const file = req.file as CloudinaryFile | undefined;
 
       if (!file) {
-        return res.status(400).json({
+        res.status(400).json({
           success: false,
           message: 'Aucun fichier fourni',
         });
+        return;
       }
 
       res.status(201).json({
@@ -66,24 +70,26 @@ router.delete(
   '/image',
   authenticate,
   authorize('owner', 'admin'),
-  async (req: Request, res: Response) => {
+  async (req: Request, res: Response): Promise<void> => {
     try {
       const { url } = req.body;
 
       if (!url) {
-        return res.status(400).json({
+        res.status(400).json({
           success: false,
           message: 'URL de l\'image requise',
         });
+        return;
       }
 
       const publicId = getPublicIdFromUrl(url);
 
       if (!publicId) {
-        return res.status(400).json({
+        res.status(400).json({
           success: false,
           message: 'URL invalide',
         });
+        return;
       }
 
       const deleted = await deleteImage(publicId);

@@ -2,7 +2,7 @@
 import { ref, onMounted } from 'vue';
 
 const currentPlan = ref('restaurant');
-const selectedHotelPlan = ref('confort');
+const _selectedHotelPlan = ref('confort'); // Reserved for future hotel pricing tier
 const isLoaded = ref(false);
 
 const isCurrentPlan = (planId: string) => currentPlan.value === planId;

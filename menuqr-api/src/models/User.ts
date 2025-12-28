@@ -6,11 +6,15 @@ export interface IUser extends Document {
   email: string;
   password: string;
   name: string;
-  role: 'admin' | 'owner' | 'staff';
+  role: 'admin' | 'owner' | 'staff' | 'superadmin';
   restaurantId?: mongoose.Types.ObjectId;
   isActive: boolean;
   refreshToken?: string;
   lastLogin?: Date;
+  // Account security
+  failedLoginAttempts: number;
+  lockUntil?: Date;
+  isLocked: boolean;
   createdAt: Date;
   updatedAt: Date;
   comparePassword(candidatePassword: string): Promise<boolean>;
@@ -30,6 +34,17 @@ const userSchema = new Schema<IUser>(
       type: String,
       required: [true, 'Password is required'],
       minlength: [8, 'Password must be at least 8 characters'],
+      validate: {
+        validator: function (password: string) {
+          // At least 1 uppercase, 1 lowercase, 1 number
+          const hasUppercase = /[A-Z]/.test(password);
+          const hasLowercase = /[a-z]/.test(password);
+          const hasNumber = /\d/.test(password);
+          return hasUppercase && hasLowercase && hasNumber;
+        },
+        message:
+          'Password must contain at least one uppercase letter, one lowercase letter, and one number',
+      },
       select: false,
     },
     name: {
@@ -40,7 +55,7 @@ const userSchema = new Schema<IUser>(
     },
     role: {
       type: String,
-      enum: ['admin', 'owner', 'staff'],
+      enum: ['admin', 'owner', 'staff', 'superadmin'],
       default: 'owner',
     },
     restaurantId: {
@@ -56,6 +71,13 @@ const userSchema = new Schema<IUser>(
       select: false,
     },
     lastLogin: {
+      type: Date,
+    },
+    failedLoginAttempts: {
+      type: Number,
+      default: 0,
+    },
+    lockUntil: {
       type: Date,
     },
   },
@@ -83,6 +105,16 @@ userSchema.methods.comparePassword = async function (
 
 // Index for faster queries (email index created by unique: true)
 userSchema.index({ restaurantId: 1 });
+
+// Virtual for account lock status
+userSchema.virtual('isLocked').get(function () {
+  // Check if lockUntil exists and is in the future
+  return !!(this.lockUntil && this.lockUntil > new Date());
+});
+
+// Ensure virtuals are included in JSON
+userSchema.set('toJSON', { virtuals: true });
+userSchema.set('toObject', { virtuals: true });
 
 export const User = mongoose.model<IUser>('User', userSchema);
 export default User;

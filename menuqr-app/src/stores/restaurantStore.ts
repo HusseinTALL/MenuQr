@@ -107,14 +107,15 @@ export const useRestaurantStore = defineStore('restaurant', {
 
         if (response.success && response.data) {
           // Transform API response
-          const restaurants = response.data.restaurants.map((r: Record<string, unknown>) => ({
-            id: r._id as string || r.id as string,
-            name: r.name as string,
-            slug: r.slug as string,
-            logo: r.logo as string | undefined,
-            description: r.description as string | undefined,
-            address: r.address as RestaurantListItem['address'],
-          }));
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const restaurants = response.data.restaurants.map((r: any) => ({
+            id: r._id || r.id,
+            name: r.name,
+            slug: r.slug,
+            logo: r.logo,
+            description: r.description,
+            address: r.address,
+          })) as RestaurantListItem[];
 
           if (params?.page && params.page > 1) {
             // Append for infinite scroll
@@ -126,7 +127,7 @@ export const useRestaurantStore = defineStore('restaurant', {
 
           this.pagination = response.data.pagination;
         }
-      } catch (error) {
+      } catch (_error) {
         console.error('Failed to fetch restaurants:', error);
         this.error = 'Impossible de charger les restaurants. Veuillez réessayer.';
       } finally {
@@ -162,7 +163,8 @@ export const useRestaurantStore = defineStore('restaurant', {
       try {
         const response = await api.getRestaurantBySlug(slug);
         if (response.success && response.data) {
-          const r = response.data;
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const r = response.data as any;
           this.selectedRestaurant = {
             id: r._id || r.id,
             name: r.name,
@@ -173,7 +175,7 @@ export const useRestaurantStore = defineStore('restaurant', {
           };
           return true;
         }
-      } catch (error) {
+      } catch (_error) {
         console.error('Failed to select restaurant:', error);
         this.error = 'Restaurant introuvable.';
       }

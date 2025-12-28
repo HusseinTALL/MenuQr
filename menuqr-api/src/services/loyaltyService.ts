@@ -1,6 +1,7 @@
 import mongoose, { ClientSession } from 'mongoose';
 import { LoyaltyTransaction, type ILoyaltyTransaction } from '../models/LoyaltyTransaction.js';
 import { Customer } from '../models/Customer.js';
+import { logger } from '../utils/logger.js';
 
 // Cache the transaction support status
 let transactionsSupported: boolean | null = null;
@@ -22,11 +23,11 @@ const supportsTransactions = async (): Promise<boolean> => {
     await session.abortTransaction();
     session.endSession();
     transactionsSupported = true;
-    console.log('[Loyalty] MongoDB transactions are supported');
+    logger.info('[Loyalty] MongoDB transactions are supported');
     return true;
-  } catch (error) {
+  } catch {
     transactionsSupported = false;
-    console.log('[Loyalty] MongoDB transactions not supported (standalone mode), using non-transactional operations');
+    logger.info('[Loyalty] MongoDB transactions not supported (standalone mode), using non-transactional operations');
     return false;
   }
 };
@@ -100,9 +101,9 @@ export const calculatePointsFromOrder = (orderTotal: number): number => {
 
 // Determine tier based on total points
 export const calculateTier = (totalPoints: number): LoyaltyTier => {
-  if (totalPoints >= LOYALTY_CONFIG.TIERS.platine.min) return 'platine';
-  if (totalPoints >= LOYALTY_CONFIG.TIERS.or.min) return 'or';
-  if (totalPoints >= LOYALTY_CONFIG.TIERS.argent.min) return 'argent';
+  if (totalPoints >= LOYALTY_CONFIG.TIERS.platine.min) {return 'platine';}
+  if (totalPoints >= LOYALTY_CONFIG.TIERS.or.min) {return 'or';}
+  if (totalPoints >= LOYALTY_CONFIG.TIERS.argent.min) {return 'argent';}
   return 'bronze';
 };
 
@@ -314,7 +315,7 @@ export const processExpiredPoints = async (
 
         try {
           const customer = await Customer.findById(group._id).session(session);
-          if (!customer) continue;
+          if (!customer) {continue;}
 
           const newBalance = Math.max(0, (customer.loyalty?.totalPoints || 0) - group.totalExpiring);
           const newTier = calculateTier(newBalance);
@@ -355,7 +356,7 @@ export const processExpiredPoints = async (
       } else {
         // Non-transactional mode (development)
         const customer = await Customer.findById(group._id);
-        if (!customer) continue;
+        if (!customer) {continue;}
 
         const newBalance = Math.max(0, (customer.loyalty?.totalPoints || 0) - group.totalExpiring);
         const newTier = calculateTier(newBalance);

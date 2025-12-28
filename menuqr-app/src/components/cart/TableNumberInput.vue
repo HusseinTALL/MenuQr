@@ -1,6 +1,11 @@
 <script setup lang="ts">
+import { Input } from 'ant-design-vue';
 import { useLocale } from '@/composables/useI18n';
 
+/**
+ * TableNumberInput - Input field for table number selection
+ * Uses Ant Design Input with numeric keyboard on mobile
+ */
 defineProps<{
   modelValue: string | null;
 }>();
@@ -11,25 +16,60 @@ const emit = defineEmits<{
 
 const { t } = useLocale();
 
-const handleInput = (event: Event) => {
-  const target = event.target as HTMLInputElement;
+const handleInput = (e: Event) => {
+  const target = e.target as HTMLInputElement;
   emit('update:modelValue', target.value);
 };
 </script>
 
 <template>
-  <div class="mb-6">
-    <label class="block text-base font-semibold text-gray-900 mb-2.5">
+  <div class="table-input">
+    <label class="table-input__label">
       {{ t('order.tableNumber') }}
     </label>
-    <input
-      type="text"
-      inputmode="numeric"
-      pattern="[0-9]*"
+    <Input
       :value="modelValue || ''"
       :placeholder="t('order.selectTable')"
-      class="w-full h-14 px-5 py-3.5 rounded-2xl bg-white text-base text-gray-900 placeholder-gray-500 border border-gray-200 shadow-sm focus:outline-none focus:border-primary-500 focus:ring-4 focus:ring-primary-500/20 transition-all duration-300 hover:shadow-md"
+      inputmode="numeric"
+      size="large"
+      class="table-input__field"
       @input="handleInput"
     />
   </div>
 </template>
+
+<style scoped>
+.table-input {
+  margin-bottom: 24px;
+}
+
+.table-input__label {
+  display: block;
+  margin-bottom: 10px;
+  font-size: 16px;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.table-input__field {
+  height: 56px;
+  border-radius: 16px;
+  font-size: 16px;
+}
+
+.table-input__field :deep(.ant-input) {
+  height: 56px;
+  padding: 0 20px;
+  border-radius: 16px;
+}
+
+.table-input__field:hover {
+  border-color: #14b8a6;
+}
+
+.table-input__field:focus,
+.table-input__field:focus-within {
+  border-color: #14b8a6;
+  box-shadow: 0 0 0 4px rgba(20, 184, 166, 0.1);
+}
+</style>

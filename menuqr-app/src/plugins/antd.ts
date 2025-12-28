@@ -8,6 +8,8 @@ import {
   Layout,
   Menu,
   Breadcrumb,
+  Row,
+  Col,
 
   // Data Display
   Table,
@@ -22,6 +24,8 @@ import {
   Image,
   Collapse,
   Tabs,
+  Segmented,
+  List,
 
   // Data Entry
   Form,
@@ -126,6 +130,8 @@ const components = [
   Layout,
   Menu,
   Breadcrumb,
+  Row,
+  Col,
   Table,
   Card,
   Statistic,
@@ -138,6 +144,8 @@ const components = [
   Image,
   Collapse,
   Tabs,
+  Segmented,
+  List,
   Form,
   Input,
   InputNumber,
