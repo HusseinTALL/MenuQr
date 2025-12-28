@@ -18,7 +18,8 @@ interface PasswordExpiryInfo {
   expiresAt: string;
 }
 
-interface LoginResult {
+// Exported for use in components
+export interface LoginResult {
   success: boolean;
   requiresTwoFactor?: boolean;
   userId?: string;

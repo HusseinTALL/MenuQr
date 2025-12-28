@@ -61,9 +61,9 @@ const TOKEN_EXPIRY_BUFFER_MS = 5 * 60 * 1000;
 function decodeJwtPayload(token: string): { exp?: number; iat?: number } | null {
   try {
     const parts = token.split('.');
-    if (parts.length !== 3) return null;
+    if (parts.length !== 3) {return null;}
     const base64Payload = parts[1];
-    if (!base64Payload) return null;
+    if (!base64Payload) {return null;}
     const payload = JSON.parse(atob(base64Payload));
     return payload;
   } catch {
@@ -76,7 +76,7 @@ function decodeJwtPayload(token: string): { exp?: number; iat?: number } | null 
  */
 function isTokenExpiringSoon(token: string, bufferMs: number = TOKEN_EXPIRY_BUFFER_MS): boolean {
   const payload = decodeJwtPayload(token);
-  if (!payload || !payload.exp) return true; // Treat as expired if can't decode
+  if (!payload || !payload.exp) {return true;} // Treat as expired if can't decode
 
   const expiryTime = payload.exp * 1000; // Convert to milliseconds
   const now = Date.now();

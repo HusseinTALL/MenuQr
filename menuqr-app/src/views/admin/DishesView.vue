@@ -389,7 +389,8 @@ const toggleAvailability = async (dish: Dish) => {
       dish.isAvailable = response.data.isAvailable;
       message.success(dish.isAvailable ? 'Plat disponible' : 'Plat indisponible');
     }
-  } catch {
+  } catch (_error) {
+    message.error('Erreur lors de la mise à jour');
   }
 };
 
@@ -442,7 +443,8 @@ const bulkToggleAvailability = async (available: boolean) => {
     await fetchData();
     selectedRowKeys.value = [];
     message.success(`${promises.length} plat(s) mis à jour`);
-  } catch {
+  } catch (_error) {
+    message.error('Erreur lors de la mise à jour');
   }
 };
 

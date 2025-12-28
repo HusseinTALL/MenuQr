@@ -55,8 +55,8 @@ if ('serviceWorker' in navigator && import.meta.env.VITE_ENABLE_PWA === 'true') 
       onRegistered(registration) {
         console.info('Service Worker registered:', registration);
       },
-      onRegisterError(error) {
-        console.error('Service Worker registration error:');
+      onRegisterError(_error) {
+        console.error('Service Worker registration error:', _error);
       },
     });
   });
