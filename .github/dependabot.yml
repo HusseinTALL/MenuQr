@@ -1,0 +1,84 @@
+version: 2
+
+updates:
+  # Frontend dependencies
+  - package-ecosystem: "npm"
+    directory: "/menuqr-app"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "Africa/Ouagadougou"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "frontend"
+    commit-message:
+      prefix: "chore(deps)"
+    groups:
+      vue:
+        patterns:
+          - "vue*"
+          - "@vue/*"
+      vite:
+        patterns:
+          - "vite*"
+          - "@vitejs/*"
+      testing:
+        patterns:
+          - "vitest*"
+          - "@vitest/*"
+          - "playwright*"
+          - "@playwright/*"
+      typescript:
+        patterns:
+          - "typescript"
+          - "@types/*"
+      antd:
+        patterns:
+          - "ant-design-vue"
+          - "@ant-design/*"
+
+  # Backend dependencies
+  - package-ecosystem: "npm"
+    directory: "/menuqr-api"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "Africa/Ouagadougou"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "backend"
+    commit-message:
+      prefix: "chore(deps)"
+    groups:
+      express:
+        patterns:
+          - "express*"
+          - "@types/express*"
+      mongoose:
+        patterns:
+          - "mongoose*"
+          - "@types/mongoose*"
+      testing:
+        patterns:
+          - "vitest*"
+          - "@vitest/*"
+      typescript:
+        patterns:
+          - "typescript"
+          - "@types/*"
+
+  # GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    labels:
+      - "dependencies"
+      - "ci"
+    commit-message:
+      prefix: "chore(ci)"
