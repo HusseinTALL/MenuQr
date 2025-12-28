@@ -2,6 +2,7 @@ import { processScheduledCampaigns } from './campaignService.js';
 import { processExpiredPoints } from './loyaltyService.js';
 import { processReminders as processReservationReminders } from './reservationService.js';
 import AlertService from './alertService.js';
+import { runLowStockAlertJob } from './inventoryService.js';
 import { Restaurant } from '../models/index.js';
 import logger from '../utils/logger.js';
 
@@ -9,11 +10,13 @@ const SCHEDULER_INTERVAL_MS = 60000; // Check every minute
 const LOYALTY_EXPIRY_HOUR = 2; // Run at 2 AM
 const RESERVATION_REMINDER_INTERVAL_MS = 15 * 60 * 1000; // Check every 15 minutes
 const ALERT_CHECK_INTERVAL_MS = 60 * 60 * 1000; // Check every hour
+const LOW_STOCK_CHECK_INTERVAL_MS = 4 * 60 * 60 * 1000; // Check every 4 hours
 
 let schedulerInterval: NodeJS.Timeout | null = null;
 let loyaltyExpiryInterval: NodeJS.Timeout | null = null;
 let reservationReminderInterval: NodeJS.Timeout | null = null;
 let alertCheckInterval: NodeJS.Timeout | null = null;
+let lowStockAlertInterval: NodeJS.Timeout | null = null;
 let lastLoyaltyProcessDate: string | null = null;
 
 /**
@@ -126,6 +129,35 @@ export function startScheduler(): void {
       logger.error('Error in initial alert check', error);
     });
   }, 30000); // 30 second delay
+
+  // Run low stock alert checks every 4 hours
+  lowStockAlertInterval = setInterval(() => {
+    runLowStockAlertJob()
+      .then((result) => {
+        if (result.alertsSent > 0) {
+          logger.info('Low stock alerts sent', {
+            restaurantsChecked: result.restaurantsChecked,
+            alertsSent: result.alertsSent,
+          });
+        }
+      })
+      .catch((error) => {
+        logger.error('Error running low stock alert job', error);
+      });
+  }, LOW_STOCK_CHECK_INTERVAL_MS);
+
+  // Also run low stock check on startup (after a delay)
+  setTimeout(() => {
+    runLowStockAlertJob()
+      .then((result) => {
+        if (result.alertsSent > 0) {
+          logger.info('Initial low stock alerts sent', result);
+        }
+      })
+      .catch((error) => {
+        logger.error('Error in initial low stock alert check', error);
+      });
+  }, 60000); // 1 minute delay
 }
 
 /**
@@ -147,6 +179,10 @@ export function stopScheduler(): void {
   if (alertCheckInterval) {
     clearInterval(alertCheckInterval);
     alertCheckInterval = null;
+  }
+  if (lowStockAlertInterval) {
+    clearInterval(lowStockAlertInterval);
+    lowStockAlertInterval = null;
   }
   logger.info('Scheduler stopped');
 }
