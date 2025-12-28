@@ -141,7 +141,7 @@ export const getNextTierInfo = (
 // Earn points from completed order
 export const earnPoints = async (
   customerId: mongoose.Types.ObjectId,
-  restaurantId: mongoose.Types.ObjectId,
+  restaurantId: mongoose.Types.ObjectId | string,
   orderId: mongoose.Types.ObjectId,
   orderTotal: number
 ): Promise<ILoyaltyTransaction> => {
@@ -527,7 +527,7 @@ export const getExpiringPoints = async (
 // Admin: Adjust customer points
 export const adjustPoints = async (
   customerId: mongoose.Types.ObjectId,
-  restaurantId: mongoose.Types.ObjectId,
+  restaurantId: mongoose.Types.ObjectId | string,
   points: number,
   reason: string,
   adjustedBy: mongoose.Types.ObjectId
@@ -583,7 +583,7 @@ export const adjustPoints = async (
 // Admin: Add bonus points
 export const addBonusPoints = async (
   customerId: mongoose.Types.ObjectId,
-  restaurantId: mongoose.Types.ObjectId,
+  restaurantId: mongoose.Types.ObjectId | string,
   points: number,
   description: string,
   _adjustedBy?: mongoose.Types.ObjectId
@@ -647,7 +647,7 @@ export const addBonusPoints = async (
 };
 
 // Get restaurant-wide loyalty statistics
-export const getLoyaltyStats = async (restaurantId: mongoose.Types.ObjectId) => {
+export const getLoyaltyStats = async (restaurantId: mongoose.Types.ObjectId | string) => {
   const [tierDistribution, transactionStats, topCustomers] = await Promise.all([
     // Tier distribution
     Customer.aggregate([
@@ -723,7 +723,7 @@ export const getLoyaltyStats = async (restaurantId: mongoose.Types.ObjectId) => 
 
 // Get all customers with loyalty info for admin
 export const getCustomersLoyalty = async (
-  restaurantId: mongoose.Types.ObjectId,
+  restaurantId: mongoose.Types.ObjectId | string,
   options: {
     tier?: string;
     search?: string;

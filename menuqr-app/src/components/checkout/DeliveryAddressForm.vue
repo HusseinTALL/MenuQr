@@ -96,7 +96,7 @@ const getCurrentLocation = async () => {
     hasCoordinates.value = true;
     emit('update:modelValue', buildAddress(coordinates));
   } catch (_error) {
-    const err = error as GeolocationPositionError;
+    const err = _error as GeolocationPositionError;
     switch (err.code) {
       case err.PERMISSION_DENIED:
         locationError.value = 'Accès à la localisation refusé';
