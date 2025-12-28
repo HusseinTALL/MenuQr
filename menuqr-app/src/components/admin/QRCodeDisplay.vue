@@ -28,7 +28,7 @@ const error = ref<string | null>(null);
 const copied = ref(false);
 
 const generateQR = async () => {
-  if (!props.url) return;
+  if (!props.url) {return;}
 
   isLoading.value = true;
   error.value = null;

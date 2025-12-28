@@ -5,11 +5,22 @@ import piniaPluginPersistedstate from 'pinia-plugin-persistedstate';
 import App from './App.vue';
 import router from './router';
 import i18n from './i18n';
+import setupAntd from './plugins/antd';
+import { initializeSentry } from './plugins/sentry';
 
 import './assets/styles/main.css';
+// Ant Design styles
+import 'ant-design-vue/dist/reset.css';
+// Client theme overrides for mobile-optimized Ant Design
+import './styles/client-theme.css';
+// Admin responsive styles
+import './styles/admin-responsive.css';
 
 // Create Vue app
 const app = createApp(App);
+
+// Initialize Sentry error tracking (must be early, before other plugins)
+initializeSentry(app, router);
 
 // Create Pinia store with persistence
 const pinia = createPinia();
@@ -19,6 +30,9 @@ pinia.use(piniaPluginPersistedstate);
 app.use(pinia);
 app.use(router);
 app.use(i18n);
+
+// Setup Ant Design Vue (admin + client interfaces)
+setupAntd(app);
 
 // Mount app
 app.mount('#app');
@@ -41,8 +55,8 @@ if ('serviceWorker' in navigator && import.meta.env.VITE_ENABLE_PWA === 'true') 
       onRegistered(registration) {
         console.info('Service Worker registered:', registration);
       },
-      onRegisterError(error) {
-        console.error('Service Worker registration error:', error);
+      onRegisterError(_error) {
+        console.error('Service Worker registration error:', _error);
       },
     });
   });

@@ -287,7 +287,7 @@ export default defineConfig({
     port: 3000,
     open: true,
     cors: true,
-    https: true, // Enable HTTPS (uses basicSsl plugin certificate)
+    // HTTPS is handled by basicSsl plugin
     host: true, // Expose to network for mobile testing
     // Proxy API requests to backend (avoids mixed content issues with HTTPS)
     proxy: {
@@ -295,6 +295,13 @@ export default defineConfig({
         target: 'http://localhost:3001',
         changeOrigin: true,
         secure: false,
+      },
+      // Proxy Socket.io WebSocket connections
+      '/socket.io': {
+        target: 'http://localhost:3001',
+        changeOrigin: true,
+        secure: false,
+        ws: true, // Enable WebSocket proxying
       },
     },
   },

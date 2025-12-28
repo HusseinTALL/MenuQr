@@ -151,20 +151,26 @@ export function useMenu() {
    * Load menu data
    */
   const loadMenu = async (slug?: string) => {
-    await menuStore.loadMenu(slug);
+    if (slug) {
+      await menuStore.loadMenu(slug);
+    } else if (menuStore.restaurant?.slug) {
+      await menuStore.loadMenu(menuStore.restaurant.slug);
+    }
   };
 
   /**
    * Refresh menu data
    */
   const refreshMenu = async () => {
-    await menuStore.loadMenu();
+    if (menuStore.restaurant?.slug) {
+      await menuStore.loadMenu(menuStore.restaurant.slug);
+    }
   };
 
   // Auto-load menu on mount if not loaded
   onMounted(() => {
-    if (!menuStore.isMenuLoaded) {
-      menuStore.loadMenu();
+    if (!menuStore.isMenuLoaded && menuStore.restaurant?.slug) {
+      menuStore.loadMenu(menuStore.restaurant.slug);
     }
   });
 

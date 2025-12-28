@@ -20,10 +20,11 @@ export const TABS_KEY: InjectionKey<TabsContext> = Symbol('tabs');
 
 <script setup lang="ts">
 /**
- * BaseTabs component
- * Tab navigation container with animated indicator
+ * BaseTabs - Wrapper around Ant Design Tabs
+ * Maintains backwards compatibility with existing API
  */
 import { ref, provide, computed, watch } from 'vue';
+import { Tabs } from 'ant-design-vue';
 
 const props = withDefaults(
   defineProps<{
@@ -88,83 +89,150 @@ provide(TABS_KEY, {
   setActiveTab,
 });
 
-const tabClasses = computed(() => {
-  const base =
-    'inline-flex items-center justify-center gap-2 font-medium transition-all duration-200';
-
-  const sizes = {
-    sm: 'px-3 py-1.5 text-xs',
-    md: 'px-4 py-2 text-sm',
-    lg: 'px-6 py-3 text-base',
-  };
-
-  return `${base} ${sizes[props.size]}`;
+// Map variant to Ant Design type
+const tabType = computed(() => {
+  switch (props.variant) {
+    case 'pills':
+      return 'card';
+    case 'underline':
+      return 'line';
+    default:
+      return 'line';
+  }
 });
 
-const getTabStateClasses = (tab: TabInfo) => {
-  const isActive = activeTab.value === tab.id;
-
-  if (tab.disabled) {
-    return 'text-gray-400 cursor-not-allowed';
+// Map size to Ant Design size
+const antSize = computed(() => {
+  switch (props.size) {
+    case 'sm':
+      return 'small';
+    case 'lg':
+      return 'large';
+    default:
+      return 'middle';
   }
+});
 
-  if (props.variant === 'pills') {
-    return isActive
-      ? 'bg-primary-600 text-white shadow-sm'
-      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100';
-  }
-
-  if (props.variant === 'underline') {
-    return isActive
-      ? 'text-primary-600 border-b-2 border-primary-600'
-      : 'text-gray-600 hover:text-gray-900 border-b-2 border-transparent';
-  }
-
-  // Default
-  return isActive
-    ? 'text-primary-600 bg-primary-50 border-primary-600'
-    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50 border-transparent';
+// Handle tab change
+const handleChange = (key: string | number) => {
+  setActiveTab(String(key));
 };
 
-const containerClasses = computed(() => {
-  if (props.variant === 'pills') {
-    return 'inline-flex gap-1 p-1 bg-gray-100 rounded-lg';
-  }
-
-  if (props.variant === 'underline') {
-    return 'flex border-b border-gray-200';
-  }
-
-  return 'inline-flex gap-1 p-1 border border-gray-200 rounded-lg bg-gray-50';
+// Generate tab items for Ant Design
+const tabItems = computed(() => {
+  return tabs.value.map((tab) => ({
+    key: tab.id,
+    label: tab.icon ? `${tab.icon} ${tab.label}` : tab.label,
+    disabled: tab.disabled,
+  }));
 });
 </script>
 
 <template>
-  <div>
-    <!-- Tab Headers -->
-    <div :class="[containerClasses, fullWidth ? 'w-full' : '']">
-      <button
-        v-for="tab in tabs"
-        :key="tab.id"
-        type="button"
-        :disabled="tab.disabled"
-        :class="[
-          tabClasses,
-          getTabStateClasses(tab),
-          variant === 'pills' ? 'rounded-md' : '',
-          variant === 'default' ? 'rounded-md border' : '',
-          fullWidth ? 'flex-1' : '',
-        ]"
-        @click="setActiveTab(tab.id)"
-      >
-        <span v-if="tab.icon" class="text-lg">{{ tab.icon }}</span>
-        <span>{{ tab.label }}</span>
-      </button>
-    </div>
+  <div
+    class="base-tabs"
+    :class="{
+      'base-tabs--pills': variant === 'pills',
+      'base-tabs--underline': variant === 'underline',
+      'base-tabs--full-width': fullWidth,
+    }"
+  >
+    <!-- Tab Headers using Ant Design -->
+    <Tabs
+      :active-key="activeTab"
+      :type="tabType"
+      :size="antSize"
+      :items="tabItems"
+      class="base-tabs__nav"
+      @change="handleChange"
+    />
 
-    <!-- Tab Content -->
-    <div class="mt-4">
+    <!-- Tab Content (slot-based for backwards compatibility) -->
+    <div class="base-tabs__content">
       <slot />
     </div>
   </div>
 </template>
+
+<style scoped>
+.base-tabs {
+  width: 100%;
+}
+
+/* Override Ant Design tabs styling */
+.base-tabs :deep(.ant-tabs-nav) {
+  margin-bottom: 16px;
+}
+
+.base-tabs :deep(.ant-tabs-tab) {
+  padding: 8px 16px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.base-tabs :deep(.ant-tabs-tab:hover) {
+  color: #14b8a6;
+}
+
+.base-tabs :deep(.ant-tabs-tab-active .ant-tabs-tab-btn) {
+  color: #14b8a6;
+}
+
+.base-tabs :deep(.ant-tabs-ink-bar) {
+  background: #14b8a6;
+}
+
+/* Pills variant */
+.base-tabs--pills :deep(.ant-tabs-nav) {
+  background: #f1f5f9;
+  border-radius: 12px;
+  padding: 4px;
+}
+
+.base-tabs--pills :deep(.ant-tabs-tab) {
+  border-radius: 8px;
+  margin: 0 2px;
+}
+
+.base-tabs--pills :deep(.ant-tabs-tab-active) {
+  background: #14b8a6;
+}
+
+.base-tabs--pills :deep(.ant-tabs-tab-active .ant-tabs-tab-btn) {
+  color: #fff;
+}
+
+.base-tabs--pills :deep(.ant-tabs-ink-bar) {
+  display: none;
+}
+
+/* Underline variant */
+.base-tabs--underline :deep(.ant-tabs-nav::before) {
+  border-bottom: 1px solid #e5e7eb;
+}
+
+/* Full width */
+.base-tabs--full-width :deep(.ant-tabs-nav-list) {
+  width: 100%;
+}
+
+.base-tabs--full-width :deep(.ant-tabs-tab) {
+  flex: 1;
+  justify-content: center;
+}
+
+/* Size variants */
+.base-tabs :deep(.ant-tabs-small .ant-tabs-tab) {
+  padding: 6px 12px;
+  font-size: 13px;
+}
+
+.base-tabs :deep(.ant-tabs-large .ant-tabs-tab) {
+  padding: 12px 24px;
+  font-size: 15px;
+}
+
+.base-tabs__content {
+  margin-top: 0;
+}
+</style>

@@ -1,7 +1,9 @@
 <script setup lang="ts">
+import { Checkbox } from 'ant-design-vue';
+
 /**
- * BaseCheckbox component
- * Reusable checkbox input with label
+ * BaseCheckbox - Wrapper around Ant Design Checkbox
+ * Maintains backwards compatibility with existing API
  */
 defineProps<{
   modelValue: boolean;
@@ -14,30 +16,75 @@ const emit = defineEmits<{
   'update:modelValue': [value: boolean];
 }>();
 
-const handleChange = (event: Event) => {
-  const target = event.target as HTMLInputElement;
-  emit('update:modelValue', target.checked);
+const handleChange = (e: { target: { checked: boolean } }) => {
+  emit('update:modelValue', e.target.checked);
 };
 </script>
 
 <template>
-  <div class="flex items-start">
-    <div class="flex items-center h-5">
-      <input
-        type="checkbox"
-        :checked="modelValue"
-        :disabled="disabled"
-        class="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-2 focus:ring-primary-500 focus:ring-offset-0 disabled:cursor-not-allowed disabled:opacity-50"
-        @change="handleChange"
-      />
-    </div>
-    <div v-if="label || error" class="ml-3 text-sm">
-      <label v-if="label" class="font-medium text-gray-700 cursor-pointer select-none">
+  <div class="base-checkbox" :class="{ 'base-checkbox--error': error }">
+    <Checkbox
+      :checked="modelValue"
+      :disabled="disabled"
+      class="base-checkbox__input"
+      @change="handleChange"
+    >
+      <span v-if="label" class="base-checkbox__label">
         {{ label }}
-      </label>
-      <p v-if="error" class="text-red-600">
-        {{ error }}
-      </p>
-    </div>
+      </span>
+    </Checkbox>
+
+    <!-- Error message -->
+    <p v-if="error" class="base-checkbox__error">
+      {{ error }}
+    </p>
   </div>
 </template>
+
+<style scoped>
+.base-checkbox {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.base-checkbox__input {
+  align-items: flex-start;
+}
+
+.base-checkbox__input :deep(.ant-checkbox) {
+  top: 2px;
+}
+
+.base-checkbox__input :deep(.ant-checkbox-inner) {
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+}
+
+.base-checkbox__input :deep(.ant-checkbox-checked .ant-checkbox-inner) {
+  background-color: #14b8a6;
+  border-color: #14b8a6;
+}
+
+.base-checkbox__input :deep(.ant-checkbox:hover .ant-checkbox-inner) {
+  border-color: #14b8a6;
+}
+
+.base-checkbox__label {
+  font-size: 14px;
+  font-weight: 500;
+  color: #374151;
+  user-select: none;
+}
+
+.base-checkbox--error :deep(.ant-checkbox-inner) {
+  border-color: #ef4444;
+}
+
+.base-checkbox__error {
+  margin-left: 26px;
+  font-size: 13px;
+  color: #ef4444;
+}
+</style>

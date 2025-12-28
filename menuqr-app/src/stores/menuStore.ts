@@ -231,6 +231,9 @@ export const useMenuStore = defineStore('menu', {
         if (response.success && response.data) {
           const apiData = response.data;
           // Transform API response to MenuData format
+          // Type assertions are used because API response shape differs from frontend types
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const settings = apiData.restaurant.settings as any;
           menuData = {
             restaurant: {
               id: apiData.restaurant.id,
@@ -240,18 +243,18 @@ export const useMenuStore = defineStore('menu', {
                 fr: apiData.restaurant.description,
                 en: apiData.restaurant.description,
               } : undefined,
-              logo: apiData.restaurant.logo,
-              address: apiData.restaurant.address?.street,
-              city: apiData.restaurant.address?.city,
-              tables: apiData.restaurant.settings?.tableCount || 15,
-              currency: apiData.restaurant.settings?.currency || 'XOF',
-              defaultLocale: apiData.restaurant.settings?.defaultLanguage || 'fr',
-              whatsappNumber: apiData.restaurant.phone,
-            },
+              logo: apiData.restaurant.logo || '',
+              address: apiData.restaurant.address?.street || '',
+              city: apiData.restaurant.address?.city || '',
+              tables: settings?.tableCount ?? 15,
+              currency: 'XOF',
+              defaultLocale: settings?.defaultLanguage === 'en' ? 'en' : 'fr',
+              whatsappNumber: apiData.restaurant.phone || '',
+            } as Restaurant,
             categories: apiData.categories.map(cat => ({
               id: cat.id,
               name: cat.name,
-              description: cat.description,
+              description: cat.description ? { fr: cat.description.fr || '', en: cat.description.en } : undefined,
               icon: cat.icon,
               order: cat.order,
               isActive: cat.isActive !== false,
@@ -261,20 +264,21 @@ export const useMenuStore = defineStore('menu', {
                 name: dish.name,
                 description: dish.description,
                 price: dish.price,
-                image: dish.image,
+                image: dish.image || '',
                 estimatedTime: dish.preparationTime,
                 isAvailable: dish.isAvailable !== false,
-                isPopular: dish.isPopular,
-                isNew: dish.isNewDish,
-                isVegetarian: dish.isVegetarian,
-                isSpicy: dish.isSpicy,
+                isPopular: dish.isPopular || false,
+                isNew: dish.isNewDish || false,
+                isVegetarian: dish.isVegetarian || false,
+                isSpicy: dish.isSpicy || false,
                 spicyLevel: dish.spicyLevel,
                 order: dish.order,
                 allergens: dish.allergens,
                 options: dish.options || [],
               })),
-            })),
+            })) as unknown as Category[],
             lastUpdated: apiData.lastUpdated || new Date().toISOString(),
+            version: '1.0',
           };
         } else {
           throw new Error('Failed to load menu from API');
@@ -292,8 +296,8 @@ export const useMenuStore = defineStore('menu', {
 
         // Cache in IndexedDB for offline access
         await offlineStore.cacheMenu(menuData);
-      } catch (error) {
-        console.warn('Failed to load menu from API, trying local fallback:', error);
+      } catch (_error) {
+        console.warn('Failed to load menu from API, trying local fallback:', _error);
 
         // Try local JSON file as fallback
         try {
@@ -369,8 +373,8 @@ export const useMenuStore = defineStore('menu', {
           // Migrate to IndexedDB
           await offlineStore.cacheMenu(data);
         }
-      } catch (error) {
-        console.error('Failed to load from cache:', error);
+      } catch (_error) {
+        console.error('Failed to load from cache:');
       }
     },
 

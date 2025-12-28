@@ -1,11 +1,16 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { Card, Button, Popconfirm } from 'ant-design-vue';
+import { DeleteOutlined, MinusOutlined, PlusOutlined } from '@ant-design/icons-vue';
 import type { CartItem } from '@/types/cart';
 import { useCart } from '@/composables/useCart';
 import { useLocale } from '@/composables/useI18n';
 import { useCurrency } from '@/composables/useCurrency';
 import LazyImage from '@/components/common/LazyImage.vue';
 
+/**
+ * CartItem - Individual cart item with quantity controls
+ * Uses Ant Design components with custom styling
+ */
 const props = defineProps<{
   item: CartItem;
 }>();
@@ -18,8 +23,6 @@ const { updateQuantity, removeItem } = useCart();
 const { localize, t } = useLocale();
 const { formatPrice } = useCurrency();
 
-const showConfirmDelete = ref(false);
-
 const increment = () => {
   updateQuantity(props.item.id, props.item.quantity + 1);
 };
@@ -30,155 +33,237 @@ const decrement = () => {
   }
 };
 
-const confirmRemove = () => {
-  showConfirmDelete.value = true;
-};
-
-const cancelRemove = () => {
-  showConfirmDelete.value = false;
-};
-
 const remove = () => {
   removeItem(props.item.id);
-  showConfirmDelete.value = false;
 };
 </script>
 
 <template>
-  <div class="relative">
-    <!-- Main Card -->
-    <div
-      class="flex gap-4 p-4 bg-white rounded-2xl shadow-sm ring-1 ring-gray-200/60 transition-all duration-200"
-    >
+  <Card class="cart-item" :bordered="false" :body-style="{ padding: '16px' }">
+    <div class="cart-item__layout">
       <!-- Dish Image -->
-      <div class="flex-shrink-0 w-24 h-24 rounded-xl overflow-hidden shadow-sm">
+      <div class="cart-item__image">
         <LazyImage
           :src="item.dish.image"
           :alt="localize(item.dish.name)"
-          class="h-full w-full object-cover"
+          class="cart-item__img"
         />
       </div>
 
       <!-- Item Details -->
-      <div class="flex-1 min-w-0 flex flex-col justify-between">
-        <div>
-          <div class="flex items-start justify-between gap-3">
-            <h3 class="text-base font-semibold text-gray-900 line-clamp-2">
-              {{ localize(item.dish.name) }}
-            </h3>
-            <button
-              class="flex-shrink-0 p-2 rounded-full text-gray-400 hover:text-red-600 hover:bg-red-50 active:scale-95 transition-all duration-200"
-              @click.stop="confirmRemove"
-            >
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                />
-              </svg>
-            </button>
-          </div>
-
-          <!-- Selected Options -->
-          <div
-            v-if="item.selectedOptions && item.selectedOptions.length > 0"
-            class="mt-2 space-y-1"
+      <div class="cart-item__details">
+        <div class="cart-item__header">
+          <h3 class="cart-item__name">{{ localize(item.dish.name) }}</h3>
+          <Popconfirm
+            :title="t('cart.removeConfirm')"
+            :ok-text="t('app.yes')"
+            :cancel-text="t('app.no')"
+            ok-type="danger"
+            placement="left"
+            @confirm="remove"
           >
-            <p
-              v-for="option in item.selectedOptions"
-              :key="option.optionId"
-              class="text-sm text-gray-600 truncate"
+            <Button
+              type="text"
+              shape="circle"
+              class="cart-item__delete"
             >
-              <span class="text-gray-500">{{ option.optionName }}:</span>
-              {{ option.choices.map((c) => localize(c.name)).join(', ') }}
-              <span v-if="option.priceModifier > 0" class="font-medium text-primary-600">
-                (+{{ formatPrice(option.priceModifier) }})
-              </span>
-            </p>
-          </div>
+              <template #icon><DeleteOutlined /></template>
+            </Button>
+          </Popconfirm>
+        </div>
 
-          <!-- Item Notes -->
-          <p v-if="item.notes" class="mt-2 text-sm italic text-gray-500 truncate">
-            "{{ item.notes }}"
+        <!-- Selected Options -->
+        <div v-if="item.selectedOptions && item.selectedOptions.length > 0" class="cart-item__options">
+          <p v-for="option in item.selectedOptions" :key="option.optionId" class="cart-item__option">
+            <span class="cart-item__option-name">{{ option.optionName }}:</span>
+            {{ option.choices.map((c) => localize(c.name)).join(', ') }}
+            <span v-if="option.priceModifier > 0" class="cart-item__option-price">
+              (+{{ formatPrice(option.priceModifier) }})
+            </span>
           </p>
         </div>
 
+        <!-- Item Notes -->
+        <p v-if="item.notes" class="cart-item__notes">"{{ item.notes }}"</p>
+
         <!-- Price and Quantity -->
-        <div class="flex items-center justify-between mt-4">
-          <div class="text-lg font-bold text-gray-900">
-            {{ formatPrice(item.totalPrice) }}
-          </div>
+        <div class="cart-item__footer">
+          <span class="cart-item__price">{{ formatPrice(item.totalPrice) }}</span>
 
           <!-- Quantity Controls -->
-          <div class="inline-flex items-center rounded-2xl bg-gray-100 p-1.5 shadow-inner">
-            <button
-              class="w-10 h-10 rounded-full flex items-center justify-center text-gray-700 hover:bg-gray-200 active:scale-95 transition-all disabled:opacity-40"
+          <div class="cart-item__quantity">
+            <Button
+              type="default"
+              shape="circle"
               :disabled="item.quantity <= 1"
+              class="cart-item__qty-btn"
               @click.stop="decrement"
             >
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M20 12H4"
-                />
-              </svg>
-            </button>
-            <span class="w-12 text-center text-base font-bold text-gray-900">{{
-              item.quantity
-            }}</span>
-            <button
-              class="w-10 h-10 rounded-full flex items-center justify-center bg-primary-600 text-white hover:bg-primary-700 active:scale-95 transition-all shadow-md"
+              <template #icon><MinusOutlined /></template>
+            </Button>
+            <span class="cart-item__qty-value">{{ item.quantity }}</span>
+            <Button
+              type="primary"
+              shape="circle"
+              class="cart-item__qty-btn cart-item__qty-btn--plus"
               @click.stop="increment"
             >
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M12 4v16m8-8H4"
-                />
-              </svg>
-            </button>
+              <template #icon><PlusOutlined /></template>
+            </Button>
           </div>
         </div>
       </div>
     </div>
-
-    <!-- Confirm Delete Overlay -->
-    <Transition
-      enter-active-class="transition ease-out duration-200"
-      enter-from-class="opacity-0 scale-95"
-      enter-to-class="opacity-100 scale-100"
-      leave-active-class="transition ease-in duration-150"
-      leave-from-class="opacity-100 scale-100"
-      leave-to-class="opacity-0 scale-95"
-    >
-      <div
-        v-if="showConfirmDelete"
-        class="absolute inset-0 z-10 rounded-2xl bg-white/95 backdrop-blur-sm flex flex-col items-center justify-center gap-4 px-6 shadow-2xl"
-      >
-        <p class="text-base font-medium text-gray-800 text-center">
-          {{ t('cart.removeConfirm') }}
-        </p>
-        <div class="flex gap-3">
-          <button
-            class="px-5 py-2.5 text-sm font-semibold text-gray-700 bg-gray-100 rounded-xl hover:bg-gray-200 active:scale-95 transition-all"
-            @click="cancelRemove"
-          >
-            {{ t('app.no') }}
-          </button>
-          <button
-            class="px-5 py-2.5 text-sm font-semibold text-white bg-red-600 rounded-xl hover:bg-red-700 active:scale-95 transition-all shadow-md"
-            @click="remove"
-          >
-            {{ t('app.yes') }}
-          </button>
-        </div>
-      </div>
-    </Transition>
-  </div>
+  </Card>
 </template>
+
+<style scoped>
+.cart-item {
+  border-radius: 16px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06), 0 2px 8px rgba(0, 0, 0, 0.04);
+  transition: all 0.2s ease;
+}
+
+.cart-item__layout {
+  display: flex;
+  gap: 16px;
+}
+
+/* Image */
+.cart-item__image {
+  flex-shrink: 0;
+  width: 96px;
+  height: 96px;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+.cart-item__img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Details */
+.cart-item__details {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.cart-item__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.cart-item__name {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #1f2937;
+  line-height: 1.3;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.cart-item__delete {
+  flex-shrink: 0;
+  color: #9ca3af;
+}
+
+.cart-item__delete:hover {
+  color: #ef4444;
+  background: #fef2f2;
+}
+
+/* Options */
+.cart-item__options {
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.cart-item__option {
+  margin: 0;
+  font-size: 14px;
+  color: #4b5563;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cart-item__option-name {
+  color: #9ca3af;
+}
+
+.cart-item__option-price {
+  font-weight: 500;
+  color: #14b8a6;
+}
+
+/* Notes */
+.cart-item__notes {
+  margin: 8px 0 0;
+  font-size: 14px;
+  font-style: italic;
+  color: #6b7280;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Footer */
+.cart-item__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: auto;
+  padding-top: 16px;
+}
+
+.cart-item__price {
+  font-size: 18px;
+  font-weight: 700;
+  color: #1f2937;
+}
+
+/* Quantity */
+.cart-item__quantity {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px;
+  background: #f3f4f6;
+  border-radius: 24px;
+}
+
+.cart-item__qty-btn {
+  width: 40px;
+  height: 40px;
+}
+
+.cart-item__qty-btn--plus {
+  background: linear-gradient(135deg, #14b8a6 0%, #0d9488 100%);
+  border: none;
+  box-shadow: 0 2px 6px rgba(20, 184, 166, 0.35);
+}
+
+.cart-item__qty-btn--plus:hover {
+  background: linear-gradient(135deg, #0d9488 0%, #0f766e 100%);
+}
+
+.cart-item__qty-value {
+  min-width: 48px;
+  text-align: center;
+  font-size: 16px;
+  font-weight: 700;
+  color: #1f2937;
+}
+</style>

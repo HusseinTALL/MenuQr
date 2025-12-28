@@ -16,7 +16,7 @@ import DatePicker from '@/components/reservation/DatePicker.vue';
 import TimeSlotPicker from '@/components/reservation/TimeSlotPicker.vue';
 
 const router = useRouter();
-const route = useRoute();
+const _route = useRoute();
 const restaurantStore = useRestaurantStore();
 const customerAuth = useCustomerAuthStore();
 const cartStore = useCartStore();
@@ -112,8 +112,10 @@ async function loadAvailableDates() {
     loadingDates.value = true;
     error.value = '';
     const response = await api.getAvailableDates(restaurantId.value, partySize.value);
-    availableDates.value = response.data.dates;
-    settings.value = response.data.settings;
+    if (response.data) {
+      availableDates.value = response.data.dates;
+      settings.value = response.data.settings;
+    }
   } catch (err) {
     console.error('Failed to load available dates:', err);
     error.value = 'Impossible de charger les disponibilités';
@@ -140,7 +142,9 @@ watch(selectedDate, async (newDate) => {
     error.value = '';
     selectedTime.value = null;
     const response = await api.getAvailableSlots(restaurantId.value, newDate, partySize.value);
-    timeSlots.value = response.data;
+    if (response.data) {
+      timeSlots.value = response.data;
+    }
   } catch (err) {
     console.error('Failed to load time slots:', err);
     error.value = 'Impossible de charger les créneaux';
@@ -172,7 +176,7 @@ function prevStep() {
 // Validation per step
 const canProceedStep1 = computed(() => selectedDate.value !== null);
 const canProceedStep2 = computed(() => selectedTime.value !== null);
-const canProceedStep3 = computed(() => true); // Location is optional
+const _canProceedStep3 = computed(() => true); // Location is optional
 const canProceedStep4 = computed(() => {
   if (!customerAuth.isAuthenticated) {
     return customerName.value.trim() !== '' && customerPhone.value.trim() !== '';
@@ -190,7 +194,7 @@ const canSubmit = computed(() => {
 
 // Formatted date for display
 const formattedSelectedDate = computed(() => {
-  if (!selectedDate.value) return '';
+  if (!selectedDate.value) {return '';}
   const date = new Date(selectedDate.value);
   return date.toLocaleDateString('fr-FR', {
     weekday: 'long',
@@ -201,11 +205,11 @@ const formattedSelectedDate = computed(() => {
 
 // Pre-order from cart
 const cartItems = computed(() => cartStore.items);
-const cartTotal = computed(() => cartStore.totalPrice);
+const cartTotal = computed(() => cartStore.subtotal);
 
 // Submit reservation
 async function submitReservation() {
-  if (!canSubmit.value || !restaurantId.value) return;
+  if (!canSubmit.value || !restaurantId.value) {return;}
 
   try {
     submitting.value = true;
@@ -232,7 +236,11 @@ async function submitReservation() {
         items: cartItems.value.map((item) => ({
           dishId: item.dishId,
           quantity: item.quantity,
-          options: item.selectedOptions,
+          options: item.selectedOptions?.map((opt) => ({
+            name: opt.optionName,
+            choice: opt.choices?.[0]?.name?.fr || '',
+            price: opt.priceModifier || 0,
+          })),
           notes: item.notes,
         })),
         notes: undefined,
@@ -244,7 +252,7 @@ async function submitReservation() {
     // Success!
     reservationSuccess.value = true;
     createdReservation.value = {
-      reservationNumber: response.data.reservationNumber,
+      reservationNumber: response.data?.reservationNumber || '',
       date: formattedSelectedDate.value,
       time: selectedTime.value!,
     };

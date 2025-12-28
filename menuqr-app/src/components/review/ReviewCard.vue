@@ -37,7 +37,7 @@ const customerName = computed(() => {
 
 const customerInitials = computed(() => {
   const name = customerName.value;
-  if (!name) return 'C';
+  if (!name) {return 'C';}
   const parts = name.split(' ').filter(p => p.length > 0);
   if (parts.length >= 2 && parts[0] && parts[1]) {
     return ((parts[0][0] || '') + (parts[1][0] || '')).toUpperCase();
@@ -60,11 +60,11 @@ const timeAgo = computed(() => {
   const diffMs = now.getTime() - date.getTime();
   const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
 
-  if (diffDays === 0) return "Aujourd'hui";
-  if (diffDays === 1) return 'Hier';
-  if (diffDays < 7) return `Il y a ${diffDays} jours`;
-  if (diffDays < 30) return `Il y a ${Math.floor(diffDays / 7)} semaine(s)`;
-  if (diffDays < 365) return `Il y a ${Math.floor(diffDays / 30)} mois`;
+  if (diffDays === 0) {return "Aujourd'hui";}
+  if (diffDays === 1) {return 'Hier';}
+  if (diffDays < 7) {return `Il y a ${diffDays} jours`;}
+  if (diffDays < 30) {return `Il y a ${Math.floor(diffDays / 7)} semaine(s)`;}
+  if (diffDays < 365) {return `Il y a ${Math.floor(diffDays / 30)} mois`;}
   return `Il y a ${Math.floor(diffDays / 365)} an(s)`;
 });
 

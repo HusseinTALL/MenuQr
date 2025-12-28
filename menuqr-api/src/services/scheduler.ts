@@ -1,15 +1,19 @@
 import { processScheduledCampaigns } from './campaignService.js';
 import { processExpiredPoints } from './loyaltyService.js';
 import { processReminders as processReservationReminders } from './reservationService.js';
+import AlertService from './alertService.js';
 import { Restaurant } from '../models/index.js';
+import logger from '../utils/logger.js';
 
 const SCHEDULER_INTERVAL_MS = 60000; // Check every minute
 const LOYALTY_EXPIRY_HOUR = 2; // Run at 2 AM
 const RESERVATION_REMINDER_INTERVAL_MS = 15 * 60 * 1000; // Check every 15 minutes
+const ALERT_CHECK_INTERVAL_MS = 60 * 60 * 1000; // Check every hour
 
 let schedulerInterval: NodeJS.Timeout | null = null;
 let loyaltyExpiryInterval: NodeJS.Timeout | null = null;
 let reservationReminderInterval: NodeJS.Timeout | null = null;
+let alertCheckInterval: NodeJS.Timeout | null = null;
 let lastLoyaltyProcessDate: string | null = null;
 
 /**
@@ -29,7 +33,7 @@ async function processAllExpiredPoints(): Promise<void> {
     return;
   }
 
-  console.log('[Scheduler] Processing expired loyalty points...');
+  logger.info('Processing expired loyalty points...');
   lastLoyaltyProcessDate = today;
 
   try {
@@ -46,12 +50,13 @@ async function processAllExpiredPoints(): Promise<void> {
     }
 
     if (totalPoints > 0) {
-      console.log(
-        `[Scheduler] Loyalty expiry complete: ${totalCustomers} customers, ${totalPoints} points expired`
-      );
+      logger.info('Loyalty expiry complete', {
+        customersProcessed: totalCustomers,
+        pointsExpired: totalPoints
+      });
     }
   } catch (error) {
-    console.error('[Scheduler] Error processing expired points:', error);
+    logger.error('Error processing expired points', error);
     // Reset date so it tries again next hour
     lastLoyaltyProcessDate = null;
   }
@@ -62,47 +67,65 @@ async function processAllExpiredPoints(): Promise<void> {
  */
 export function startScheduler(): void {
   if (schedulerInterval) {
-    console.log('[Scheduler] Already running');
+    logger.warn('Scheduler already running');
     return;
   }
 
-  console.log('[Scheduler] Starting scheduler (campaigns every 60s, loyalty expiry daily at 2AM, reservation reminders every 15min)');
+  logger.info('Starting scheduler', {
+    campaignInterval: '60s',
+    loyaltyExpiry: '2AM daily',
+    reservationReminders: '15min'
+  });
 
   // Run campaigns immediately on start
   processScheduledCampaigns().catch((error) => {
-    console.error('[Scheduler] Error processing campaigns:', error);
+    logger.error('Error processing campaigns', error);
   });
 
   // Then run campaigns at intervals
   schedulerInterval = setInterval(() => {
     processScheduledCampaigns().catch((error) => {
-      console.error('[Scheduler] Error processing campaigns:', error);
+      logger.error('Error processing campaigns', error);
     });
   }, SCHEDULER_INTERVAL_MS);
 
   // Check for loyalty expiry every hour
   loyaltyExpiryInterval = setInterval(() => {
     processAllExpiredPoints().catch((error) => {
-      console.error('[Scheduler] Error in loyalty expiry check:', error);
+      logger.error('Error in loyalty expiry check', error);
     });
   }, 60 * 60 * 1000); // Every hour
 
   // Also check on startup (in case server starts at 2 AM)
   processAllExpiredPoints().catch((error) => {
-    console.error('[Scheduler] Error in initial loyalty expiry check:', error);
+    logger.error('Error in initial loyalty expiry check', error);
   });
 
   // Process reservation reminders every 15 minutes
   reservationReminderInterval = setInterval(() => {
     processReservationReminders().catch((error) => {
-      console.error('[Scheduler] Error processing reservation reminders:', error);
+      logger.error('Error processing reservation reminders', error);
     });
   }, RESERVATION_REMINDER_INTERVAL_MS);
 
   // Also check reminders on startup
   processReservationReminders().catch((error) => {
-    console.error('[Scheduler] Error in initial reservation reminder check:', error);
+    logger.error('Error in initial reservation reminder check', error);
   });
+
+  // Run alert checks every hour
+  alertCheckInterval = setInterval(() => {
+    AlertService.runAllChecks().catch((error) => {
+      logger.error('Error running alert checks', error);
+    });
+  }, ALERT_CHECK_INTERVAL_MS);
+
+  // Also run alert checks on startup (after a delay to let DB connect)
+  setTimeout(() => {
+    AlertService.runAllChecks().catch((error) => {
+      logger.error('Error in initial alert check', error);
+    });
+  }, 30000); // 30 second delay
 }
 
 /**
@@ -121,5 +144,9 @@ export function stopScheduler(): void {
     clearInterval(reservationReminderInterval);
     reservationReminderInterval = null;
   }
-  console.log('[Scheduler] Stopped');
+  if (alertCheckInterval) {
+    clearInterval(alertCheckInterval);
+    alertCheckInterval = null;
+  }
+  logger.info('Scheduler stopped');
 }

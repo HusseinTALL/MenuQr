@@ -27,12 +27,12 @@ if (!customerAuth.isAuthenticated) {
 }
 
 const tierConfig = computed(() => {
-  if (!loyaltyInfo.value) return TIER_CONFIG.bronze;
+  if (!loyaltyInfo.value) {return TIER_CONFIG.bronze;}
   return TIER_CONFIG[loyaltyInfo.value.currentTier] || TIER_CONFIG.bronze;
 });
 
 const progressPercent = computed(() => {
-  if (!loyaltyInfo.value?.nextTier) return 100;
+  if (!loyaltyInfo.value?.nextTier) {return 100;}
   const current = loyaltyInfo.value.totalPoints;
   const currentMin = TIER_CONFIG[loyaltyInfo.value.currentTier].minPoints;
   const nextMin = loyaltyInfo.value.nextTier.pointsNeeded + current;

@@ -1,0 +1,448 @@
+/**
+ * MenuQR Client Theme CSS
+ * Mobile-first optimizations for Ant Design Vue client interfaces
+ */
+
+/* ============================================
+   CSS Variables for Client Theme
+   ============================================ */
+:root {
+  /* Primary brand colors */
+  --client-primary: #14b8a6;
+  --client-primary-hover: #0d9488;
+  --client-primary-active: #0f766e;
+  --client-primary-light: #ccfbf1;
+  --client-primary-bg: #f0fdfa;
+
+  /* Secondary colors */
+  --client-secondary: #8b5cf6;
+  --client-secondary-light: #ede9fe;
+
+  /* Status colors */
+  --client-success: #22c55e;
+  --client-warning: #f59e0b;
+  --client-error: #ef4444;
+  --client-info: #3b82f6;
+
+  /* Neutral colors */
+  --client-text: #1e293b;
+  --client-text-secondary: #64748b;
+  --client-text-muted: #94a3b8;
+  --client-border: #e2e8f0;
+  --client-bg: #f8fafc;
+  --client-bg-elevated: #ffffff;
+
+  /* Spacing */
+  --client-spacing-xs: 4px;
+  --client-spacing-sm: 8px;
+  --client-spacing-md: 12px;
+  --client-spacing-lg: 16px;
+  --client-spacing-xl: 24px;
+
+  /* Border radius */
+  --client-radius-sm: 8px;
+  --client-radius-md: 12px;
+  --client-radius-lg: 16px;
+  --client-radius-xl: 20px;
+
+  /* Touch targets (WCAG) */
+  --client-touch-min: 44px;
+  --client-touch-comfortable: 48px;
+
+  /* Shadows */
+  --client-shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --client-shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --client-shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  --client-shadow-card: 0 1px 3px 0 rgb(0 0 0 / 0.08), 0 1px 2px -1px rgb(0 0 0 / 0.08);
+
+  /* Z-index layers */
+  --client-z-header: 100;
+  --client-z-fab: 200;
+  --client-z-drawer: 300;
+  --client-z-modal: 400;
+  --client-z-toast: 500;
+}
+
+/* ============================================
+   Base Layout
+   ============================================ */
+.client-layout {
+  background: var(--client-bg);
+  min-height: 100dvh;
+  min-height: -webkit-fill-available;
+}
+
+/* ============================================
+   Typography Overrides
+   ============================================ */
+.client-layout {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ============================================
+   Touch Interactions
+   ============================================ */
+
+/* Remove 300ms tap delay */
+.client-layout * {
+  touch-action: manipulation;
+}
+
+/* Smooth scrolling */
+.client-layout {
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Prevent text selection on interactive elements */
+.client-layout button,
+.client-layout .ant-btn,
+.client-layout .ant-card[class*="hoverable"] {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* Active state feedback */
+.client-layout .ant-btn:active,
+.client-layout .ant-card[class*="hoverable"]:active {
+  transform: scale(0.98);
+  transition: transform 0.1s ease;
+}
+
+/* ============================================
+   Card Styling
+   ============================================ */
+
+/* Dish cards */
+.client-layout .dish-card {
+  border-radius: var(--client-radius-lg);
+  overflow: hidden;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.client-layout .dish-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--client-shadow-lg);
+}
+
+.client-layout .dish-card .ant-card-cover img {
+  aspect-ratio: 4/3;
+  object-fit: cover;
+}
+
+/* Compact card variant */
+.client-layout .dish-card--compact .ant-card-body {
+  padding: var(--client-spacing-md);
+}
+
+/* Featured card variant */
+.client-layout .dish-card--featured {
+  border: 2px solid var(--client-primary);
+}
+
+/* ============================================
+   Form Elements
+   ============================================ */
+
+/* Input focus ring */
+.client-layout .ant-input:focus,
+.client-layout .ant-input-focused,
+.client-layout .ant-select-focused .ant-select-selector,
+.client-layout .ant-picker-focused {
+  border-color: var(--client-primary) !important;
+  box-shadow: 0 0 0 3px var(--client-primary-light) !important;
+}
+
+/* Textarea */
+.client-layout .ant-input-textarea-show-count::after {
+  font-size: 12px;
+  color: var(--client-text-muted);
+}
+
+/* ============================================
+   Button Variants
+   ============================================ */
+
+/* WhatsApp button */
+.client-layout .ant-btn-whatsapp {
+  background: #25d366 !important;
+  border-color: #25d366 !important;
+  color: white !important;
+}
+
+.client-layout .ant-btn-whatsapp:hover {
+  background: #20bd5a !important;
+  border-color: #20bd5a !important;
+}
+
+/* Cart/Add button */
+.client-layout .btn-add-cart {
+  background: var(--client-primary);
+  border-color: var(--client-primary);
+  box-shadow: 0 2px 8px rgba(20, 184, 166, 0.3);
+}
+
+.client-layout .btn-add-cart:hover {
+  background: var(--client-primary-hover);
+  border-color: var(--client-primary-hover);
+  box-shadow: 0 4px 12px rgba(20, 184, 166, 0.4);
+}
+
+/* ============================================
+   Badges & Tags
+   ============================================ */
+
+/* Status badges */
+.client-layout .badge-new {
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+  color: white;
+}
+
+.client-layout .badge-popular {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  color: white;
+}
+
+.client-layout .badge-promo {
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  color: white;
+}
+
+.client-layout .badge-vegan {
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: white;
+}
+
+.client-layout .badge-spicy {
+  background: linear-gradient(135deg, #f97316, #ea580c);
+  color: white;
+}
+
+/* ============================================
+   Price Display
+   ============================================ */
+
+.client-layout .price {
+  font-weight: 700;
+  color: var(--client-text);
+}
+
+.client-layout .price--primary {
+  color: var(--client-primary);
+}
+
+.client-layout .price--large {
+  font-size: 1.5rem;
+}
+
+.client-layout .price--old {
+  text-decoration: line-through;
+  color: var(--client-text-muted);
+  font-weight: 400;
+}
+
+/* ============================================
+   FAB (Floating Action Button) - Cart
+   ============================================ */
+
+.client-layout .cart-fab {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: var(--client-z-fab);
+}
+
+.client-layout .cart-fab .ant-float-btn {
+  width: 60px;
+  height: 60px;
+  box-shadow: 0 4px 14px rgba(20, 184, 166, 0.4);
+}
+
+.client-layout .cart-fab .ant-badge-count {
+  top: -4px;
+  right: -4px;
+  transform: none;
+  background: var(--client-error);
+  border: 2px solid white;
+  font-weight: 600;
+}
+
+@media (max-width: 575px) {
+  .client-layout .cart-fab {
+    bottom: calc(16px + env(safe-area-inset-bottom));
+    right: 16px;
+  }
+}
+
+/* ============================================
+   Sticky Footer (Checkout button)
+   ============================================ */
+
+.client-layout .sticky-footer {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 12px 16px;
+  padding-bottom: calc(12px + env(safe-area-inset-bottom));
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-top: 1px solid var(--client-border);
+  z-index: var(--client-z-header);
+}
+
+/* ============================================
+   Empty States
+   ============================================ */
+
+.client-layout .empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 24px;
+  text-align: center;
+}
+
+.client-layout .empty-state-icon {
+  font-size: 64px;
+  color: var(--client-text-muted);
+  margin-bottom: 16px;
+}
+
+.client-layout .empty-state-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--client-text);
+  margin-bottom: 8px;
+}
+
+.client-layout .empty-state-description {
+  font-size: 14px;
+  color: var(--client-text-secondary);
+  max-width: 280px;
+}
+
+/* ============================================
+   Animations
+   ============================================ */
+
+/* Fade in */
+@keyframes clientFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.client-layout .animate-fade-in {
+  animation: clientFadeIn 0.3s ease-out;
+}
+
+/* Slide up */
+@keyframes clientSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.client-layout .animate-slide-up {
+  animation: clientSlideUp 0.3s ease-out;
+}
+
+/* Scale in */
+@keyframes clientScaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.client-layout .animate-scale-in {
+  animation: clientScaleIn 0.2s ease-out;
+}
+
+/* Stagger children - reset opacity and use animation to control visibility */
+.client-layout .stagger-children > * {
+  opacity: initial; /* Reset main.css opacity:0 - let animation control it */
+  animation: clientFadeIn 0.3s ease-out forwards;
+}
+
+.client-layout .stagger-children > *:nth-child(1) { animation-delay: 0ms; }
+.client-layout .stagger-children > *:nth-child(2) { animation-delay: 50ms; }
+.client-layout .stagger-children > *:nth-child(3) { animation-delay: 100ms; }
+.client-layout .stagger-children > *:nth-child(4) { animation-delay: 150ms; }
+.client-layout .stagger-children > *:nth-child(5) { animation-delay: 200ms; }
+.client-layout .stagger-children > *:nth-child(6) { animation-delay: 250ms; }
+
+/* Skeleton shimmer */
+@keyframes clientShimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.client-layout .skeleton-shimmer {
+  background: linear-gradient(
+    90deg,
+    #f1f5f9 0%,
+    #e2e8f0 50%,
+    #f1f5f9 100%
+  );
+  background-size: 200% 100%;
+  animation: clientShimmer 1.5s infinite;
+}
+
+/* ============================================
+   Reduced Motion Support
+   ============================================ */
+
+@media (prefers-reduced-motion: reduce) {
+  .client-layout *,
+  .client-layout *::before,
+  .client-layout *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ============================================
+   Dark Mode Support (Future)
+   ============================================ */
+
+@media (prefers-color-scheme: dark) {
+  /* Placeholder for future dark mode support */
+  /* .client-layout.dark-mode { ... } */
+}
+
+/* ============================================
+   Print Styles
+   ============================================ */
+
+@media print {
+  .client-layout .cart-fab,
+  .client-layout .sticky-footer,
+  .client-layout .ant-float-btn {
+    display: none !important;
+  }
+}

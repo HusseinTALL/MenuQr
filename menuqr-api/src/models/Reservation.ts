@@ -255,7 +255,7 @@ reservationSchema.index({ restaurantId: 1, tableId: 1, reservationDate: 1 });
 // Additional performance indexes
 reservationSchema.index({ status: 1, reservationDate: 1 }); // For status-based queries across all restaurants
 reservationSchema.index({ tableId: 1, reservationDate: 1, status: 1 }); // For table availability checks
-reservationSchema.index({ reservationNumber: 1 }); // For lookup by reservation number
+// reservationNumber already has unique index from unique: true in schema
 
 // Generate reservation number
 // Use pre('validate') to set auto-generated fields BEFORE validation runs
@@ -282,19 +282,19 @@ reservationSchema.pre('save', function () {
     const now = new Date();
     switch (this.status) {
       case 'confirmed':
-        if (!this.confirmedAt) this.confirmedAt = now;
+        if (!this.confirmedAt) {this.confirmedAt = now;}
         break;
       case 'arrived':
-        if (!this.arrivedAt) this.arrivedAt = now;
+        if (!this.arrivedAt) {this.arrivedAt = now;}
         break;
       case 'seated':
-        if (!this.seatedAt) this.seatedAt = now;
+        if (!this.seatedAt) {this.seatedAt = now;}
         break;
       case 'completed':
-        if (!this.completedAt) this.completedAt = now;
+        if (!this.completedAt) {this.completedAt = now;}
         break;
       case 'cancelled':
-        if (!this.cancelledAt) this.cancelledAt = now;
+        if (!this.cancelledAt) {this.cancelledAt = now;}
         break;
     }
   }

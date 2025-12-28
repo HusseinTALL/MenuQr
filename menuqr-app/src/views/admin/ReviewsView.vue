@@ -4,13 +4,21 @@ import type { Review, AdminReviewStats, ReviewStatus, AdminReviewQueryParams, Re
 import api from '@/services/api';
 import ReviewCard from '@/components/review/ReviewCard.vue';
 import StarRating from '@/components/review/StarRating.vue';
+import { message } from 'ant-design-vue';
+import {
+  StarOutlined,
+  MessageOutlined,
+  ClockCircleOutlined,
+  CheckCircleOutlined,
+  CloseCircleOutlined,
+  PercentageOutlined,
+} from '@ant-design/icons-vue';
 
 // State
 const reviews = ref<Review[]>([]);
 const stats = ref<AdminReviewStats | null>(null);
 const pagination = ref<ReviewPagination | null>(null);
 const loading = ref(false);
-const statsLoading = ref(false);
 const error = ref('');
 
 // Filters
@@ -29,7 +37,7 @@ const responseContent = ref('');
 const modalLoading = ref(false);
 
 // Tab
-const activeTab = ref<'all' | 'pending'>('all');
+const activeTab = ref<string>('all');
 
 // Computed
 const pendingCount = computed(() => stats.value?.pending || 0);
@@ -37,22 +45,22 @@ const pendingCount = computed(() => stats.value?.pending || 0);
 const statusOptions = [
   { value: '', label: 'Tous les statuts' },
   { value: 'pending', label: 'En attente' },
-  { value: 'approved', label: 'Approuvés' },
-  { value: 'rejected', label: 'Rejetés' },
-  { value: 'flagged', label: 'Signalés' },
+  { value: 'approved', label: 'Approuves' },
+  { value: 'rejected', label: 'Rejetes' },
+  { value: 'flagged', label: 'Signales' },
 ];
 
 const ratingOptions = [
   { value: '', label: 'Toutes les notes' },
-  { value: 5, label: '5 étoiles' },
-  { value: 4, label: '4 étoiles' },
-  { value: 3, label: '3 étoiles' },
-  { value: 2, label: '2 étoiles' },
-  { value: 1, label: '1 étoile' },
+  { value: 5, label: '5 etoiles' },
+  { value: 4, label: '4 etoiles' },
+  { value: 3, label: '3 etoiles' },
+  { value: 2, label: '2 etoiles' },
+  { value: 1, label: '1 etoile' },
 ];
 
 const sortOptions = [
-  { value: 'recent', label: 'Plus récents' },
+  { value: 'recent', label: 'Plus recents' },
   { value: 'oldest', label: 'Plus anciens' },
   { value: 'rating_high', label: 'Meilleures notes' },
   { value: 'rating_low', label: 'Notes les plus basses' },
@@ -60,14 +68,11 @@ const sortOptions = [
 
 // Methods
 const loadStats = async () => {
-  statsLoading.value = true;
   try {
     const response = await api.getAdminReviewStats();
     stats.value = response.data || null;
   } catch (err) {
     console.error('Error loading stats:', err);
-  } finally {
-    statsLoading.value = false;
   }
 };
 
@@ -112,14 +117,14 @@ const loadReviews = async (page = 1) => {
 const handleApprove = async (id: string) => {
   try {
     await api.approveReview(id);
-    // Update local state
     const review = reviews.value.find(r => r._id === id);
     if (review) {
       review.status = 'approved';
     }
+    message.success('Avis approuve');
     await loadStats();
   } catch (err: unknown) {
-    error.value = err instanceof Error ? err.message : 'Erreur lors de l\'approbation';
+    message.error(err instanceof Error ? err.message : 'Erreur lors de l\'approbation');
   }
 };
 
@@ -130,21 +135,21 @@ const openRejectModal = (id: string) => {
 };
 
 const handleReject = async () => {
-  if (!selectedReviewId.value || !rejectReason.value.trim()) return;
+  if (!selectedReviewId.value || !rejectReason.value.trim()) {return;}
 
   modalLoading.value = true;
   try {
     await api.rejectReview(selectedReviewId.value, rejectReason.value.trim());
-    // Update local state
     const review = reviews.value.find(r => r._id === selectedReviewId.value);
     if (review) {
       review.status = 'rejected';
       review.rejectionReason = rejectReason.value.trim();
     }
     showRejectModal.value = false;
+    message.success('Avis rejete');
     await loadStats();
   } catch (err: unknown) {
-    error.value = err instanceof Error ? err.message : 'Erreur lors du rejet';
+    message.error(err instanceof Error ? err.message : 'Erreur lors du rejet');
   } finally {
     modalLoading.value = false;
   }
@@ -157,33 +162,32 @@ const openRespondModal = (id: string) => {
 };
 
 const handleRespond = async () => {
-  if (!selectedReviewId.value || !responseContent.value.trim()) return;
+  if (!selectedReviewId.value || !responseContent.value.trim()) {return;}
 
   modalLoading.value = true;
   try {
     const response = await api.respondToReview(selectedReviewId.value, responseContent.value.trim());
-    // Update local state
     const review = reviews.value.find(r => r._id === selectedReviewId.value);
     if (review && response.data) {
       review.response = response.data.response;
     }
     showRespondModal.value = false;
+    message.success('Reponse publiee');
   } catch (err: unknown) {
-    error.value = err instanceof Error ? err.message : 'Erreur lors de la réponse';
+    message.error(err instanceof Error ? err.message : 'Erreur lors de la reponse');
   } finally {
     modalLoading.value = false;
   }
 };
 
 const handleDelete = async (id: string) => {
-  if (!confirm('Êtes-vous sûr de vouloir supprimer cet avis ?')) return;
-
   try {
     await api.deleteAdminReview(id);
     reviews.value = reviews.value.filter(r => r._id !== id);
+    message.success('Avis supprime');
     await loadStats();
   } catch (err: unknown) {
-    error.value = err instanceof Error ? err.message : 'Erreur lors de la suppression';
+    message.error(err instanceof Error ? err.message : 'Erreur lors de la suppression');
   }
 };
 
@@ -205,153 +209,190 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="p-6 max-w-7xl mx-auto">
-    <!-- Header -->
-    <div class="mb-6">
-      <h1 class="text-2xl font-bold text-gray-900">Gestion des Avis</h1>
-      <p class="text-gray-600 mt-1">Modérez et répondez aux avis de vos clients</p>
-    </div>
+  <div class="reviews-view space-y-6">
+    <!-- Header Card -->
+    <a-card class="header-card" :bordered="false">
+      <div class="header-gradient">
+        <div class="header-decoration"></div>
+        <div class="header-orb orb-1"></div>
+        <div class="header-orb orb-2"></div>
 
-    <!-- Stats Cards -->
-    <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 mb-6">
-      <div class="bg-white rounded-xl border border-gray-200 p-4">
-        <div class="text-2xl font-bold text-gray-900">{{ stats?.total || 0 }}</div>
-        <div class="text-sm text-gray-500">Total</div>
-      </div>
-      <div class="bg-yellow-50 rounded-xl border border-yellow-200 p-4">
-        <div class="text-2xl font-bold text-yellow-700">{{ stats?.pending || 0 }}</div>
-        <div class="text-sm text-yellow-600">En attente</div>
-      </div>
-      <div class="bg-green-50 rounded-xl border border-green-200 p-4">
-        <div class="text-2xl font-bold text-green-700">{{ stats?.approved || 0 }}</div>
-        <div class="text-sm text-green-600">Approuvés</div>
-      </div>
-      <div class="bg-red-50 rounded-xl border border-red-200 p-4">
-        <div class="text-2xl font-bold text-red-700">{{ stats?.rejected || 0 }}</div>
-        <div class="text-sm text-red-600">Rejetés</div>
-      </div>
-      <div class="bg-white rounded-xl border border-gray-200 p-4">
-        <div class="flex items-center gap-2">
-          <StarRating :model-value="stats?.averageRating || 0" readonly size="sm" />
-        </div>
-        <div class="text-sm text-gray-500 mt-1">Note moyenne</div>
-      </div>
-      <div class="bg-teal-50 rounded-xl border border-teal-200 p-4">
-        <div class="text-2xl font-bold text-teal-700">{{ stats?.responseRate || 0 }}%</div>
-        <div class="text-sm text-teal-600">Taux de réponse</div>
-      </div>
-    </div>
-
-    <!-- Tabs -->
-    <div class="flex gap-2 mb-4">
-      <button
-        :class="[
-          'px-4 py-2 rounded-lg font-medium transition-colors',
-          activeTab === 'all'
-            ? 'bg-teal-600 text-white'
-            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-        ]"
-        @click="activeTab = 'all'"
-      >
-        Tous les avis
-      </button>
-      <button
-        :class="[
-          'px-4 py-2 rounded-lg font-medium transition-colors relative',
-          activeTab === 'pending'
-            ? 'bg-teal-600 text-white'
-            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-        ]"
-        @click="activeTab = 'pending'"
-      >
-        En attente
-        <span
-          v-if="pendingCount > 0"
-          class="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center"
-        >
-          {{ pendingCount > 9 ? '9+' : pendingCount }}
-        </span>
-      </button>
-    </div>
-
-    <!-- Filters -->
-    <div v-if="activeTab === 'all'" class="flex flex-wrap items-center gap-3 p-4 bg-gray-50 rounded-lg mb-4">
-      <select
-        v-model="statusFilter"
-        class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500"
-      >
-        <option v-for="opt in statusOptions" :key="opt.value" :value="opt.value">
-          {{ opt.label }}
-        </option>
-      </select>
-      <select
-        v-model="ratingFilter"
-        class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500"
-      >
-        <option v-for="opt in ratingOptions" :key="String(opt.value)" :value="opt.value">
-          {{ opt.label }}
-        </option>
-      </select>
-      <select
-        v-model="sortOption"
-        class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500"
-      >
-        <option v-for="opt in sortOptions" :key="opt.value" :value="opt.value">
-          {{ opt.label }}
-        </option>
-      </select>
-      <div v-if="pagination" class="ml-auto text-sm text-gray-500">
-        {{ pagination.total }} avis
-      </div>
-    </div>
-
-    <!-- Error -->
-    <div v-if="error" class="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
-      {{ error }}
-    </div>
-
-    <!-- Loading -->
-    <div v-if="loading && reviews.length === 0" class="space-y-4">
-      <div
-        v-for="i in 3"
-        :key="i"
-        class="bg-white rounded-lg border border-gray-200 p-4 animate-pulse"
-      >
-        <div class="flex items-center gap-3 mb-3">
-          <div class="w-10 h-10 rounded-full bg-gray-200" />
-          <div class="space-y-2">
-            <div class="h-4 w-24 bg-gray-200 rounded" />
-            <div class="h-3 w-32 bg-gray-200 rounded" />
+        <div class="header-content">
+          <div class="header-title-section">
+            <div class="header-icon">
+              <StarOutlined />
+            </div>
+            <div>
+              <h1 class="header-title">Gestion des Avis</h1>
+              <p class="header-subtitle">Moderez et repondez aux avis de vos clients</p>
+            </div>
           </div>
         </div>
-        <div class="space-y-2">
-          <div class="h-4 w-3/4 bg-gray-200 rounded" />
-          <div class="h-4 w-1/2 bg-gray-200 rounded" />
-        </div>
       </div>
+    </a-card>
+
+    <!-- Stats Cards -->
+    <a-row v-if="stats" :gutter="[16, 16]">
+      <a-col :xs="24" :sm="12" :md="8" :lg="4">
+        <a-card :bordered="false" class="stat-card">
+          <a-statistic
+            :value="stats.total"
+            title="Total"
+          >
+            <template #prefix>
+              <MessageOutlined class="stat-icon" />
+            </template>
+          </a-statistic>
+        </a-card>
+      </a-col>
+      <a-col :xs="24" :sm="12" :md="8" :lg="4">
+        <a-card :bordered="false" class="stat-card pending">
+          <a-statistic
+            :value="stats.pending"
+            title="En attente"
+            value-style="color: #d97706"
+          >
+            <template #prefix>
+              <ClockCircleOutlined class="stat-icon pending" />
+            </template>
+          </a-statistic>
+        </a-card>
+      </a-col>
+      <a-col :xs="24" :sm="12" :md="8" :lg="4">
+        <a-card :bordered="false" class="stat-card success">
+          <a-statistic
+            :value="stats.approved"
+            title="Approuves"
+            value-style="color: #059669"
+          >
+            <template #prefix>
+              <CheckCircleOutlined class="stat-icon success" />
+            </template>
+          </a-statistic>
+        </a-card>
+      </a-col>
+      <a-col :xs="24" :sm="12" :md="8" :lg="4">
+        <a-card :bordered="false" class="stat-card danger">
+          <a-statistic
+            :value="stats.rejected"
+            title="Rejetes"
+            value-style="color: #dc2626"
+          >
+            <template #prefix>
+              <CloseCircleOutlined class="stat-icon danger" />
+            </template>
+          </a-statistic>
+        </a-card>
+      </a-col>
+      <a-col :xs="24" :sm="12" :md="8" :lg="4">
+        <a-card :bordered="false" class="stat-card">
+          <div class="rating-stat">
+            <StarRating :model-value="stats.averageRating || 0" readonly size="sm" />
+            <span class="rating-value">{{ (stats.averageRating || 0).toFixed(1) }}</span>
+          </div>
+          <div class="stat-label">Note moyenne</div>
+        </a-card>
+      </a-col>
+      <a-col :xs="24" :sm="12" :md="8" :lg="4">
+        <a-card :bordered="false" class="stat-card teal">
+          <a-statistic
+            :value="stats.responseRate"
+            title="Taux de reponse"
+            suffix="%"
+            value-style="color: #0d9488"
+          >
+            <template #prefix>
+              <PercentageOutlined class="stat-icon teal" />
+            </template>
+          </a-statistic>
+        </a-card>
+      </a-col>
+    </a-row>
+
+    <!-- Tabs -->
+    <a-card :bordered="false" class="tabs-card">
+      <a-tabs v-model:activeKey="activeTab">
+        <a-tab-pane key="all" tab="Tous les avis" />
+        <a-tab-pane key="pending">
+          <template #tab>
+            <span>
+              En attente
+              <a-badge
+                v-if="pendingCount > 0"
+                :count="pendingCount"
+                :overflow-count="9"
+                class="tab-badge"
+              />
+            </span>
+          </template>
+        </a-tab-pane>
+      </a-tabs>
+
+      <!-- Filters (only show for "all" tab) -->
+      <div v-if="activeTab === 'all'" class="filters-row">
+        <a-select
+          v-model:value="statusFilter"
+          placeholder="Tous les statuts"
+          style="width: 180px"
+        >
+          <a-select-option v-for="opt in statusOptions" :key="opt.value" :value="opt.value">
+            {{ opt.label }}
+          </a-select-option>
+        </a-select>
+
+        <a-select
+          v-model:value="ratingFilter"
+          placeholder="Toutes les notes"
+          style="width: 180px"
+        >
+          <a-select-option v-for="opt in ratingOptions" :key="String(opt.value)" :value="opt.value">
+            {{ opt.label }}
+          </a-select-option>
+        </a-select>
+
+        <a-select
+          v-model:value="sortOption"
+          style="width: 180px"
+        >
+          <a-select-option v-for="opt in sortOptions" :key="opt.value" :value="opt.value">
+            {{ opt.label }}
+          </a-select-option>
+        </a-select>
+
+        <span v-if="pagination" class="filter-count">
+          {{ pagination.total }} avis
+        </span>
+      </div>
+    </a-card>
+
+    <!-- Error -->
+    <a-alert
+      v-if="error"
+      :message="error"
+      type="error"
+      show-icon
+      closable
+      @close="error = ''"
+    />
+
+    <!-- Loading -->
+    <div v-if="loading && reviews.length === 0" class="loading-container">
+      <a-spin size="large" />
     </div>
 
     <!-- Empty state -->
-    <div
-      v-else-if="!loading && reviews.length === 0"
-      class="text-center py-12 bg-white rounded-lg border border-gray-200"
-    >
-      <svg class="w-16 h-16 mx-auto text-gray-300 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="1.5"
-          d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
-        />
-      </svg>
-      <h3 class="text-lg font-medium text-gray-900 mb-1">Aucun avis</h3>
-      <p class="text-gray-500">
-        {{ activeTab === 'pending' ? 'Aucun avis en attente de modération' : 'Aucun avis pour le moment' }}
-      </p>
-    </div>
+    <a-card v-else-if="!loading && reviews.length === 0" :bordered="false" class="empty-card">
+      <a-empty :description="activeTab === 'pending' ? 'Aucun avis en attente de moderation' : 'Aucun avis pour le moment'">
+        <template #image>
+          <div class="empty-icon">
+            <MessageOutlined />
+          </div>
+        </template>
+      </a-empty>
+    </a-card>
 
     <!-- Reviews list -->
-    <div v-else class="space-y-4">
+    <div v-else class="reviews-list">
       <ReviewCard
         v-for="review in reviews"
         :key="review._id"
@@ -367,108 +408,384 @@ onMounted(() => {
       <!-- Load more -->
       <div
         v-if="pagination && currentPage < pagination.pages"
-        class="text-center pt-4"
+        class="load-more"
       >
-        <button
-          :disabled="loading"
-          class="px-6 py-2 bg-gray-100 text-gray-700 font-medium rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50"
-          @click="loadMore"
-        >
-          {{ loading ? 'Chargement...' : 'Voir plus' }}
-        </button>
+        <a-button :loading="loading" @click="loadMore">
+          Voir plus
+        </a-button>
       </div>
     </div>
 
     <!-- Reject Modal -->
-    <Teleport to="body">
-      <div
-        v-if="showRejectModal"
-        class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
-        @click="showRejectModal = false"
-      >
-        <div
-          class="bg-white rounded-xl shadow-xl max-w-md w-full mx-4 p-6"
-          @click.stop
-        >
-          <h3 class="text-lg font-semibold text-gray-900 mb-4">Rejeter l'avis</h3>
-          <div class="mb-4">
-            <label class="block text-sm font-medium text-gray-700 mb-1">
-              Raison du rejet <span class="text-red-500">*</span>
-            </label>
-            <textarea
-              v-model="rejectReason"
-              rows="3"
-              maxlength="200"
-              placeholder="Expliquez pourquoi cet avis est rejeté..."
-              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500"
+    <a-modal
+      v-model:open="showRejectModal"
+      title="Rejeter l'avis"
+      :footer="null"
+      :width="500"
+      @cancel="showRejectModal = false"
+    >
+      <div class="modal-content">
+        <div class="modal-icon danger">
+          <CloseCircleOutlined />
+        </div>
+
+        <a-form layout="vertical" class="modal-form">
+          <a-form-item label="Raison du rejet" required>
+            <a-textarea
+              v-model:value="rejectReason"
+              :rows="3"
+              :maxlength="200"
+              placeholder="Expliquez pourquoi cet avis est rejete..."
+              show-count
             />
-            <p class="text-xs text-gray-500 text-right mt-1">
-              {{ rejectReason.length }}/200
-            </p>
-          </div>
-          <div class="flex justify-end gap-3">
-            <button
-              class="px-4 py-2 text-gray-700 hover:text-gray-900"
-              @click="showRejectModal = false"
-            >
-              Annuler
-            </button>
-            <button
-              :disabled="!rejectReason.trim() || modalLoading"
-              class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50"
-              @click="handleReject"
-            >
-              {{ modalLoading ? 'Envoi...' : 'Rejeter' }}
-            </button>
-          </div>
+          </a-form-item>
+        </a-form>
+
+        <div class="modal-actions">
+          <a-button size="large" @click="showRejectModal = false">
+            Annuler
+          </a-button>
+          <a-button
+            type="primary"
+            danger
+            size="large"
+            :loading="modalLoading"
+            :disabled="!rejectReason.trim()"
+            @click="handleReject"
+          >
+            Rejeter
+          </a-button>
         </div>
       </div>
-    </Teleport>
+    </a-modal>
 
     <!-- Respond Modal -->
-    <Teleport to="body">
-      <div
-        v-if="showRespondModal"
-        class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
-        @click="showRespondModal = false"
-      >
-        <div
-          class="bg-white rounded-xl shadow-xl max-w-md w-full mx-4 p-6"
-          @click.stop
-        >
-          <h3 class="text-lg font-semibold text-gray-900 mb-4">Répondre à l'avis</h3>
-          <div class="mb-4">
-            <label class="block text-sm font-medium text-gray-700 mb-1">
-              Votre réponse <span class="text-red-500">*</span>
-            </label>
-            <textarea
-              v-model="responseContent"
-              rows="4"
-              maxlength="500"
-              placeholder="Rédigez votre réponse au client..."
-              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500"
+    <a-modal
+      v-model:open="showRespondModal"
+      title="Repondre a l'avis"
+      :footer="null"
+      :width="500"
+      @cancel="showRespondModal = false"
+    >
+      <div class="modal-content">
+        <div class="modal-icon teal">
+          <MessageOutlined />
+        </div>
+
+        <a-form layout="vertical" class="modal-form">
+          <a-form-item label="Votre reponse" required>
+            <a-textarea
+              v-model:value="responseContent"
+              :rows="4"
+              :maxlength="500"
+              placeholder="Redigez votre reponse au client..."
+              show-count
             />
-            <p class="text-xs text-gray-500 text-right mt-1">
-              {{ responseContent.length }}/500
-            </p>
-          </div>
-          <div class="flex justify-end gap-3">
-            <button
-              class="px-4 py-2 text-gray-700 hover:text-gray-900"
-              @click="showRespondModal = false"
-            >
-              Annuler
-            </button>
-            <button
-              :disabled="!responseContent.trim() || modalLoading"
-              class="px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 disabled:opacity-50"
-              @click="handleRespond"
-            >
-              {{ modalLoading ? 'Envoi...' : 'Publier la réponse' }}
-            </button>
-          </div>
+          </a-form-item>
+        </a-form>
+
+        <div class="modal-actions">
+          <a-button size="large" @click="showRespondModal = false">
+            Annuler
+          </a-button>
+          <a-button
+            type="primary"
+            size="large"
+            :loading="modalLoading"
+            :disabled="!responseContent.trim()"
+            @click="handleRespond"
+          >
+            Publier la reponse
+          </a-button>
         </div>
       </div>
-    </Teleport>
+    </a-modal>
   </div>
 </template>
+
+<style scoped>
+.reviews-view {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Header Card */
+.header-card {
+  border-radius: 20px;
+  overflow: hidden;
+}
+
+.header-card :deep(.ant-card-body) {
+  padding: 0;
+}
+
+.header-gradient {
+  background: linear-gradient(135deg, #f59e0b 0%, #fbbf24 50%, #f97316 100%);
+  padding: 32px;
+  position: relative;
+  overflow: hidden;
+  color: white;
+}
+
+.header-decoration {
+  position: absolute;
+  inset: 0;
+  opacity: 0.1;
+  background-image: radial-gradient(circle at 4px 4px, white 1px, transparent 1px);
+  background-size: 16px 16px;
+}
+
+.header-orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(40px);
+}
+
+.header-orb.orb-1 {
+  right: -32px;
+  top: -32px;
+  width: 128px;
+  height: 128px;
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.header-orb.orb-2 {
+  left: -48px;
+  bottom: -48px;
+  width: 160px;
+  height: 160px;
+  background: rgba(251, 191, 36, 0.2);
+}
+
+.header-content {
+  position: relative;
+}
+
+.header-title-section {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.header-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(8px);
+  font-size: 24px;
+}
+
+.header-title {
+  font-size: 24px;
+  font-weight: 700;
+  margin: 0;
+}
+
+.header-subtitle {
+  margin: 4px 0 0;
+  opacity: 0.9;
+}
+
+/* Stats Cards */
+.stat-card {
+  border-radius: 16px;
+  text-align: center;
+}
+
+.stat-card.pending {
+  background: #fffbeb;
+}
+
+.stat-card.success {
+  background: #ecfdf5;
+}
+
+.stat-card.danger {
+  background: #fef2f2;
+}
+
+.stat-card.teal {
+  background: #f0fdfa;
+}
+
+.stat-icon {
+  font-size: 18px;
+  margin-right: 8px;
+  color: #6b7280;
+}
+
+.stat-icon.pending {
+  color: #d97706;
+}
+
+.stat-icon.success {
+  color: #059669;
+}
+
+.stat-icon.danger {
+  color: #dc2626;
+}
+
+.stat-icon.teal {
+  color: #0d9488;
+}
+
+.rating-stat {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.rating-value {
+  font-size: 24px;
+  font-weight: 700;
+  color: #f59e0b;
+}
+
+.stat-label {
+  margin-top: 8px;
+  font-size: 14px;
+  color: #6b7280;
+}
+
+/* Tabs Card */
+.tabs-card {
+  border-radius: 16px;
+}
+
+.tabs-card :deep(.ant-tabs-nav) {
+  margin-bottom: 0;
+}
+
+.tab-badge {
+  margin-left: 8px;
+}
+
+.filters-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  padding-top: 16px;
+  border-top: 1px solid #f3f4f6;
+  margin-top: 16px;
+}
+
+.filter-count {
+  margin-left: auto;
+  font-size: 14px;
+  color: #6b7280;
+}
+
+/* Loading */
+.loading-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 300px;
+}
+
+/* Empty State */
+.empty-card {
+  border-radius: 16px;
+  text-align: center;
+  padding: 48px;
+}
+
+.empty-icon {
+  width: 80px;
+  height: 80px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: linear-gradient(to bottom right, #fef3c7, #fde68a);
+  font-size: 36px;
+  color: #f59e0b;
+}
+
+/* Reviews List */
+.reviews-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.load-more {
+  display: flex;
+  justify-content: center;
+  padding-top: 16px;
+}
+
+/* Modal Styles */
+.modal-content {
+  text-align: center;
+}
+
+.modal-icon {
+  width: 64px;
+  height: 64px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  font-size: 28px;
+}
+
+.modal-icon.danger {
+  background: linear-gradient(to bottom right, #fef2f2, #fee2e2);
+  color: #dc2626;
+}
+
+.modal-icon.teal {
+  background: linear-gradient(to bottom right, #f0fdfa, #ccfbf1);
+  color: #0d9488;
+}
+
+.modal-form {
+  margin-top: 24px;
+  text-align: left;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.modal-actions .ant-btn {
+  flex: 1;
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+  .header-gradient {
+    padding: 20px;
+  }
+
+  .header-title {
+    font-size: 20px;
+  }
+
+  .filters-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .filters-row .ant-select {
+    width: 100% !important;
+  }
+
+  .filter-count {
+    margin-left: 0;
+    text-align: center;
+  }
+}
+</style>

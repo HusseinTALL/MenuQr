@@ -17,6 +17,7 @@ import {
   getAdminReviewStats,
   type ReviewFilters,
 } from '../services/reviewService.js';
+import { emitNewReview } from '../services/socketService.js';
 
 // =====================
 // Customer Endpoints
@@ -85,6 +86,14 @@ export const createReview = asyncHandler(async (req: Request, res: Response): Pr
     await review.populate('dishId', 'name slug image');
   }
 
+  // Emit real-time event for new review
+  emitNewReview(restaurantId, {
+    reviewId: review._id.toString(),
+    rating: review.rating,
+    comment: review.comment,
+    customerName: customer.name,
+  });
+
   res.status(201).json({
     success: true,
     message: initialStatus === 'approved'
@@ -125,10 +134,10 @@ export const updateOwnReview = asyncHandler(async (req: Request, res: Response):
   const oldRating = review.rating;
 
   // Update fields
-  if (rating !== undefined) review.rating = rating;
-  if (title !== undefined) review.title = title;
-  if (comment !== undefined) review.comment = comment;
-  if (images !== undefined) review.images = images;
+  if (rating !== undefined) {review.rating = rating;}
+  if (title !== undefined) {review.title = title;}
+  if (comment !== undefined) {review.comment = comment;}
+  if (images !== undefined) {review.images = images;}
 
   // Reset to pending if was approved (needs re-moderation)
   if (wasApproved && (rating !== oldRating || comment !== review.comment)) {
@@ -457,12 +466,12 @@ export const getAdminReviews = asyncHandler(async (req: Request, res: Response):
     restaurantId: restaurant._id,
   };
 
-  if (status) filters.status = String(status);
-  if (rating) filters.rating = Number(rating);
-  if (dishId) filters.dishId = new mongoose.Types.ObjectId(String(dishId));
-  if (customerId) filters.customerId = new mongoose.Types.ObjectId(String(customerId));
-  if (hasResponse !== undefined) filters.hasResponse = hasResponse === 'true';
-  if (isVerifiedPurchase !== undefined) filters.isVerifiedPurchase = isVerifiedPurchase === 'true';
+  if (status) {filters.status = String(status);}
+  if (rating) {filters.rating = Number(rating);}
+  if (dishId) {filters.dishId = new mongoose.Types.ObjectId(String(dishId));}
+  if (customerId) {filters.customerId = new mongoose.Types.ObjectId(String(customerId));}
+  if (hasResponse !== undefined) {filters.hasResponse = hasResponse === 'true';}
+  if (isVerifiedPurchase !== undefined) {filters.isVerifiedPurchase = isVerifiedPurchase === 'true';}
 
   const result = await getReviewsWithPagination(filters, {
     page: Number(page),

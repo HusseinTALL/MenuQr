@@ -15,6 +15,7 @@ import { Restaurant, type IRestaurant } from '../models/Restaurant.js';
 import { Dish } from '../models/Dish.js';
 import { smsService } from './smsService.js';
 import { ApiError } from '../middleware/errorHandler.js';
+import { logger } from '../utils/logger.js';
 
 // ============================================================================
 // Types
@@ -617,16 +618,16 @@ export const updateReservation = async (
   }
 
   // Update fields
-  if (data.reservationDate) reservation.reservationDate = data.reservationDate;
-  if (data.timeSlot) reservation.timeSlot = data.timeSlot;
-  if (data.partySize) reservation.partySize = data.partySize;
-  if (data.duration) reservation.duration = data.duration;
-  if (data.locationPreference) reservation.locationPreference = data.locationPreference;
-  if (data.specialRequests !== undefined) reservation.specialRequests = data.specialRequests;
-  if (data.customerName) reservation.customerName = data.customerName;
-  if (data.customerPhone) reservation.customerPhone = data.customerPhone;
-  if (data.customerEmail !== undefined) reservation.customerEmail = data.customerEmail;
-  if (data.tableId) reservation.tableId = data.tableId;
+  if (data.reservationDate) {reservation.reservationDate = data.reservationDate;}
+  if (data.timeSlot) {reservation.timeSlot = data.timeSlot;}
+  if (data.partySize) {reservation.partySize = data.partySize;}
+  if (data.duration) {reservation.duration = data.duration;}
+  if (data.locationPreference) {reservation.locationPreference = data.locationPreference;}
+  if (data.specialRequests !== undefined) {reservation.specialRequests = data.specialRequests;}
+  if (data.customerName) {reservation.customerName = data.customerName;}
+  if (data.customerPhone) {reservation.customerPhone = data.customerPhone;}
+  if (data.customerEmail !== undefined) {reservation.customerEmail = data.customerEmail;}
+  if (data.tableId) {reservation.tableId = data.tableId;}
 
   await reservation.save();
 
@@ -922,7 +923,7 @@ export const processReminders = async (): Promise<{ sent24h: number; sent2h: num
   }
 
   if (sent24h > 0 || sent2h > 0) {
-    console.log(`[Reservations] Reminders sent: ${sent24h} (24h), ${sent2h} (2h)`);
+    logger.info('[Reservations] Reminders sent', { sent24h, sent2h });
   }
 
   return { sent24h, sent2h };
@@ -1041,8 +1042,8 @@ export const getReservations = async (
 
   if (dateFrom || dateTo) {
     query.reservationDate = {};
-    if (dateFrom) (query.reservationDate as Record<string, Date>).$gte = dateFrom;
-    if (dateTo) (query.reservationDate as Record<string, Date>).$lte = dateTo;
+    if (dateFrom) {(query.reservationDate as Record<string, Date>).$gte = dateFrom;}
+    if (dateTo) {(query.reservationDate as Record<string, Date>).$lte = dateTo;}
   }
 
   if (tableId) {

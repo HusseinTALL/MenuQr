@@ -234,37 +234,26 @@ Les logs de développement sont visibles dans:
 - Vue DevTools
 - Service Worker console
 
-## 📝 TODO / Roadmap
+## Documentation
 
-Voir la liste complète des tâches dans le document de spécification.
+- **Main README**: [../README.md](../README.md)
+- **API Reference**: [../docs/API.md](../docs/API.md)
+- **Environment Variables**: [../docs/ENV.md](../docs/ENV.md)
+- **Deployment Guide**: [../docs/DEPLOYMENT.md](../docs/DEPLOYMENT.md)
 
-Prochaines fonctionnalités:
-- [ ] Backend API pour gestion dynamique du menu
-- [ ] Système d'authentification admin
-- [ ] Dashboard d'analytics
-- [ ] Notifications push
-- [ ] Support paiement mobile (Orange Money, Moov Money)
-- [ ] Programme de fidélité
-- [ ] Mode sombre
-
-## 🤝 Contribution
+## Contribution
 
 Ce projet est actuellement en développement privé.
 
-## 📄 Licence
+## Licence
 
-Propriétaire - Tous droits réservés © 2024 MenuQR
+Propriétaire - Tous droits réservés (c) 2024-2025 MenuQR
 
-## 👥 Auteurs
-
-Développé avec ❤️ au Burkina Faso 🇧🇫
-
-## 📞 Support
+## Support
 
 Pour toute question ou support:
 - Email: contact@menuqr.bf
-- WhatsApp: [Votre numéro]
 
 ---
 
-**Note**: Ce projet utilise des données statiques (Phase 1). Les phases suivantes incluront un backend API et un tableau de bord admin.
+Developed with care in Burkina Faso

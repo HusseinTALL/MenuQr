@@ -32,7 +32,7 @@ const shortUrl = computed(() => {
 });
 
 const generateQR = async () => {
-  if (!props.url) return;
+  if (!props.url) {return;}
 
   isLoading.value = true;
   try {

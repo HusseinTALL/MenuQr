@@ -268,6 +268,12 @@ export const useCartStore = defineStore('cart', {
         this.scheduledTime = null;
         this.fulfillmentType = 'dine_in';
         this.deliveryAddress = null;
+      } else if (orderType === 'scheduled') {
+        // Set default fulfillment type to pickup for scheduled orders
+        // (dine_in is not valid for scheduled orders)
+        if (this.fulfillmentType === 'dine_in') {
+          this.fulfillmentType = 'pickup';
+        }
       }
     },
 

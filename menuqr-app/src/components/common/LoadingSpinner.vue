@@ -1,44 +1,71 @@
 <script setup lang="ts">
-defineProps<{
+import { computed } from 'vue';
+import { Spin } from 'ant-design-vue';
+import { LoadingOutlined } from '@ant-design/icons-vue';
+
+/**
+ * LoadingSpinner - Wrapper around Ant Design Spin
+ * Maintains backwards compatibility with existing API
+ */
+const props = defineProps<{
   size?: 'sm' | 'md' | 'lg';
   color?: 'primary' | 'white' | 'gray';
   variant?: 'spinner' | 'dots' | 'pulse';
   label?: string;
+  tip?: string;
 }>();
+
+// Map size to Ant Design size
+const antSize = computed(() => {
+  switch (props.size) {
+    case 'sm':
+      return 'small';
+    case 'lg':
+      return 'large';
+    default:
+      return 'default';
+  }
+});
+
+// Custom indicator size
+const indicatorSize = computed(() => {
+  switch (props.size) {
+    case 'sm':
+      return 16;
+    case 'lg':
+      return 32;
+    default:
+      return 24;
+  }
+});
+
+// Color class for custom styling
+const colorClass = computed(() => {
+  switch (props.color) {
+    case 'white':
+      return 'loading-spinner--white';
+    case 'gray':
+      return 'loading-spinner--gray';
+    default:
+      return 'loading-spinner--primary';
+  }
+});
 </script>
 
 <template>
-  <!-- Spinner variant (default) -->
+  <!-- Spinner variant (default) - uses Ant Design Spin -->
   <div
     v-if="!variant || variant === 'spinner'"
-    class="inline-flex items-center justify-center"
-    :class="{
-      'w-4 h-4': size === 'sm',
-      'w-8 h-8': size === 'md' || !size,
-      'w-12 h-12': size === 'lg',
-    }"
+    class="loading-spinner"
+    :class="colorClass"
     role="status"
     :aria-label="label || 'Chargement...'"
   >
-    <svg
-      class="animate-spin"
-      :class="{
-        'text-primary-500': color === 'primary' || !color,
-        'text-white': color === 'white',
-        'text-gray-400': color === 'gray',
-      }"
-      xmlns="http://www.w3.org/2000/svg"
-      fill="none"
-      viewBox="0 0 24 24"
-      aria-hidden="true"
-    >
-      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
-      <path
-        class="opacity-75"
-        fill="currentColor"
-        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-      />
-    </svg>
+    <Spin :size="antSize" :tip="tip">
+      <template #indicator>
+        <LoadingOutlined :style="{ fontSize: `${indicatorSize}px` }" spin />
+      </template>
+    </Spin>
     <span class="sr-only">{{ label || 'Chargement...' }}</span>
   </div>
 
@@ -46,11 +73,7 @@ defineProps<{
   <div
     v-else-if="variant === 'dots'"
     class="loading-dots"
-    :class="{
-      'text-primary-500': color === 'primary' || !color,
-      'text-white': color === 'white',
-      'text-gray-400': color === 'gray',
-    }"
+    :class="colorClass"
     role="status"
     :aria-label="label || 'Chargement...'"
   >
@@ -63,17 +86,13 @@ defineProps<{
   <!-- Pulse ring variant -->
   <div
     v-else-if="variant === 'pulse'"
-    class="loading-pulse-ring"
+    class="loading-pulse"
     :class="[
+      colorClass,
       {
-        'w-6 h-6': size === 'sm',
-        'w-10 h-10': size === 'md' || !size,
-        'w-14 h-14': size === 'lg',
-      },
-      {
-        'text-primary-500': color === 'primary' || !color,
-        'text-white': color === 'white',
-        'text-gray-400': color === 'gray',
+        'loading-pulse--sm': size === 'sm',
+        'loading-pulse--md': size === 'md' || !size,
+        'loading-pulse--lg': size === 'lg',
       },
     ]"
     role="status"
@@ -82,3 +101,149 @@ defineProps<{
     <span class="sr-only">{{ label || 'Chargement...' }}</span>
   </div>
 </template>
+
+<style scoped>
+/* Base spinner styles */
+.loading-spinner {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Color variants */
+.loading-spinner--primary :deep(.ant-spin-dot-item),
+.loading-spinner--primary :deep(.anticon) {
+  color: #14b8a6;
+}
+
+.loading-spinner--white :deep(.ant-spin-dot-item),
+.loading-spinner--white :deep(.anticon) {
+  color: #ffffff;
+}
+
+.loading-spinner--gray :deep(.ant-spin-dot-item),
+.loading-spinner--gray :deep(.anticon) {
+  color: #9ca3af;
+}
+
+/* Dots variant */
+.loading-dots {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.loading-dots span:not(.sr-only) {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+  animation: dots-bounce 1.4s infinite ease-in-out both;
+}
+
+.loading-dots span:nth-child(1) {
+  animation-delay: -0.32s;
+}
+
+.loading-dots span:nth-child(2) {
+  animation-delay: -0.16s;
+}
+
+.loading-dots span:nth-child(3) {
+  animation-delay: 0s;
+}
+
+.loading-dots--primary {
+  color: #14b8a6;
+}
+
+.loading-dots--white {
+  color: #ffffff;
+}
+
+.loading-dots--gray {
+  color: #9ca3af;
+}
+
+@keyframes dots-bounce {
+  0%,
+  80%,
+  100% {
+    transform: scale(0);
+  }
+  40% {
+    transform: scale(1);
+  }
+}
+
+/* Pulse variant */
+.loading-pulse {
+  position: relative;
+  border-radius: 50%;
+}
+
+.loading-pulse::before,
+.loading-pulse::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 2px solid currentColor;
+  animation: pulse-ring 1.5s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+}
+
+.loading-pulse::after {
+  animation-delay: 0.5s;
+}
+
+.loading-pulse--sm {
+  width: 24px;
+  height: 24px;
+}
+
+.loading-pulse--md {
+  width: 40px;
+  height: 40px;
+}
+
+.loading-pulse--lg {
+  width: 56px;
+  height: 56px;
+}
+
+.loading-pulse--primary {
+  color: #14b8a6;
+}
+
+.loading-pulse--white {
+  color: #ffffff;
+}
+
+.loading-pulse--gray {
+  color: #9ca3af;
+}
+
+@keyframes pulse-ring {
+  0% {
+    transform: scale(0.5);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 0;
+  }
+}
+
+/* Screen reader only */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+</style>

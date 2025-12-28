@@ -1,11 +1,18 @@
 <script setup lang="ts">
-import BaseIcon from './BaseIcon.vue';
+import { computed } from 'vue';
+import { Alert } from 'ant-design-vue';
+import {
+  InfoCircleOutlined,
+  CheckCircleOutlined,
+  ExclamationCircleOutlined,
+  CloseCircleOutlined,
+} from '@ant-design/icons-vue';
 
 /**
- * BaseAlert component
- * Display important messages, errors, warnings, or information
+ * BaseAlert - Wrapper around Ant Design Alert
+ * Maintains backwards compatibility with existing API
  */
-defineProps<{
+const props = defineProps<{
   variant?: 'info' | 'success' | 'warning' | 'error';
   title?: string;
   dismissible?: boolean;
@@ -14,81 +21,119 @@ defineProps<{
 const emit = defineEmits<{
   dismiss: [];
 }>();
+
+// Map variant to Ant Design type
+const alertType = computed(() => {
+  switch (props.variant) {
+    case 'success':
+      return 'success';
+    case 'warning':
+      return 'warning';
+    case 'error':
+      return 'error';
+    default:
+      return 'info';
+  }
+});
+
+// Get icon component
+const iconComponent = computed(() => {
+  switch (props.variant) {
+    case 'success':
+      return CheckCircleOutlined;
+    case 'warning':
+      return ExclamationCircleOutlined;
+    case 'error':
+      return CloseCircleOutlined;
+    default:
+      return InfoCircleOutlined;
+  }
+});
+
+const handleClose = () => {
+  emit('dismiss');
+};
 </script>
 
 <template>
-  <div
-    class="flex items-start gap-3 p-4 rounded-lg border"
-    :class="{
-      'bg-blue-50 border-blue-200': variant === 'info' || !variant,
-      'bg-green-50 border-green-200': variant === 'success',
-      'bg-yellow-50 border-yellow-200': variant === 'warning',
-      'bg-red-50 border-red-200': variant === 'error',
-    }"
-    role="alert"
+  <Alert
+    :type="alertType"
+    :message="title"
+    :closable="dismissible"
+    :show-icon="true"
+    class="base-alert"
+    @close="handleClose"
   >
-    <!-- Icon -->
-    <div class="flex-shrink-0">
-      <BaseIcon
-        :name="
-          variant === 'success'
-            ? 'check'
-            : variant === 'warning'
-              ? 'warning'
-              : variant === 'error'
-                ? 'error'
-                : 'info'
-        "
-        size="lg"
-        :class="{
-          'text-blue-600': variant === 'info' || !variant,
-          'text-green-600': variant === 'success',
-          'text-yellow-600': variant === 'warning',
-          'text-red-600': variant === 'error',
-        }"
-      />
-    </div>
+    <template #icon>
+      <component :is="iconComponent" />
+    </template>
 
-    <!-- Content -->
-    <div class="flex-1 min-w-0">
-      <h3
-        v-if="title"
-        class="font-semibold mb-1"
-        :class="{
-          'text-blue-900': variant === 'info' || !variant,
-          'text-green-900': variant === 'success',
-          'text-yellow-900': variant === 'warning',
-          'text-red-900': variant === 'error',
-        }"
-      >
-        {{ title }}
-      </h3>
-      <div
-        class="text-sm"
-        :class="{
-          'text-blue-800': variant === 'info' || !variant,
-          'text-green-800': variant === 'success',
-          'text-yellow-800': variant === 'warning',
-          'text-red-800': variant === 'error',
-        }"
-      >
-        <slot />
-      </div>
-    </div>
-
-    <!-- Dismiss button -->
-    <button
-      v-if="dismissible"
-      class="flex-shrink-0 tap-target p-1 rounded-lg transition-colors hover:bg-black hover:bg-opacity-5"
-      :class="{
-        'text-blue-600': variant === 'info' || !variant,
-        'text-green-600': variant === 'success',
-        'text-yellow-600': variant === 'warning',
-        'text-red-600': variant === 'error',
-      }"
-      @click="emit('dismiss')"
-    >
-      <BaseIcon name="close" size="sm" />
-    </button>
-  </div>
+    <template v-if="$slots.default" #description>
+      <slot />
+    </template>
+  </Alert>
 </template>
+
+<style scoped>
+.base-alert {
+  border-radius: 12px;
+  padding: 12px 16px;
+}
+
+.base-alert :deep(.ant-alert-message) {
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.base-alert :deep(.ant-alert-description) {
+  font-size: 14px;
+}
+
+.base-alert :deep(.ant-alert-icon) {
+  font-size: 20px;
+}
+
+.base-alert :deep(.ant-alert-close-icon) {
+  font-size: 14px;
+}
+
+/* Info variant */
+.base-alert.ant-alert-info {
+  background-color: #eff6ff;
+  border-color: #bfdbfe;
+}
+
+.base-alert.ant-alert-info :deep(.ant-alert-icon) {
+  color: #2563eb;
+}
+
+/* Success variant */
+.base-alert.ant-alert-success {
+  background-color: #f0fdf4;
+  border-color: #bbf7d0;
+}
+
+.base-alert.ant-alert-success :deep(.ant-alert-icon) {
+  color: #16a34a;
+}
+
+/* Warning variant */
+.base-alert.ant-alert-warning {
+  background-color: #fefce8;
+  border-color: #fde047;
+}
+
+.base-alert.ant-alert-warning :deep(.ant-alert-icon) {
+  color: #ca8a04;
+}
+
+/* Error variant */
+.base-alert.ant-alert-error {
+  background-color: #fef2f2;
+  border-color: #fecaca;
+}
+
+.base-alert.ant-alert-error :deep(.ant-alert-icon) {
+  color: #dc2626;
+}
+</style>

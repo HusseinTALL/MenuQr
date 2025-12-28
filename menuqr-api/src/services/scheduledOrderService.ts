@@ -421,7 +421,7 @@ export const getCalendarData = async (
   const dataByDate: Map<string, CalendarDay> = new Map();
 
   for (const order of orders) {
-    if (!order.scheduledFor) continue;
+    if (!order.scheduledFor) {continue;}
 
     const dateStr = formatDate(order.scheduledFor);
 

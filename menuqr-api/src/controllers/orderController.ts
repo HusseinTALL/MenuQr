@@ -2,6 +2,8 @@ import { Request, Response } from 'express';
 import { Order, Dish, Restaurant, Customer } from '../models/index.js';
 import { asyncHandler, ApiError } from '../middleware/errorHandler.js';
 import * as loyaltyService from '../services/loyaltyService.js';
+import { emitNewOrder, emitOrderUpdate, emitOrderReady } from '../services/socketService.js';
+import logger from '../utils/logger.js';
 
 interface OrderItemInput {
   dishId: string;
@@ -45,7 +47,7 @@ export const createOrder = asyncHandler(async (req: Request, res: Response): Pro
       throw new ApiError(404, `Dish ${item.dishId} not found or unavailable`);
     }
 
-    let itemPrice = item.variant ? item.variant.price : dish.price;
+    const itemPrice = item.variant ? item.variant.price : dish.price;
     let optionsTotal = 0;
 
     if (item.options && item.options.length > 0) {
@@ -153,6 +155,17 @@ export const createOrder = asyncHandler(async (req: Request, res: Response): Pro
     status: 'pending',
     paymentStatus: 'pending',
     loyalty: loyaltyData,
+  });
+
+  // Emit real-time event for new order
+  emitNewOrder(restaurantId, {
+    orderId: order._id.toString(),
+    orderNumber: order.orderNumber,
+    status: order.status,
+    tableNumber: order.tableNumber,
+    items: order.items.map((item) => ({ name: item.name, quantity: item.quantity })),
+    total: order.total,
+    createdAt: order.createdAt,
   });
 
   res.status(201).json({
@@ -270,7 +283,7 @@ export const updateOrderStatus = asyncHandler(
         order.confirmedAt = now;
         break;
       case 'preparing':
-        if (!order.confirmedAt) order.confirmedAt = now;
+        if (!order.confirmedAt) {order.confirmedAt = now;}
         break;
       case 'ready':
         order.preparedAt = now;
@@ -320,7 +333,7 @@ export const updateOrderStatus = asyncHandler(
             }
           } catch (loyaltyError) {
             // Log error but don't fail the order completion
-            console.error('Loyalty points error:', loyaltyError);
+            logger.error('Loyalty points error:', loyaltyError);
           }
         }
         break;
@@ -332,6 +345,25 @@ export const updateOrderStatus = asyncHandler(
 
     order.status = status;
     await order.save();
+
+    // Emit real-time events based on status
+    const orderEventData = {
+      orderId: order._id.toString(),
+      orderNumber: order.orderNumber,
+      status: order.status,
+      tableNumber: order.tableNumber,
+      items: order.items.map((item) => ({ name: item.name, quantity: item.quantity })),
+      total: order.total,
+      updatedAt: now,
+    };
+
+    if (status === 'ready') {
+      // Special event for order ready (customer notification)
+      emitOrderReady(order.restaurantId.toString(), orderEventData);
+    } else {
+      // General order update event
+      emitOrderUpdate(order.restaurantId.toString(), orderEventData);
+    }
 
     res.json({
       success: true,
@@ -398,7 +430,7 @@ export const updateOrderItems = asyncHandler(
         throw new ApiError(404, `Dish ${item.dishId} not found`);
       }
 
-      let itemPrice = item.variant ? item.variant.price : dish.price;
+      const itemPrice = item.variant ? item.variant.price : dish.price;
       let optionsTotal = 0;
 
       if (item.options && item.options.length > 0) {

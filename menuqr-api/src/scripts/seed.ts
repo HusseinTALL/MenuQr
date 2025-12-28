@@ -16,12 +16,12 @@ const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/menuqr
 
 async function seed() {
   try {
-    console.log('Connecting to MongoDB...');
+    console.info('Connecting to MongoDB...');
     await mongoose.connect(MONGODB_URI);
-    console.log('Connected to MongoDB');
+    console.info('Connected to MongoDB');
 
     // Clear existing data
-    console.log('Clearing existing data...');
+    console.info('Clearing existing data...');
     await Promise.all([
       User.deleteMany({}),
       Restaurant.deleteMany({}),
@@ -37,7 +37,7 @@ async function seed() {
     ]);
 
     // Create admin user
-    console.log('Creating admin user...');
+    console.info('Creating admin user...');
     const user = await User.create({
       email: 'admin@menuqr.fr',
       password: 'admin123',
@@ -46,7 +46,7 @@ async function seed() {
     });
 
     // Create restaurant - Garbadrome Patte d'Oie
-    console.log('Creating restaurant...');
+    console.info('Creating restaurant...');
     const restaurant = await new Restaurant({
       name: "Garbadrome Patte d'Oie",
       slug: 'garbadrome-patte-doie',
@@ -87,7 +87,7 @@ async function seed() {
     await user.save();
 
     // Create categories
-    console.log('Creating categories...');
+    console.info('Creating categories...');
     const categories = await Category.create([
       {
         name: { fr: 'Garba', en: 'Garba' },
@@ -158,7 +158,7 @@ async function seed() {
     const [garba, platsAfricains, grillades, accompagnements, entrees, petitDejeuner, boissons, desserts] = categories;
 
     // Create dishes
-    console.log('Creating dishes...');
+    console.info('Creating dishes...');
     await Dish.create([
       // ========== GARBA ==========
       {
@@ -811,7 +811,7 @@ async function seed() {
     const allDishes = await Dish.find({ restaurantId: restaurant._id });
 
     // ========== TABLES ==========
-    console.log('Creating tables...');
+    console.info('Creating tables...');
     const tables = await Table.create([
       { name: 'Table 1', capacity: 2, minCapacity: 1, location: 'indoor', restaurantId: restaurant._id, isActive: true, order: 1 },
       { name: 'Table 2', capacity: 2, minCapacity: 1, location: 'indoor', restaurantId: restaurant._id, isActive: true, order: 2 },
@@ -826,7 +826,7 @@ async function seed() {
     ]);
 
     // ========== CUSTOMERS ==========
-    console.log('Creating customers...');
+    console.info('Creating customers...');
     const customerData = [
       { phone: '+22670000001', name: 'Aminata Ouedraogo', email: 'aminata@email.com', currentTier: 'platine' as const, totalPoints: 5000, lifetimePoints: 15000, totalOrders: 50, totalSpent: 150000 },
       { phone: '+22670000002', name: 'Ibrahim Sawadogo', email: 'ibrahim@email.com', currentTier: 'or' as const, totalPoints: 2500, lifetimePoints: 8000, totalOrders: 30, totalSpent: 90000 },
@@ -867,8 +867,8 @@ async function seed() {
     );
 
     // ========== ORDERS ==========
-    console.log('Creating orders...');
-    const orderStatuses = ['pending', 'confirmed', 'preparing', 'ready', 'completed', 'cancelled'] as const;
+    console.info('Creating orders...');
+    const _orderStatuses = ['pending', 'confirmed', 'preparing', 'ready', 'completed', 'cancelled'] as const;
     const statusDistribution = { pending: 5, confirmed: 5, preparing: 5, ready: 3, completed: 10, cancelled: 2 };
     const orders: any[] = [];
 
@@ -916,8 +916,8 @@ async function seed() {
     await Order.insertMany(orders);
 
     // ========== RESERVATIONS ==========
-    console.log('Creating reservations...');
-    const reservationStatuses = ['pending', 'confirmed', 'completed', 'cancelled', 'no_show'] as const;
+    console.info('Creating reservations...');
+    const _reservationStatuses = ['pending', 'confirmed', 'completed', 'cancelled', 'no_show'] as const;
     const resDistribution = { pending: 3, confirmed: 4, completed: 3, cancelled: 1, no_show: 1 };
     const reservations: any[] = [];
     let resCount = 0;
@@ -962,8 +962,8 @@ async function seed() {
     await Reservation.insertMany(reservations);
 
     // ========== REVIEWS ==========
-    console.log('Creating reviews...');
-    const reviewStatuses = ['approved', 'pending', 'flagged'] as const;
+    console.info('Creating reviews...');
+    const _reviewStatuses = ['approved', 'pending', 'flagged'] as const;
     const reviewDistribution = { approved: 15, pending: 3, flagged: 2 };
     const reviews: any[] = [];
     const reviewComments = [
@@ -1014,7 +1014,7 @@ async function seed() {
     await Review.insertMany(reviews);
 
     // ========== LOYALTY TRANSACTIONS ==========
-    console.log('Creating loyalty transactions...');
+    console.info('Creating loyalty transactions...');
     const loyaltyTransactions: any[] = [];
 
     for (const customer of customers.slice(0, 12)) {
@@ -1025,7 +1025,7 @@ async function seed() {
         const type = Math.random() > 0.2 ? 'earn' : 'redeem';
         const points = type === 'earn' ? Math.floor(Math.random() * 100) + 10 : Math.min(balance, Math.floor(Math.random() * 50) + 10);
 
-        if (type === 'redeem' && balance < 10) continue;
+        if (type === 'redeem' && balance < 10) {continue;}
 
         balance = type === 'earn' ? balance + points : balance - points;
 
@@ -1043,7 +1043,7 @@ async function seed() {
     await LoyaltyTransaction.insertMany(loyaltyTransactions);
 
     // ========== CAMPAIGNS ==========
-    console.log('Creating campaigns...');
+    console.info('Creating campaigns...');
     const campaignData = [
       {
         name: 'Promo Weekend',
@@ -1101,30 +1101,30 @@ async function seed() {
       }))
     );
 
-    console.log('\n✅ Seed completed successfully!');
-    console.log('\nCreated:');
-    console.log('  - 1 Admin user (admin@menuqr.fr / admin123)');
-    console.log("  - 1 Restaurant (Garbadrome Patte d'Oie)");
-    console.log('  - 8 Categories');
-    console.log('  - 45 Dishes');
-    console.log('  - 10 Tables');
-    console.log('  - 15 Customers');
-    console.log('  - 30 Orders');
-    console.log('  - 12 Reservations');
-    console.log('  - 20 Reviews');
-    console.log(`  - ${loyaltyTransactions.length} Loyalty Transactions`);
-    console.log('  - 5 Campaigns');
-    console.log('\nYou can now login at /admin/login with:');
-    console.log('  Email: admin@menuqr.fr');
-    console.log('  Password: admin123');
-    console.log('\nPublic menu available at: /menu/slug/garbadrome-patte-doie');
+    console.info('\n✅ Seed completed successfully!');
+    console.info('\nCreated:');
+    console.info('  - 1 Admin user (admin@menuqr.fr / admin123)');
+    console.info("  - 1 Restaurant (Garbadrome Patte d'Oie)");
+    console.info('  - 8 Categories');
+    console.info('  - 45 Dishes');
+    console.info('  - 10 Tables');
+    console.info('  - 15 Customers');
+    console.info('  - 30 Orders');
+    console.info('  - 12 Reservations');
+    console.info('  - 20 Reviews');
+    console.info(`  - ${loyaltyTransactions.length} Loyalty Transactions`);
+    console.info('  - 5 Campaigns');
+    console.info('\nYou can now login at /admin/login with:');
+    console.info('  Email: admin@menuqr.fr');
+    console.info('  Password: admin123');
+    console.info('\nPublic menu available at: /menu/slug/garbadrome-patte-doie');
 
   } catch (error) {
     console.error('Seed failed:', error);
     process.exit(1);
   } finally {
     await mongoose.connection.close();
-    console.log('\nDatabase connection closed');
+    console.info('\nDatabase connection closed');
   }
 }
 

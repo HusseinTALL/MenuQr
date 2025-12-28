@@ -55,7 +55,7 @@ const errorMessage = computed(() => authStore.error);
 // Start OTP countdown
 function startOtpCountdown(seconds: number) {
   otpCountdown.value = seconds;
-  if (otpTimer) clearInterval(otpTimer);
+  if (otpTimer) {clearInterval(otpTimer);}
   otpTimer = setInterval(() => {
     if (otpCountdown.value > 0) {
       otpCountdown.value--;
@@ -76,7 +76,7 @@ function resetForm() {
   showPassword.value = false;
   currentStep.value = 'choice';
   authStore.error = null;
-  if (otpTimer) clearInterval(otpTimer);
+  if (otpTimer) {clearInterval(otpTimer);}
 }
 
 // Close modal
@@ -87,7 +87,7 @@ function closeModal() {
 
 // Step 1: Check if phone exists and determine flow
 async function handlePhoneSubmit() {
-  if (!isPhoneValid.value) return;
+  if (!isPhoneValid.value) {return;}
 
   const result = await authStore.checkPhone(phone.value, props.restaurantId);
 
@@ -113,13 +113,13 @@ async function sendOtp(type: 'register' | 'login' | 'reset_password') {
 
 // Resend OTP
 async function resendOtp() {
-  if (otpCountdown.value > 0) return;
+  if (otpCountdown.value > 0) {return;}
   await sendOtp(authMode.value === 'register' ? 'register' : 'reset_password');
 }
 
 // Verify OTP
 async function handleOtpSubmit() {
-  if (!isOtpValid.value) return;
+  if (!isOtpValid.value) {return;}
 
   const result = await authStore.verifyOtp(phone.value, props.restaurantId, otpCode.value);
   if (result.success) {
@@ -133,7 +133,7 @@ async function handleOtpSubmit() {
 
 // Register
 async function handleRegister() {
-  if (!isRegisterFormValid.value) return;
+  if (!isRegisterFormValid.value) {return;}
 
   const success = await authStore.register(
     phone.value,
@@ -151,7 +151,7 @@ async function handleRegister() {
 
 // Login
 async function handleLogin() {
-  if (!isLoginFormValid.value) return;
+  if (!isLoginFormValid.value) {return;}
 
   const success = await authStore.login(phone.value, props.restaurantId, password.value);
 
@@ -169,7 +169,7 @@ function goToForgotPassword() {
 
 // Send forgot password OTP
 async function handleForgotPassword() {
-  if (!isPhoneValid.value) return;
+  if (!isPhoneValid.value) {return;}
   const success = await authStore.forgotPassword(phone.value, props.restaurantId);
   if (success) {
     currentStep.value = 'otp';
@@ -179,7 +179,7 @@ async function handleForgotPassword() {
 
 // Reset password
 async function handleResetPassword() {
-  if (!isPasswordValid.value || password.value !== confirmPassword.value) return;
+  if (!isPasswordValid.value || password.value !== confirmPassword.value) {return;}
 
   const success = await authStore.resetPassword(
     phone.value,

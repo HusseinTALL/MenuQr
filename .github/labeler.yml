@@ -1,0 +1,81 @@
+# Label configuration for PR labeler
+
+# Frontend labels
+frontend:
+  - changed-files:
+      - any-glob-to-any-file: 'menuqr-app/**/*'
+
+# Backend labels
+backend:
+  - changed-files:
+      - any-glob-to-any-file: 'menuqr-api/**/*'
+
+# Documentation
+documentation:
+  - changed-files:
+      - any-glob-to-any-file:
+          - '**/*.md'
+          - 'docs/**/*'
+
+# Configuration
+configuration:
+  - changed-files:
+      - any-glob-to-any-file:
+          - '**/*.json'
+          - '**/*.yml'
+          - '**/*.yaml'
+          - '**/.*rc'
+          - '**/.*rc.js'
+          - '**/.*rc.cjs'
+
+# Tests
+tests:
+  - changed-files:
+      - any-glob-to-any-file:
+          - '**/*.test.ts'
+          - '**/*.spec.ts'
+          - '**/__tests__/**/*'
+          - '**/tests/**/*'
+
+# CI/CD
+ci:
+  - changed-files:
+      - any-glob-to-any-file: '.github/**/*'
+
+# Dependencies
+dependencies:
+  - changed-files:
+      - any-glob-to-any-file:
+          - '**/package.json'
+          - '**/package-lock.json'
+
+# Components (Vue)
+components:
+  - changed-files:
+      - any-glob-to-any-file: 'menuqr-app/src/components/**/*'
+
+# Views/Pages
+views:
+  - changed-files:
+      - any-glob-to-any-file: 'menuqr-app/src/views/**/*'
+
+# API/Controllers
+api:
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'menuqr-api/src/controllers/**/*'
+          - 'menuqr-api/src/routes/**/*'
+
+# Database/Models
+database:
+  - changed-files:
+      - any-glob-to-any-file: 'menuqr-api/src/models/**/*'
+
+# Styles
+styles:
+  - changed-files:
+      - any-glob-to-any-file:
+          - '**/*.css'
+          - '**/*.scss'
+          - '**/*.less'
+          - 'menuqr-app/src/styles/**/*'

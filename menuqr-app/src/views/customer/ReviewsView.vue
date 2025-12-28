@@ -5,6 +5,7 @@ import { useCustomerAuthStore } from '@/stores/customerAuth';
 import { useMenuStore } from '@/stores/menuStore';
 import type { Review, ReviewQueryParams, ReviewPagination, ReviewStats as ReviewStatsType } from '@/types/review';
 import api from '@/services/api';
+import { Modal, message } from 'ant-design-vue';
 import AppHeader from '@/components/common/AppHeader.vue';
 import ReviewCard from '@/components/review/ReviewCard.vue';
 import ReviewForm from '@/components/review/ReviewForm.vue';
@@ -53,12 +54,12 @@ const sortOptions = [
 ];
 
 const hasMore = computed(() => {
-  if (!pagination.value) return false;
+  if (!pagination.value) {return false;}
   return pagination.value.page < pagination.value.pages;
 });
 
 const hasMoreMyReviews = computed(() => {
-  if (!myPagination.value) return false;
+  if (!myPagination.value) {return false;}
   return myPagination.value.page < myPagination.value.pages;
 });
 
@@ -75,8 +76,9 @@ const ratingPercentages = computed(() => {
     return { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
   }
   const result: Record<number, number> = {};
+  const dist = stats.value.ratingDistribution as Record<number, number>;
   for (let i = 5; i >= 1; i--) {
-    result[i] = ((stats.value.ratingDistribution[i] || 0) / stats.value.totalReviews) * 100;
+    result[i] = ((dist[i] || 0) / stats.value.totalReviews) * 100;
   }
   return result;
 });
@@ -96,10 +98,12 @@ const getAvatarColor = (name: string) => {
 };
 
 const getInitials = (name: string) => {
-  if (!name) return '?';
+  if (!name) {return '?';}
   const parts = name.trim().split(' ');
-  if (parts.length >= 2) {
-    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  const firstPart = parts[0];
+  const lastPart = parts[parts.length - 1];
+  if (parts.length >= 2 && firstPart && lastPart) {
+    return ((firstPart[0] ?? '') + (lastPart[0] ?? '')).toUpperCase();
   }
   return name.slice(0, 2).toUpperCase();
 };
@@ -130,9 +134,10 @@ const fetchReviews = async (append = false) => {
     }
 
     const response = await api.getRestaurantReviews(restaurantId.value, params);
-    if (response.success) {
-      const reviewsData = response.data as Review[];
-      const paginationData = (response as unknown as { pagination: ReviewPagination }).pagination;
+    if (response.success && response.data) {
+      const data = response.data as unknown as { reviews: Review[]; pagination: ReviewPagination };
+      const reviewsData = data.reviews || [];
+      const paginationData = data.pagination;
 
       if (append) {
         reviews.value = [...reviews.value, ...reviewsData];
@@ -141,7 +146,7 @@ const fetchReviews = async (append = false) => {
       }
       pagination.value = paginationData;
     }
-  } catch (err) {
+  } catch {
     error.value = 'Impossible de charger les avis';
   } finally {
     isLoading.value = false;
@@ -151,7 +156,7 @@ const fetchReviews = async (append = false) => {
 
 // Fetch my reviews
 const fetchMyReviews = async (append = false) => {
-  if (!isAuthenticated.value) return;
+  if (!isAuthenticated.value) {return;}
 
   if (!append) {
     isLoading.value = true;
@@ -166,9 +171,10 @@ const fetchMyReviews = async (append = false) => {
     };
 
     const response = await api.getMyReviews(params);
-    if (response.success) {
-      const reviewsData = response.data as Review[];
-      const paginationData = (response as unknown as { pagination: ReviewPagination }).pagination;
+    if (response.success && response.data) {
+      const data = response.data as unknown as { reviews: Review[]; pagination: ReviewPagination };
+      const reviewsData = data.reviews || [];
+      const paginationData = data.pagination;
 
       if (append) {
         myReviews.value = [...myReviews.value, ...reviewsData];
@@ -187,7 +193,7 @@ const fetchMyReviews = async (append = false) => {
 
 // Fetch stats
 const fetchStats = async () => {
-  if (!restaurantId.value) return;
+  if (!restaurantId.value) {return;}
 
   try {
     const response = await api.getRestaurantReviewStats(restaurantId.value);
@@ -235,24 +241,32 @@ const handleReport = async (reviewId: string) => {
 
   try {
     await api.reportReview(reviewId);
-    alert('Merci pour votre signalement. Nous allons examiner cet avis.');
+    message.success('Merci pour votre signalement. Nous allons examiner cet avis.');
   } catch {
-    alert('Une erreur est survenue');
+    message.error('Une erreur est survenue');
   }
 };
 
 // Handle delete own review
 const handleDelete = async (reviewId: string) => {
-  if (!confirm('Voulez-vous vraiment supprimer cet avis ?')) return;
-
-  try {
-    await api.deleteReview(reviewId);
-    myReviews.value = myReviews.value.filter((r) => r._id !== reviewId);
-    reviews.value = reviews.value.filter((r) => r._id !== reviewId);
-    fetchStats();
-  } catch {
-    alert('Une erreur est survenue');
-  }
+  Modal.confirm({
+    title: 'Supprimer cet avis ?',
+    content: 'Cette action est irréversible.',
+    okText: 'Supprimer',
+    cancelText: 'Annuler',
+    okType: 'danger',
+    async onOk() {
+      try {
+        await api.deleteReview(reviewId);
+        myReviews.value = myReviews.value.filter((r) => r._id !== reviewId);
+        reviews.value = reviews.value.filter((r) => r._id !== reviewId);
+        fetchStats();
+        message.success('Avis supprimé');
+      } catch {
+        message.error('Une erreur est survenue');
+      }
+    },
+  });
 };
 
 // Open review form
@@ -349,24 +363,24 @@ onMounted(async () => {
                     :style="{ width: `${ratingPercentages[rating]}%` }"
                   ></div>
                 </div>
-                <span class="w-10 text-right text-xs text-white/80">{{ stats.ratingDistribution[rating] || 0 }}</span>
+                <span class="w-10 text-right text-xs text-white/80">{{ (stats.ratingDistribution as Record<number, number>)[rating] || 0 }}</span>
               </div>
             </div>
           </div>
         </div>
 
         <!-- Categories ratings -->
-        <div v-if="stats.categoryRatings" class="grid grid-cols-3 gap-4 p-5">
-          <div v-if="stats.categoryRatings.food" class="text-center">
-            <div class="mb-1 text-2xl font-bold text-amber-600">{{ stats.categoryRatings.food.toFixed(1) }}</div>
+        <div v-if="(stats as unknown as { categoryRatings?: { food?: number; service?: number; ambiance?: number } }).categoryRatings" class="grid grid-cols-3 gap-4 p-5">
+          <div v-if="(stats as unknown as { categoryRatings: { food?: number } }).categoryRatings?.food" class="text-center">
+            <div class="mb-1 text-2xl font-bold text-amber-600">{{ (stats as unknown as { categoryRatings: { food: number } }).categoryRatings.food.toFixed(1) }}</div>
             <div class="text-xs text-slate-500">Cuisine</div>
           </div>
-          <div v-if="stats.categoryRatings.service" class="text-center">
-            <div class="mb-1 text-2xl font-bold text-orange-600">{{ stats.categoryRatings.service.toFixed(1) }}</div>
+          <div v-if="(stats as unknown as { categoryRatings: { service?: number } }).categoryRatings?.service" class="text-center">
+            <div class="mb-1 text-2xl font-bold text-orange-600">{{ (stats as unknown as { categoryRatings: { service: number } }).categoryRatings.service.toFixed(1) }}</div>
             <div class="text-xs text-slate-500">Service</div>
           </div>
-          <div v-if="stats.categoryRatings.ambiance" class="text-center">
-            <div class="mb-1 text-2xl font-bold text-rose-600">{{ stats.categoryRatings.ambiance.toFixed(1) }}</div>
+          <div v-if="(stats as unknown as { categoryRatings: { ambiance?: number } }).categoryRatings?.ambiance" class="text-center">
+            <div class="mb-1 text-2xl font-bold text-rose-600">{{ (stats as unknown as { categoryRatings: { ambiance: number } }).categoryRatings.ambiance.toFixed(1) }}</div>
             <div class="text-xs text-slate-500">Ambiance</div>
           </div>
         </div>
@@ -591,12 +605,12 @@ onMounted(async () => {
               <div class="mb-3 flex items-center gap-3">
                 <div
                   class="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br text-sm font-bold text-white"
-                  :class="getAvatarColor(review.customer?.name || '')"
+                  :class="getAvatarColor(review.customerId?.name || '')"
                 >
-                  {{ getInitials(review.customer?.name || '') }}
+                  {{ getInitials(review.customerId?.name || '') }}
                 </div>
                 <div class="flex-1">
-                  <div class="font-semibold text-slate-800">{{ review.customer?.name || 'Client' }}</div>
+                  <div class="font-semibold text-slate-800">{{ review.customerId?.name || 'Client' }}</div>
                   <div class="flex items-center gap-2">
                     <div class="flex gap-0.5">
                       <svg v-for="i in 5" :key="i" class="h-4 w-4" :class="i <= review.rating ? 'text-amber-400' : 'text-slate-200'" fill="currentColor" viewBox="0 0 20 20">
@@ -811,6 +825,9 @@ onMounted(async () => {
 </template>
 
 <style scoped>
+/* ============================================
+   BASE STYLES
+   ============================================ */
 .modal-enter-active,
 .modal-leave-active {
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -837,5 +854,425 @@ onMounted(async () => {
 
 .animate-fadeIn {
   animation: fadeIn 0.4s ease-out forwards;
+}
+
+/* ============================================
+   RESPONSIVE BREAKPOINTS
+   ============================================ */
+
+/* Extra small devices (phones, less than 576px) */
+@media (max-width: 575px) {
+  /* Container adjustments */
+  .container {
+    padding-left: 12px !important;
+    padding-right: 12px !important;
+  }
+
+  /* Hero Stats Section */
+  .rounded-3xl {
+    border-radius: 1rem;
+  }
+
+  /* Main rating hero adjustments */
+  .relative.bg-gradient-to-br {
+    padding: 16px;
+  }
+
+  .relative.bg-gradient-to-br .flex.items-center.gap-6 {
+    flex-direction: column;
+    text-align: center;
+    gap: 16px;
+  }
+
+  /* Big rating number */
+  .text-6xl {
+    font-size: 3rem;
+  }
+
+  /* Rating bars container */
+  .relative.bg-gradient-to-br .flex-1.space-y-2 {
+    width: 100%;
+  }
+
+  /* Rating bar items */
+  .relative.bg-gradient-to-br .flex.items-center.gap-2 {
+    gap: 6px;
+  }
+
+  .relative.bg-gradient-to-br .w-8 {
+    width: 20px;
+    font-size: 12px;
+  }
+
+  .relative.bg-gradient-to-br .w-10 {
+    width: 32px;
+    font-size: 10px;
+  }
+
+  /* Category ratings */
+  .grid.grid-cols-3 {
+    gap: 8px;
+    padding: 12px;
+  }
+
+  .grid.grid-cols-3 .text-2xl {
+    font-size: 1.25rem;
+  }
+
+  .grid.grid-cols-3 .text-xs {
+    font-size: 10px;
+  }
+
+  /* Write Review CTA */
+  .rounded-2xl.bg-gradient-to-r .p-5 {
+    padding: 14px;
+  }
+
+  .rounded-2xl.bg-gradient-to-r .flex.items-center.justify-between {
+    flex-direction: column;
+    gap: 12px;
+    text-align: center;
+  }
+
+  .rounded-2xl.bg-gradient-to-r .text-lg {
+    font-size: 1rem;
+  }
+
+  .rounded-2xl.bg-gradient-to-r .text-sm {
+    font-size: 12px;
+  }
+
+  .rounded-2xl.bg-gradient-to-r button {
+    width: 100%;
+    justify-content: center;
+  }
+
+  /* Tabs */
+  .flex.gap-2.rounded-2xl.bg-slate-100 {
+    border-radius: 12px;
+  }
+
+  .flex.gap-2.rounded-2xl.bg-slate-100 button {
+    padding: 10px 8px;
+    font-size: 13px;
+  }
+
+  /* Filter chips */
+  .space-y-4 .flex.flex-wrap.gap-2 button {
+    padding: 8px 12px;
+    font-size: 12px;
+  }
+
+  .space-y-4 .text-xs.font-medium {
+    font-size: 10px;
+    margin-bottom: 6px;
+  }
+
+  /* Featured reviews section */
+  .mb-8 h3.text-lg {
+    font-size: 1rem;
+  }
+
+  .mb-8 h3 .h-8.w-8 {
+    width: 28px;
+    height: 28px;
+  }
+
+  .mb-8 h3 .h-5.w-5 {
+    width: 16px;
+    height: 16px;
+  }
+
+  /* Featured review cards */
+  .overflow-hidden.rounded-2xl.bg-gradient-to-br {
+    padding: 14px;
+  }
+
+  .overflow-hidden.rounded-2xl.bg-gradient-to-br .h-10.w-10 {
+    width: 36px;
+    height: 36px;
+    font-size: 12px;
+  }
+
+  .overflow-hidden.rounded-2xl.bg-gradient-to-br .font-semibold {
+    font-size: 14px;
+  }
+
+  .overflow-hidden.rounded-2xl.bg-gradient-to-br .text-sm {
+    font-size: 13px;
+  }
+
+  /* Empty state */
+  .rounded-2xl.bg-white.p-16 {
+    padding: 32px 16px;
+  }
+
+  .rounded-2xl.bg-white.p-16 .h-24.w-24 {
+    width: 80px;
+    height: 80px;
+  }
+
+  .rounded-2xl.bg-white.p-16 .h-12.w-12 {
+    width: 40px;
+    height: 40px;
+  }
+
+  .rounded-2xl.bg-white.p-16 .text-xl {
+    font-size: 1.125rem;
+  }
+
+  /* My Reviews cards */
+  .overflow-hidden.rounded-2xl.bg-white.shadow-sm .p-5 {
+    padding: 14px;
+  }
+
+  .overflow-hidden.rounded-2xl.bg-white.shadow-sm .border-b {
+    padding: 12px 14px;
+  }
+
+  /* Dish info in my reviews */
+  .rounded-xl.bg-slate-50.p-3 {
+    padding: 10px;
+    flex-direction: row;
+    gap: 10px;
+  }
+
+  .rounded-xl.bg-slate-50.p-3 .h-12.w-12 {
+    width: 40px;
+    height: 40px;
+  }
+
+  .rounded-xl.bg-slate-50.p-3 .font-medium {
+    font-size: 13px;
+  }
+
+  /* Review images */
+  .flex.gap-2 .h-20.w-20 {
+    width: 60px;
+    height: 60px;
+  }
+
+  /* Response and rejection cards */
+  .rounded-xl.bg-teal-50.p-4,
+  .rounded-xl.bg-red-50.p-4 {
+    padding: 12px;
+  }
+
+  /* Actions footer */
+  .flex.justify-end.border-t.border-slate-100 {
+    padding: 10px 14px;
+  }
+
+  .flex.justify-end.border-t.border-slate-100 button {
+    font-size: 13px;
+    padding: 8px 12px;
+  }
+
+  /* Load more button */
+  .pt-4.text-center button {
+    width: 100%;
+    padding: 14px;
+  }
+
+  /* Modal on mobile - full screen */
+  .fixed.inset-0.z-50 {
+    padding: 0;
+    align-items: flex-end;
+  }
+
+  .fixed.inset-0.z-50 > .w-full.max-w-lg {
+    max-width: 100%;
+    width: 100%;
+    border-radius: 20px 20px 0 0;
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+
+  .fixed.inset-0.z-50 .bg-gradient-to-r.p-5 {
+    padding: 16px;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+
+  .fixed.inset-0.z-50 .bg-gradient-to-r .text-xl {
+    font-size: 1.125rem;
+  }
+
+  .fixed.inset-0.z-50 .p-5:last-child {
+    padding: 16px;
+  }
+
+  /* Loading skeleton */
+  .animate-pulse.rounded-2xl.bg-white.p-6 {
+    padding: 16px;
+  }
+
+  .animate-pulse .h-12.w-12 {
+    width: 40px;
+    height: 40px;
+  }
+
+  /* Error state */
+  .rounded-2xl.bg-white.p-12 {
+    padding: 32px 16px;
+  }
+
+  .rounded-2xl.bg-white.p-12 .h-20.w-20 {
+    width: 64px;
+    height: 64px;
+  }
+
+  .rounded-2xl.bg-white.p-12 .h-10.w-10 {
+    width: 32px;
+    height: 32px;
+  }
+
+  .rounded-2xl.bg-white.p-12 .text-lg {
+    font-size: 1rem;
+  }
+
+  .rounded-2xl.bg-white.p-12 .flex.justify-center.gap-3 {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .rounded-2xl.bg-white.p-12 .flex.justify-center.gap-3 button {
+    width: 100%;
+  }
+}
+
+/* Small devices (landscape phones, 576px - 767px) */
+@media (min-width: 576px) and (max-width: 767px) {
+  /* Hero rating section */
+  .relative.bg-gradient-to-br .flex.items-center.gap-6 {
+    gap: 20px;
+  }
+
+  .text-6xl {
+    font-size: 3.5rem;
+  }
+
+  /* Modal sizing */
+  .fixed.inset-0.z-50 > .w-full.max-w-lg {
+    max-width: 90%;
+    margin: auto;
+    max-height: 85vh;
+    overflow-y: auto;
+  }
+}
+
+/* Medium devices (tablets, 768px and up) */
+@media (min-width: 768px) {
+  /* Hero section enhancement */
+  .relative.bg-gradient-to-br {
+    padding: 24px;
+  }
+
+  .text-6xl {
+    font-size: 4rem;
+  }
+
+  /* Better grid for category ratings */
+  .grid.grid-cols-3 {
+    gap: 24px;
+    padding: 20px;
+  }
+
+  /* Filter chips - better spacing */
+  .space-y-4 .flex.flex-wrap.gap-2 {
+    gap: 10px;
+  }
+
+  /* Featured review cards */
+  .overflow-hidden.rounded-2xl.bg-gradient-to-br {
+    padding: 20px;
+  }
+
+  /* My reviews cards */
+  .overflow-hidden.rounded-2xl.bg-white.shadow-sm .p-5 {
+    padding: 20px;
+  }
+}
+
+/* Touch-friendly improvements for mobile */
+@media (hover: none) and (pointer: coarse) {
+  /* Larger tap targets */
+  .flex.flex-wrap.gap-2 button {
+    min-height: 44px;
+    padding: 10px 16px;
+  }
+
+  /* Tab buttons */
+  .flex.gap-2.rounded-2xl.bg-slate-100 button {
+    min-height: 48px;
+  }
+
+  /* Clickable cards feedback */
+  .overflow-hidden.rounded-2xl:active {
+    transform: scale(0.98);
+    opacity: 0.95;
+  }
+
+  /* Load more button */
+  .pt-4.text-center button {
+    min-height: 48px;
+  }
+
+  /* CTA button */
+  .rounded-2xl.bg-gradient-to-r button {
+    min-height: 48px;
+  }
+
+  /* Delete button in my reviews */
+  .flex.justify-end.border-t.border-slate-100 button {
+    min-height: 44px;
+  }
+
+  /* Modal close button */
+  .fixed.inset-0.z-50 .rounded-lg.p-1 {
+    padding: 8px;
+  }
+}
+
+/* Safe area for notched phones */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  @media (max-width: 575px) {
+    .min-h-screen.bg-gradient-to-b {
+      padding-bottom: calc(32px + env(safe-area-inset-bottom));
+    }
+
+    .fixed.inset-0.z-50 > .w-full {
+      padding-bottom: env(safe-area-inset-bottom);
+    }
+  }
+}
+
+/* Smooth scrolling */
+@media (prefers-reduced-motion: no-preference) {
+  .overflow-y-auto {
+    scroll-behavior: smooth;
+  }
+}
+
+/* Reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+  .animate-fadeIn {
+    animation: none;
+    opacity: 1;
+  }
+
+  .animate-pulse {
+    animation: none;
+  }
+
+  .transition-all {
+    transition: none;
+  }
+}
+
+/* Dark mode support (if needed in future) */
+@media (prefers-color-scheme: dark) {
+  /* Placeholder for dark mode styles */
 }
 </style>

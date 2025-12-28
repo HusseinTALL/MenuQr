@@ -14,128 +14,114 @@ describe('BaseButton', () => {
       expect(wrapper.text()).toContain('Click me');
     });
 
-    it('renders as a button element', () => {
+    it('wraps Ant Design Button component', () => {
       const wrapper = mount(BaseButton);
-      expect(wrapper.element.tagName).toBe('BUTTON');
+      expect(wrapper.find('.ant-btn').exists()).toBe(true);
+    });
+
+    it('has base-button class', () => {
+      const wrapper = mount(BaseButton);
+      expect(wrapper.find('.base-button').exists()).toBe(true);
     });
   });
 
   // Variants tests
   describe('variants', () => {
-    it('applies primary variant styles by default', () => {
+    it('applies primary variant by default', () => {
       const wrapper = mount(BaseButton);
-      expect(wrapper.classes()).toContain('bg-primary-500');
-      expect(wrapper.classes()).toContain('text-white');
+      expect(wrapper.find('.ant-btn-primary').exists()).toBe(true);
     });
 
-    it('applies secondary variant styles', () => {
+    it('applies secondary variant (default type)', () => {
       const wrapper = mount(BaseButton, {
         props: { variant: 'secondary' },
       });
-      expect(wrapper.classes()).toContain('bg-gray-100');
-      expect(wrapper.classes()).toContain('text-gray-700');
+      expect(wrapper.find('.ant-btn-default').exists()).toBe(true);
     });
 
-    it('applies whatsapp variant styles', () => {
+    it('applies whatsapp variant', () => {
       const wrapper = mount(BaseButton, {
         props: { variant: 'whatsapp' },
       });
-      expect(wrapper.classes()).toContain('bg-whatsapp');
-      expect(wrapper.classes()).toContain('text-white');
+      expect(wrapper.find('.base-button--whatsapp').exists()).toBe(true);
     });
 
-    it('applies outline variant styles', () => {
+    it('applies outline variant', () => {
       const wrapper = mount(BaseButton, {
         props: { variant: 'outline' },
       });
-      expect(wrapper.classes()).toContain('border-2');
-      expect(wrapper.classes()).toContain('border-primary-500');
+      expect(wrapper.find('.base-button--outline').exists()).toBe(true);
     });
 
-    it('applies ghost variant styles', () => {
+    it('applies ghost variant (text type)', () => {
       const wrapper = mount(BaseButton, {
         props: { variant: 'ghost' },
       });
-      expect(wrapper.classes()).toContain('text-gray-600');
+      expect(wrapper.find('.ant-btn-text').exists()).toBe(true);
     });
 
-    it('applies danger variant styles', () => {
+    it('applies danger variant', () => {
       const wrapper = mount(BaseButton, {
         props: { variant: 'danger' },
       });
-      expect(wrapper.classes()).toContain('bg-red-500');
-      expect(wrapper.classes()).toContain('text-white');
+      expect(wrapper.find('.ant-btn-dangerous').exists()).toBe(true);
     });
   });
 
   // Size tests
   describe('sizes', () => {
-    it('applies medium size styles by default', () => {
+    it('applies medium size by default', () => {
       const wrapper = mount(BaseButton);
-      expect(wrapper.classes()).toContain('px-5');
-      expect(wrapper.classes()).toContain('py-3');
-      expect(wrapper.classes()).toContain('text-base');
+      // Medium is default, no size class needed
+      expect(wrapper.find('.ant-btn').exists()).toBe(true);
     });
 
-    it('applies small size styles', () => {
+    it('applies small size', () => {
       const wrapper = mount(BaseButton, {
         props: { size: 'sm' },
       });
-      expect(wrapper.classes()).toContain('px-3');
-      expect(wrapper.classes()).toContain('py-2');
-      expect(wrapper.classes()).toContain('text-sm');
+      expect(wrapper.find('.ant-btn-sm').exists()).toBe(true);
     });
 
-    it('applies large size styles', () => {
+    it('applies large size', () => {
       const wrapper = mount(BaseButton, {
         props: { size: 'lg' },
       });
-      expect(wrapper.classes()).toContain('px-6');
-      expect(wrapper.classes()).toContain('py-4');
-      expect(wrapper.classes()).toContain('text-lg');
+      expect(wrapper.find('.ant-btn-lg').exists()).toBe(true);
     });
   });
 
   // Icon button tests
   describe('icon button', () => {
-    it('applies icon button styles when icon prop is true', () => {
+    it('applies circle shape when icon prop is true', () => {
       const wrapper = mount(BaseButton, {
         props: { icon: true },
       });
-      expect(wrapper.classes()).toContain('w-10');
-      expect(wrapper.classes()).toContain('h-10');
-      expect(wrapper.classes()).toContain('p-0');
+      expect(wrapper.find('.ant-btn-circle').exists()).toBe(true);
     });
 
-    it('applies small icon button styles', () => {
+    it('applies icon button custom class', () => {
       const wrapper = mount(BaseButton, {
-        props: { icon: true, size: 'sm' },
+        props: { icon: true },
       });
-      expect(wrapper.classes()).toContain('w-8');
-      expect(wrapper.classes()).toContain('h-8');
-    });
-
-    it('applies large icon button styles', () => {
-      const wrapper = mount(BaseButton, {
-        props: { icon: true, size: 'lg' },
-      });
-      expect(wrapper.classes()).toContain('w-12');
-      expect(wrapper.classes()).toContain('h-12');
+      expect(wrapper.find('.base-button--icon').exists()).toBe(true);
     });
   });
 
   // Full width tests
   describe('fullWidth', () => {
-    it('applies full width styles when fullWidth prop is true', () => {
+    it('applies full width class when fullWidth prop is true', () => {
       const wrapper = mount(BaseButton, {
         props: { fullWidth: true },
       });
-      expect(wrapper.classes()).toContain('w-full');
+      expect(wrapper.find('.base-button--full-width').exists()).toBe(true);
     });
 
-    it('does not apply full width styles by default', () => {
-      const wrapper = mount(BaseButton);
-      expect(wrapper.classes()).not.toContain('w-full');
+    it('uses block prop from Ant Design', () => {
+      const wrapper = mount(BaseButton, {
+        props: { fullWidth: true },
+      });
+      expect(wrapper.find('.ant-btn-block').exists()).toBe(true);
     });
   });
 
@@ -145,52 +131,29 @@ describe('BaseButton', () => {
       const wrapper = mount(BaseButton, {
         props: { disabled: true },
       });
-      expect(wrapper.attributes('disabled')).toBeDefined();
+      expect(wrapper.find('.ant-btn').attributes('disabled')).toBeDefined();
     });
 
     it('is not disabled by default', () => {
       const wrapper = mount(BaseButton);
-      expect(wrapper.attributes('disabled')).toBeUndefined();
-    });
-
-    it('does not emit click event when disabled', async () => {
-      const wrapper = mount(BaseButton, {
-        props: { disabled: true },
-      });
-      await wrapper.trigger('click');
-      // Disabled buttons don't emit clicks in browsers, but we can check the attribute
-      expect(wrapper.attributes('disabled')).toBeDefined();
+      expect(wrapper.find('.ant-btn').attributes('disabled')).toBeUndefined();
     });
   });
 
   // Loading state tests
   describe('loading state', () => {
-    it('shows loading spinner when loading prop is true', () => {
+    it('shows loading state when loading prop is true', () => {
       const wrapper = mount(BaseButton, {
         props: { loading: true },
-        slots: {
-          default: 'Submit',
-        },
       });
-      expect(wrapper.findComponent({ name: 'LoadingSpinner' }).exists()).toBe(true);
-      expect(wrapper.text()).not.toContain('Submit');
+      expect(wrapper.find('.ant-btn-loading').exists()).toBe(true);
     });
 
-    it('is disabled when loading', () => {
+    it('shows loading icon when loading', () => {
       const wrapper = mount(BaseButton, {
         props: { loading: true },
       });
-      expect(wrapper.attributes('disabled')).toBeDefined();
-    });
-
-    it('hides slot content when loading', () => {
-      const wrapper = mount(BaseButton, {
-        props: { loading: true },
-        slots: {
-          default: 'Button Text',
-        },
-      });
-      expect(wrapper.text()).not.toContain('Button Text');
+      expect(wrapper.find('.ant-btn-loading-icon').exists()).toBe(true);
     });
   });
 
@@ -198,34 +161,39 @@ describe('BaseButton', () => {
   describe('events', () => {
     it('emits click event when clicked', async () => {
       const wrapper = mount(BaseButton);
-      await wrapper.trigger('click');
+      await wrapper.find('.ant-btn').trigger('click');
       expect(wrapper.emitted('click')).toBeTruthy();
       expect(wrapper.emitted('click')?.length).toBe(1);
     });
 
     it('passes MouseEvent to click handler', async () => {
       const wrapper = mount(BaseButton);
-      await wrapper.trigger('click');
+      await wrapper.find('.ant-btn').trigger('click');
       const emitted = wrapper.emitted('click');
       expect(emitted).toBeTruthy();
       expect(emitted![0][0]).toBeInstanceOf(MouseEvent);
     });
   });
 
-  // Accessibility tests
-  describe('accessibility', () => {
-    it('has correct base classes for focus states', () => {
+  // HTML type tests
+  describe('htmlType', () => {
+    it('defaults to button type', () => {
       const wrapper = mount(BaseButton);
-      const classes = wrapper.classes().join(' ');
-      expect(classes).toContain('transition');
+      expect(wrapper.find('.ant-btn').attributes('type')).toBe('button');
     });
 
-    it('applies disabled styles when disabled', () => {
+    it('applies submit type', () => {
       const wrapper = mount(BaseButton, {
-        props: { disabled: true },
+        props: { htmlType: 'submit' },
       });
-      expect(wrapper.classes()).toContain('disabled:opacity-50');
-      expect(wrapper.classes()).toContain('disabled:cursor-not-allowed');
+      expect(wrapper.find('.ant-btn').attributes('type')).toBe('submit');
+    });
+
+    it('applies reset type', () => {
+      const wrapper = mount(BaseButton, {
+        props: { htmlType: 'reset' },
+      });
+      expect(wrapper.find('.ant-btn').attributes('type')).toBe('reset');
     });
   });
 });

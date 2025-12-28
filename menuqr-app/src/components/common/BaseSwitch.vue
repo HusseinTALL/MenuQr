@@ -1,10 +1,11 @@
 <script setup lang="ts">
-/**
- * BaseSwitch component
- * Toggle switch with optional label and description
- */
 import { computed } from 'vue';
+import { Switch } from 'ant-design-vue';
 
+/**
+ * BaseSwitch - Wrapper around Ant Design Switch
+ * Maintains backwards compatibility with existing API
+ */
 const props = withDefaults(
   defineProps<{
     modelValue: boolean;
@@ -22,70 +23,129 @@ const emit = defineEmits<{
   'update:modelValue': [value: boolean];
 }>();
 
-const toggle = () => {
+// Map size to Ant Design size
+const antSize = computed(() => {
+  switch (props.size) {
+    case 'sm':
+      return 'small';
+    case 'lg':
+      return 'default'; // Ant doesn't have large, we'll use CSS
+    default:
+      return 'default';
+  }
+});
+
+const handleChange = (checked: boolean | string | number) => {
+  emit('update:modelValue', Boolean(checked));
+};
+
+const handleLabelClick = () => {
   if (!props.disabled) {
     emit('update:modelValue', !props.modelValue);
   }
 };
-
-const sizeClasses = computed(() => {
-  switch (props.size) {
-    case 'sm':
-      return {
-        track: 'w-8 h-4',
-        thumb: 'w-3 h-3',
-        translate: 'translate-x-4',
-      };
-    case 'lg':
-      return {
-        track: 'w-14 h-7',
-        thumb: 'w-6 h-6',
-        translate: 'translate-x-7',
-      };
-    default:
-      return {
-        track: 'w-11 h-6',
-        thumb: 'w-5 h-5',
-        translate: 'translate-x-5',
-      };
-  }
-});
 </script>
 
 <template>
-  <div class="flex items-center gap-3" :class="{ 'opacity-50 cursor-not-allowed': disabled }">
+  <div
+    class="base-switch"
+    :class="{
+      'base-switch--disabled': disabled,
+      'base-switch--sm': size === 'sm',
+      'base-switch--lg': size === 'lg',
+    }"
+  >
     <!-- Switch -->
-    <button
-      type="button"
-      role="switch"
-      :aria-checked="modelValue"
+    <Switch
+      :checked="modelValue"
       :disabled="disabled"
-      class="relative inline-flex flex-shrink-0 rounded-full border-2 border-transparent cursor-pointer transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
-      :class="[
-        sizeClasses.track,
-        modelValue ? 'bg-primary-600' : 'bg-gray-200',
-        disabled ? 'cursor-not-allowed' : 'cursor-pointer',
-      ]"
-      @click="toggle"
-    >
-      <span
-        class="pointer-events-none inline-block rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out"
-        :class="[sizeClasses.thumb, modelValue ? sizeClasses.translate : 'translate-x-0']"
-      />
-    </button>
+      :size="antSize"
+      class="base-switch__input"
+      @change="handleChange"
+    />
 
     <!-- Label & Description -->
-    <div v-if="label || description" class="flex flex-col">
-      <span
-        v-if="label"
-        class="text-sm font-medium text-gray-900 cursor-pointer select-none"
-        @click="toggle"
-      >
+    <div v-if="label || description" class="base-switch__content" @click="handleLabelClick">
+      <span v-if="label" class="base-switch__label">
         {{ label }}
       </span>
-      <span v-if="description" class="text-xs text-gray-500">
+      <span v-if="description" class="base-switch__description">
         {{ description }}
       </span>
     </div>
   </div>
 </template>
+
+<style scoped>
+.base-switch {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.base-switch--disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.base-switch__input {
+  flex-shrink: 0;
+}
+
+/* Custom switch colors */
+.base-switch__input:deep(.ant-switch-checked) {
+  background: #14b8a6;
+}
+
+.base-switch__input:deep(.ant-switch:hover:not(.ant-switch-disabled)) {
+  background: #d1d5db;
+}
+
+.base-switch__input:deep(.ant-switch-checked:hover:not(.ant-switch-disabled)) {
+  background: #0d9488;
+}
+
+/* Large size override */
+.base-switch--lg .base-switch__input {
+  min-width: 56px;
+  height: 28px;
+}
+
+.base-switch--lg .base-switch__input :deep(.ant-switch-handle) {
+  width: 24px;
+  height: 24px;
+  top: 2px;
+}
+
+.base-switch--lg .base-switch__input:deep(.ant-switch-checked .ant-switch-handle) {
+  inset-inline-start: calc(100% - 26px);
+}
+
+.base-switch__content {
+  display: flex;
+  flex-direction: column;
+  cursor: pointer;
+}
+
+.base-switch--disabled .base-switch__content {
+  cursor: not-allowed;
+}
+
+.base-switch__label {
+  font-size: 14px;
+  font-weight: 500;
+  color: #1e293b;
+  user-select: none;
+}
+
+.base-switch__description {
+  font-size: 12px;
+  color: #64748b;
+  user-select: none;
+}
+
+/* Focus ring */
+.base-switch__input:deep(.ant-switch:focus) {
+  box-shadow: 0 0 0 3px rgba(20, 184, 166, 0.2);
+}
+</style>

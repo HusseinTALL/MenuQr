@@ -22,7 +22,7 @@ const errorMessage = ref<string | null>(null);
 const onDetect = (detectedCodes: DetectedBarcode[]) => {
   if (detectedCodes && detectedCodes.length > 0) {
     const firstCode = detectedCodes[0];
-    if (firstCode.rawValue) {
+    if (firstCode && firstCode.rawValue) {
       emit('result', firstCode.rawValue);
     }
   }

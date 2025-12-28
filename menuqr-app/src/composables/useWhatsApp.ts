@@ -356,7 +356,7 @@ export function useWhatsApp() {
         options: item.selectedOptions.flatMap((opt) =>
           opt.choices.map((choice) => ({
             name: typeof choice.name === 'string' ? choice.name : choice.name.fr || choice.name.en || '',
-            price: choice.price || 0,
+            price: choice.priceModifier || 0,
           }))
         ),
         specialInstructions: item.notes || undefined,
@@ -368,14 +368,21 @@ export function useWhatsApp() {
       let orderNum = generateOrderNumber();
       try {
         // Build order data including scheduling info
+        // Map fulfillment types to API expected values
+        const fulfillmentTypeMap: Record<string, 'dine-in' | 'takeaway' | 'delivery'> = {
+          'dine-in': 'dine-in',
+          'dine_in': 'dine-in',
+          'takeaway': 'takeaway',
+          'delivery': 'delivery',
+        };
         const orderData: Parameters<typeof api.createOrder>[0] = {
           restaurantId,
-          tableNumber: cartStore.tableNumber || undefined,
+          tableNumber: cartStore.tableNumber ? String(cartStore.tableNumber) : undefined,
           items: orderItems,
           specialInstructions: cartStore.notes || undefined,
           // Scheduling fields
           orderType: cartStore.orderType,
-          fulfillmentType: cartStore.fulfillmentType,
+          fulfillmentType: fulfillmentTypeMap[cartStore.fulfillmentType] || 'dine-in',
         };
 
         // Add scheduled date/time if scheduled
@@ -390,7 +397,14 @@ export function useWhatsApp() {
 
         // Add delivery address if delivery
         if (cartStore.fulfillmentType === 'delivery' && cartStore.deliveryAddress) {
-          orderData.deliveryAddress = cartStore.deliveryAddress;
+          const addr = cartStore.deliveryAddress;
+          orderData.deliveryAddress = {
+            street: addr.street,
+            city: addr.city,
+            postalCode: addr.postalCode,
+            details: addr.apartment || addr.instructions,
+            coordinates: addr.coordinates ? { lat: addr.coordinates.latitude, lng: addr.coordinates.longitude } : undefined,
+          };
         }
 
         const response = await api.createOrder(orderData);
@@ -430,9 +444,9 @@ export function useWhatsApp() {
         error: null,
         method: 'whatsapp_web',
       };
-    } catch (error) {
+    } catch (_error) {
       isSending.value = false;
-      console.error('Failed to send WhatsApp order:', error);
+      console.error('Failed to send WhatsApp order:');
       return {
         success: false,
         orderNumber: null,

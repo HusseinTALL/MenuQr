@@ -34,7 +34,7 @@ onMounted(() => {
   // Listen for install prompt
   window.addEventListener('beforeinstallprompt', (e) => {
     e.preventDefault();
-    deferredPrompt.value = e;
+    deferredPrompt.value = e as unknown as BeforeInstallPromptEvent;
     isInstallable.value = true;
   });
 

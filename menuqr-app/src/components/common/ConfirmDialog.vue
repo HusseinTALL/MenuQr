@@ -1,6 +1,12 @@
 <script setup lang="ts">
 import { watch } from 'vue';
+import { Modal, Button } from 'ant-design-vue';
+import { ExclamationCircleOutlined } from '@ant-design/icons-vue';
 
+/**
+ * ConfirmDialog - Wrapper around Ant Design Modal
+ * Maintains backwards compatibility with existing API
+ */
 interface Props {
   open: boolean;
   title?: string;
@@ -23,25 +29,17 @@ const emit = defineEmits<{
   close: [];
 }>();
 
-// Handle escape key
+// Handle escape key (Ant Modal handles this, but we keep for compat)
 watch(
   () => props.open,
   (isOpen) => {
     if (isOpen) {
-      document.addEventListener('keydown', handleKeydown);
       document.body.style.overflow = 'hidden';
     } else {
-      document.removeEventListener('keydown', handleKeydown);
       document.body.style.overflow = '';
     }
   }
 );
-
-const handleKeydown = (e: KeyboardEvent) => {
-  if (e.key === 'Escape') {
-    handleCancel();
-  }
-};
 
 const handleConfirm = () => {
   emit('confirm');
@@ -52,95 +50,144 @@ const handleCancel = () => {
   emit('cancel');
   emit('close');
 };
-
-const handleBackdropClick = (e: MouseEvent) => {
-  if (e.target === e.currentTarget) {
-    handleCancel();
-  }
-};
 </script>
 
 <template>
-  <Teleport to="body">
-    <Transition name="modal">
+  <Modal
+    :open="open"
+    :title="null"
+    :footer="null"
+    :closable="false"
+    :mask-closable="true"
+    :centered="true"
+    :width="360"
+    class="confirm-dialog"
+    @cancel="handleCancel"
+  >
+    <div class="confirm-dialog__content">
+      <!-- Icon -->
       <div
-        v-if="open"
-        class="fixed inset-0 z-50 flex items-center justify-center p-4"
-        @click="handleBackdropClick"
+        class="confirm-dialog__icon"
+        :class="{
+          'confirm-dialog__icon--primary': confirmVariant === 'primary',
+          'confirm-dialog__icon--danger': confirmVariant === 'danger',
+        }"
       >
-        <!-- Backdrop -->
-        <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" />
-
-        <!-- Dialog -->
-        <div
-          class="relative w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl"
-          role="dialog"
-          aria-modal="true"
-          :aria-labelledby="title ? 'dialog-title' : undefined"
-        >
-          <!-- Title -->
-          <h3
-            v-if="title"
-            id="dialog-title"
-            class="text-lg font-semibold text-gray-900 mb-2"
-          >
-            {{ title }}
-          </h3>
-
-          <!-- Message -->
-          <p class="text-gray-600 mb-6">
-            {{ message }}
-          </p>
-
-          <!-- Actions -->
-          <div class="flex gap-3">
-            <button
-              type="button"
-              class="flex-1 rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-300"
-              @click="handleCancel"
-            >
-              {{ cancelText }}
-            </button>
-
-            <button
-              type="button"
-              class="flex-1 rounded-xl px-4 py-2.5 text-sm font-medium text-white transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1"
-              :class="{
-                'bg-primary-600 hover:bg-primary-700 focus:ring-primary-500':
-                  confirmVariant === 'primary',
-                'bg-red-600 hover:bg-red-700 focus:ring-red-500':
-                  confirmVariant === 'danger',
-              }"
-              @click="handleConfirm"
-            >
-              {{ confirmText }}
-            </button>
-          </div>
-        </div>
+        <ExclamationCircleOutlined />
       </div>
-    </Transition>
-  </Teleport>
+
+      <!-- Title -->
+      <h3 v-if="title" class="confirm-dialog__title">
+        {{ title }}
+      </h3>
+
+      <!-- Message -->
+      <p class="confirm-dialog__message">
+        {{ message }}
+      </p>
+
+      <!-- Actions -->
+      <div class="confirm-dialog__actions">
+        <Button size="large" class="confirm-dialog__btn" @click="handleCancel">
+          {{ cancelText }}
+        </Button>
+
+        <Button
+          :type="confirmVariant === 'danger' ? 'primary' : 'primary'"
+          :danger="confirmVariant === 'danger'"
+          size="large"
+          class="confirm-dialog__btn"
+          @click="handleConfirm"
+        >
+          {{ confirmText }}
+        </Button>
+      </div>
+    </div>
+  </Modal>
 </template>
 
+<style>
+/* Global modal styles (unscoped for Ant Design overrides) */
+.confirm-dialog .ant-modal-content {
+  border-radius: 20px;
+  padding: 24px;
+  overflow: hidden;
+}
+
+.confirm-dialog .ant-modal-body {
+  padding: 0;
+}
+</style>
+
 <style scoped>
-.modal-enter-active,
-.modal-leave-active {
-  transition: opacity 200ms ease-out;
+.confirm-dialog__content {
+  text-align: center;
 }
 
-.modal-enter-active > div:last-child,
-.modal-leave-active > div:last-child {
-  transition: transform 200ms ease-out, opacity 200ms ease-out;
+.confirm-dialog__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  margin-bottom: 16px;
+  font-size: 28px;
 }
 
-.modal-enter-from,
-.modal-leave-to {
-  opacity: 0;
+.confirm-dialog__icon--primary {
+  background: #f0fdfa;
+  color: #14b8a6;
 }
 
-.modal-enter-from > div:last-child,
-.modal-leave-to > div:last-child {
-  transform: scale(0.95);
-  opacity: 0;
+.confirm-dialog__icon--danger {
+  background: #fef2f2;
+  color: #ef4444;
+}
+
+.confirm-dialog__title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #1e293b;
+  margin-bottom: 8px;
+}
+
+.confirm-dialog__message {
+  font-size: 14px;
+  color: #64748b;
+  margin-bottom: 24px;
+  line-height: 1.5;
+}
+
+.confirm-dialog__actions {
+  display: flex;
+  gap: 12px;
+}
+
+.confirm-dialog__btn {
+  flex: 1;
+  border-radius: 12px;
+  height: 44px;
+  font-weight: 500;
+}
+
+.confirm-dialog__btn.ant-btn-default {
+  border-color: #e2e8f0;
+  color: #475569;
+}
+
+.confirm-dialog__btn.ant-btn-default:hover {
+  border-color: #cbd5e1;
+  color: #1e293b;
+}
+
+.confirm-dialog__btn.ant-btn-primary:not(.ant-btn-dangerous) {
+  background: #14b8a6;
+  border-color: #14b8a6;
+}
+
+.confirm-dialog__btn.ant-btn-primary:not(.ant-btn-dangerous):hover {
+  background: #0d9488;
+  border-color: #0d9488;
 }
 </style>

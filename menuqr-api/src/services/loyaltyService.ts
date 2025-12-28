@@ -1,6 +1,7 @@
 import mongoose, { ClientSession } from 'mongoose';
 import { LoyaltyTransaction, type ILoyaltyTransaction } from '../models/LoyaltyTransaction.js';
 import { Customer } from '../models/Customer.js';
+import { logger } from '../utils/logger.js';
 
 // Cache the transaction support status
 let transactionsSupported: boolean | null = null;
@@ -22,11 +23,11 @@ const supportsTransactions = async (): Promise<boolean> => {
     await session.abortTransaction();
     session.endSession();
     transactionsSupported = true;
-    console.log('[Loyalty] MongoDB transactions are supported');
+    logger.info('[Loyalty] MongoDB transactions are supported');
     return true;
-  } catch (error) {
+  } catch {
     transactionsSupported = false;
-    console.log('[Loyalty] MongoDB transactions not supported (standalone mode), using non-transactional operations');
+    logger.info('[Loyalty] MongoDB transactions not supported (standalone mode), using non-transactional operations');
     return false;
   }
 };
@@ -100,9 +101,9 @@ export const calculatePointsFromOrder = (orderTotal: number): number => {
 
 // Determine tier based on total points
 export const calculateTier = (totalPoints: number): LoyaltyTier => {
-  if (totalPoints >= LOYALTY_CONFIG.TIERS.platine.min) return 'platine';
-  if (totalPoints >= LOYALTY_CONFIG.TIERS.or.min) return 'or';
-  if (totalPoints >= LOYALTY_CONFIG.TIERS.argent.min) return 'argent';
+  if (totalPoints >= LOYALTY_CONFIG.TIERS.platine.min) {return 'platine';}
+  if (totalPoints >= LOYALTY_CONFIG.TIERS.or.min) {return 'or';}
+  if (totalPoints >= LOYALTY_CONFIG.TIERS.argent.min) {return 'argent';}
   return 'bronze';
 };
 
@@ -140,7 +141,7 @@ export const getNextTierInfo = (
 // Earn points from completed order
 export const earnPoints = async (
   customerId: mongoose.Types.ObjectId,
-  restaurantId: mongoose.Types.ObjectId,
+  restaurantId: mongoose.Types.ObjectId | string,
   orderId: mongoose.Types.ObjectId,
   orderTotal: number
 ): Promise<ILoyaltyTransaction> => {
@@ -276,7 +277,7 @@ export const redeemPoints = async (
 
 // Process expired points for a specific restaurant (called by scheduler)
 export const processExpiredPoints = async (
-  restaurantId?: mongoose.Types.ObjectId
+  restaurantId?: mongoose.Types.ObjectId | string
 ): Promise<{ customersProcessed: number; totalPointsExpired: number }> => {
   const now = new Date();
   let totalExpired = 0;
@@ -314,7 +315,7 @@ export const processExpiredPoints = async (
 
         try {
           const customer = await Customer.findById(group._id).session(session);
-          if (!customer) continue;
+          if (!customer) {continue;}
 
           const newBalance = Math.max(0, (customer.loyalty?.totalPoints || 0) - group.totalExpiring);
           const newTier = calculateTier(newBalance);
@@ -355,7 +356,7 @@ export const processExpiredPoints = async (
       } else {
         // Non-transactional mode (development)
         const customer = await Customer.findById(group._id);
-        if (!customer) continue;
+        if (!customer) {continue;}
 
         const newBalance = Math.max(0, (customer.loyalty?.totalPoints || 0) - group.totalExpiring);
         const newTier = calculateTier(newBalance);
@@ -526,7 +527,7 @@ export const getExpiringPoints = async (
 // Admin: Adjust customer points
 export const adjustPoints = async (
   customerId: mongoose.Types.ObjectId,
-  restaurantId: mongoose.Types.ObjectId,
+  restaurantId: mongoose.Types.ObjectId | string,
   points: number,
   reason: string,
   adjustedBy: mongoose.Types.ObjectId
@@ -582,7 +583,7 @@ export const adjustPoints = async (
 // Admin: Add bonus points
 export const addBonusPoints = async (
   customerId: mongoose.Types.ObjectId,
-  restaurantId: mongoose.Types.ObjectId,
+  restaurantId: mongoose.Types.ObjectId | string,
   points: number,
   description: string,
   _adjustedBy?: mongoose.Types.ObjectId
@@ -646,7 +647,7 @@ export const addBonusPoints = async (
 };
 
 // Get restaurant-wide loyalty statistics
-export const getLoyaltyStats = async (restaurantId: mongoose.Types.ObjectId) => {
+export const getLoyaltyStats = async (restaurantId: mongoose.Types.ObjectId | string) => {
   const [tierDistribution, transactionStats, topCustomers] = await Promise.all([
     // Tier distribution
     Customer.aggregate([
@@ -722,7 +723,7 @@ export const getLoyaltyStats = async (restaurantId: mongoose.Types.ObjectId) => 
 
 // Get all customers with loyalty info for admin
 export const getCustomersLoyalty = async (
-  restaurantId: mongoose.Types.ObjectId,
+  restaurantId: mongoose.Types.ObjectId | string,
   options: {
     tier?: string;
     search?: string;

@@ -1,6 +1,23 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue';
 import api, { type Campaign } from '@/services/api';
+import { message } from 'ant-design-vue';
+import {
+  SearchOutlined,
+  PlusOutlined,
+  ReloadOutlined,
+  MessageOutlined,
+  CheckCircleOutlined,
+  CloseCircleOutlined,
+  SendOutlined,
+  EditOutlined,
+  CopyOutlined,
+  DeleteOutlined,
+  EyeOutlined,
+  ClockCircleOutlined,
+  UserOutlined,
+  ExclamationCircleOutlined,
+} from '@ant-design/icons-vue';
 
 const isLoading = ref(true);
 const isRefreshing = ref(false);
@@ -87,7 +104,6 @@ const insights = computed(() => {
     ? Math.round((stats.value.completedCampaigns / stats.value.totalCampaigns) * 100)
     : 0;
 
-  // Generate sparkline from campaign data distribution (placeholder)
   const weeklyTrend = [
     Math.round(totalSent * 0.08),
     Math.round(totalSent * 0.12),
@@ -100,7 +116,7 @@ const insights = computed(() => {
 
   return {
     weeklyTrend,
-    bestTime: 'Mardi 12h', // Could be calculated from campaign send times
+    bestTime: 'Mardi 12h',
     monthlyReach: stats.value.totalSuccess || 0,
     completedRate,
   };
@@ -109,18 +125,6 @@ const insights = computed(() => {
 // View and filter options
 const statusFilter = ref<string>('');
 const searchQuery = ref('');
-
-// Success/Error toasts
-const toast = ref<{ message: string; type: 'success' | 'error' } | null>(null);
-let toastTimeout: ReturnType<typeof setTimeout> | null = null;
-
-const showToast = (message: string, type: 'success' | 'error' = 'success') => {
-  toast.value = { message, type };
-  if (toastTimeout) clearTimeout(toastTimeout);
-  toastTimeout = setTimeout(() => {
-    toast.value = null;
-  }, 4000);
-};
 
 const formData = ref({
   name: '',
@@ -138,9 +142,9 @@ const messageLength = computed(() => formData.value.message.length);
 const hasEmoji = computed(() => /[\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]/u.test(formData.value.message));
 const maxCharsPerSms = computed(() => hasEmoji.value ? 70 : 160);
 const smsSegments = computed(() => {
-  if (messageLength.value === 0) return 0;
+  if (messageLength.value === 0) {return 0;}
   if (hasEmoji.value) {
-    return Math.ceil(messageLength.value / 67); // 67 for concatenated unicode
+    return Math.ceil(messageLength.value / 67);
   }
   return messageLength.value <= 160 ? 1 : Math.ceil(messageLength.value / 153);
 });
@@ -368,7 +372,6 @@ const insertToken = (token: string) => {
     const end = textarea.selectionEnd;
     const text = formData.value.message;
     formData.value.message = text.substring(0, start) + token + text.substring(end);
-    // Reset cursor position after token
     setTimeout(() => {
       textarea.focus();
       textarea.setSelectionRange(start + token.length, start + token.length);
@@ -379,7 +382,7 @@ const insertToken = (token: string) => {
 };
 
 const handleSubmit = async () => {
-  if (!formData.value.name.trim() || !formData.value.message.trim()) return;
+  if (!formData.value.name.trim() || !formData.value.message.trim()) {return;}
 
   isSubmitting.value = true;
   error.value = null;
@@ -396,7 +399,7 @@ const handleSubmit = async () => {
       if (response.success) {
         await fetchData();
         closeModal();
-        showToast('Campagne mise a jour avec succes');
+        message.success('Campagne mise a jour avec succes');
       }
     } else {
       const response = await api.createCampaign(data);
@@ -406,12 +409,12 @@ const handleSubmit = async () => {
         }
         await fetchData();
         closeModal();
-        showToast('Campagne creee avec succes');
+        message.success('Campagne creee avec succes');
       }
     }
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : 'Erreur lors de la sauvegarde';
-    showToast(message, 'error');
+    const msg = err instanceof Error ? err.message : 'Erreur lors de la sauvegarde';
+    message.error(msg);
   } finally {
     isSubmitting.value = false;
   }
@@ -423,7 +426,7 @@ const confirmDelete = (campaign: Campaign) => {
 };
 
 const deleteCampaign = async () => {
-  if (!campaignToDelete.value) return;
+  if (!campaignToDelete.value) {return;}
 
   isSubmitting.value = true;
   try {
@@ -431,18 +434,18 @@ const deleteCampaign = async () => {
     if (response.success) {
       await fetchData();
       closeDeleteModal();
-      showToast('Campagne supprimee');
+      message.success('Campagne supprimee');
     }
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : 'Erreur lors de la suppression';
-    showToast(message, 'error');
+    const msg = err instanceof Error ? err.message : 'Erreur lors de la suppression';
+    message.error(msg);
   } finally {
     isSubmitting.value = false;
   }
 };
 
 const sendCampaign = async () => {
-  if (!campaignToSend.value) return;
+  if (!campaignToSend.value) {return;}
 
   isSubmitting.value = true;
   try {
@@ -451,11 +454,11 @@ const sendCampaign = async () => {
     if (response.success) {
       await fetchData();
       closeSendModal();
-      showToast(scheduledAt ? 'Campagne programmee' : 'Envoi en cours...');
+      message.success(scheduledAt ? 'Campagne programmee' : 'Envoi en cours...');
     }
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : 'Erreur lors de l\'envoi';
-    showToast(message, 'error');
+    const msg = err instanceof Error ? err.message : 'Erreur lors de l\'envoi';
+    message.error(msg);
   } finally {
     isSubmitting.value = false;
   }
@@ -466,11 +469,11 @@ const cancelCampaign = async (campaign: Campaign) => {
     const response = await api.cancelCampaign(campaign._id);
     if (response.success) {
       await fetchData();
-      showToast('Campagne annulee');
+      message.success('Campagne annulee');
     }
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : 'Erreur lors de l\'annulation';
-    showToast(message, 'error');
+    const msg = err instanceof Error ? err.message : 'Erreur lors de l\'annulation';
+    message.error(msg);
   }
 };
 
@@ -492,10 +495,10 @@ const formatRelativeTime = (dateStr: string) => {
   const hours = Math.floor(diff / 3600000);
   const days = Math.floor(diff / 86400000);
 
-  if (minutes < 1) return 'A l\'instant';
-  if (minutes < 60) return `Il y a ${minutes}min`;
-  if (hours < 24) return `Il y a ${hours}h`;
-  if (days < 7) return `Il y a ${days}j`;
+  if (minutes < 1) {return 'A l\'instant';}
+  if (minutes < 60) {return `Il y a ${minutes}min`;}
+  if (hours < 24) {return `Il y a ${hours}h`;}
+  if (days < 7) {return `Il y a ${days}j`;}
   return formatDate(dateStr);
 };
 
@@ -517,168 +520,124 @@ onMounted(fetchData);
 </script>
 
 <template>
-  <div class="campaigns-view min-h-screen space-y-6">
-    <!-- Toast Notification -->
-    <Transition
-      enter-active-class="transition ease-out duration-300 transform"
-      enter-from-class="opacity-0 -translate-y-4 scale-95"
-      enter-to-class="opacity-100 translate-y-0 scale-100"
-      leave-active-class="transition ease-in duration-200 transform"
-      leave-from-class="opacity-100 translate-y-0 scale-100"
-      leave-to-class="opacity-0 -translate-y-4 scale-95"
-    >
-      <div
-        v-if="toast"
-        class="fixed left-1/2 top-6 z-[100] -translate-x-1/2"
-      >
-        <div
-          :class="[
-            'flex items-center gap-3 rounded-2xl px-5 py-3 shadow-2xl backdrop-blur-xl',
-            toast.type === 'success'
-              ? 'bg-emerald-500/90 text-white'
-              : 'bg-rose-500/90 text-white'
-          ]"
-        >
-          <div :class="['rounded-full p-1', toast.type === 'success' ? 'bg-white/20' : 'bg-white/20']">
-            <svg v-if="toast.type === 'success'" class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
-            </svg>
-            <svg v-else class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </div>
-          <span class="font-medium">{{ toast.message }}</span>
-        </div>
-      </div>
-    </Transition>
-
+  <div class="campaigns-view space-y-6">
     <!-- Hero Header with Animated Mesh Background -->
-    <div class="hero-section relative overflow-hidden rounded-3xl p-8 text-white shadow-xl">
-      <!-- Animated Mesh Gradient Background -->
-      <div class="absolute inset-0 mesh-gradient"></div>
+    <a-card class="hero-card" :bordered="false">
+      <div class="hero-section">
+        <!-- Animated Mesh Gradient Background -->
+        <div class="mesh-gradient"></div>
 
-      <!-- Floating Orbs -->
-      <div class="absolute -right-16 -top-16 h-48 w-48 rounded-full bg-white/10 blur-3xl floating-orb"></div>
-      <div class="absolute -bottom-20 -left-20 h-56 w-56 rounded-full bg-cyan-300/15 blur-3xl floating-orb-delayed"></div>
-      <div class="absolute right-1/3 top-1/2 h-32 w-32 rounded-full bg-teal-200/10 blur-2xl floating-orb-slow"></div>
+        <!-- Floating Orbs -->
+        <div class="floating-orb orb-1"></div>
+        <div class="floating-orb orb-2"></div>
+        <div class="floating-orb orb-3"></div>
 
-      <!-- Grid Pattern Overlay -->
-      <div class="absolute inset-0 opacity-[0.07]">
-        <svg class="h-full w-full" viewBox="0 0 100 100" preserveAspectRatio="none">
-          <defs>
-            <pattern id="grid-pattern" width="8" height="8" patternUnits="userSpaceOnUse">
-              <path d="M 8 0 L 0 0 0 8" fill="none" stroke="white" stroke-width="0.5"/>
-            </pattern>
-          </defs>
-          <rect width="100%" height="100%" fill="url(#grid-pattern)" />
-        </svg>
-      </div>
+        <!-- Grid Pattern Overlay -->
+        <div class="grid-pattern">
+          <svg class="h-full w-full" viewBox="0 0 100 100" preserveAspectRatio="none">
+            <defs>
+              <pattern id="grid-pattern" width="8" height="8" patternUnits="userSpaceOnUse">
+                <path d="M 8 0 L 0 0 0 8" fill="none" stroke="white" stroke-width="0.5"/>
+              </pattern>
+            </defs>
+            <rect width="100%" height="100%" fill="url(#grid-pattern)" />
+          </svg>
+        </div>
 
-      <div class="relative">
-        <!-- Header Row -->
-        <div class="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
-          <div>
-            <div class="flex items-center gap-4">
-              <div class="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/20 backdrop-blur-sm shadow-lg">
-                <svg class="h-7 w-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                </svg>
+        <div class="hero-content">
+          <!-- Header Row -->
+          <div class="hero-header">
+            <div class="hero-title-section">
+              <div class="hero-icon-wrapper">
+                <MessageOutlined class="hero-icon" />
               </div>
               <div>
-                <h1 class="text-2xl font-bold tracking-tight lg:text-3xl">Campagnes SMS</h1>
-                <p class="mt-1 text-teal-100/90">Engagez vos clients avec des promotions ciblees</p>
+                <h1 class="hero-title">Campagnes SMS</h1>
+                <p class="hero-subtitle">Engagez vos clients avec des promotions ciblees</p>
               </div>
             </div>
 
             <!-- Quick Action Chips -->
-            <div class="mt-5 flex flex-wrap gap-2">
-              <button
+            <div class="quick-chips">
+              <a-button
                 v-if="draftCount > 0"
+                type="text"
+                class="chip-button"
                 @click="statusFilter = 'draft'"
-                class="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1.5 text-sm font-medium backdrop-blur-sm transition-all hover:bg-white/25 active:scale-95"
               >
-                <span class="h-2 w-2 rounded-full bg-slate-300"></span>
+                <span class="chip-dot draft"></span>
                 {{ draftCount }} brouillon{{ draftCount > 1 ? 's' : '' }}
-              </button>
-              <button
+              </a-button>
+              <a-button
                 v-if="scheduledCount > 0"
+                type="text"
+                class="chip-button"
                 @click="statusFilter = 'scheduled'"
-                class="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1.5 text-sm font-medium backdrop-blur-sm transition-all hover:bg-white/25 active:scale-95"
               >
-                <span class="h-2 w-2 rounded-full bg-blue-300"></span>
+                <span class="chip-dot scheduled"></span>
                 {{ scheduledCount }} programmee{{ scheduledCount > 1 ? 's' : '' }}
-              </button>
-              <button
+              </a-button>
+              <a-button
+                type="text"
+                class="chip-button"
                 @click="statusFilter = ''"
-                class="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1.5 text-sm backdrop-blur-sm transition-all hover:bg-white/20 active:scale-95"
               >
                 Voir tout
-              </button>
+              </a-button>
             </div>
           </div>
 
-          <div class="flex items-center gap-3">
-            <button
+          <div class="hero-actions">
+            <a-button
+              type="text"
+              :loading="isRefreshing"
+              class="refresh-button"
               @click="refreshData"
-              :disabled="isRefreshing"
-              class="flex h-12 w-12 items-center justify-center rounded-xl bg-white/15 backdrop-blur-sm transition-all hover:bg-white/25 disabled:opacity-50 active:scale-95"
-              title="Actualiser"
             >
-              <svg
-                :class="['h-5 w-5 transition-transform', isRefreshing && 'animate-spin']"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-              </svg>
-            </button>
-            <button
+              <template #icon><ReloadOutlined /></template>
+            </a-button>
+            <a-button
+              type="primary"
+              size="large"
+              class="create-button"
               @click="openCreateModal"
-              class="flex items-center gap-2 rounded-xl bg-white px-6 py-3 font-semibold text-teal-600 shadow-lg transition-all hover:shadow-xl active:scale-[0.98]"
             >
-              <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-              </svg>
-              <span>Nouvelle campagne</span>
-            </button>
+              <template #icon><PlusOutlined /></template>
+              Nouvelle campagne
+            </a-button>
           </div>
         </div>
 
         <!-- Stats Grid with Insights -->
-        <div class="mt-8 grid grid-cols-2 gap-4 lg:grid-cols-5">
+        <div class="stats-grid">
           <!-- Total Campaigns -->
-          <div class="group rounded-2xl bg-white/10 p-5 backdrop-blur-sm transition-all hover:bg-white/15">
-            <div class="flex items-center justify-between">
-              <div class="text-3xl font-bold tabular-nums">{{ stats.totalCampaigns }}</div>
-              <div class="rounded-xl bg-white/10 p-2">
-                <svg class="h-5 w-5 text-teal-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-                </svg>
+          <div class="stat-card">
+            <div class="stat-header">
+              <div class="stat-value">{{ stats.totalCampaigns }}</div>
+              <div class="stat-icon-wrapper">
+                <MessageOutlined />
               </div>
             </div>
-            <div class="mt-1 text-sm text-teal-100/80">Campagnes totales</div>
+            <div class="stat-label">Campagnes totales</div>
           </div>
 
           <!-- Completed -->
-          <div class="group rounded-2xl bg-white/10 p-5 backdrop-blur-sm transition-all hover:bg-white/15">
-            <div class="flex items-center justify-between">
-              <div class="text-3xl font-bold tabular-nums">{{ stats.completedCampaigns }}</div>
-              <div class="rounded-xl bg-emerald-400/20 p-2">
-                <svg class="h-5 w-5 text-emerald-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
+          <div class="stat-card">
+            <div class="stat-header">
+              <div class="stat-value">{{ stats.completedCampaigns }}</div>
+              <div class="stat-icon-wrapper success">
+                <CheckCircleOutlined />
               </div>
             </div>
-            <div class="mt-1 text-sm text-teal-100/80">Terminees</div>
+            <div class="stat-label">Terminees</div>
           </div>
 
           <!-- SMS Sent with Sparkline -->
-          <div class="group rounded-2xl bg-white/10 p-5 backdrop-blur-sm transition-all hover:bg-white/15">
-            <div class="flex items-center justify-between">
-              <div class="text-3xl font-bold tabular-nums">{{ stats.totalMessagesSent }}</div>
-              <div class="rounded-xl bg-white/10 p-1.5">
-                <svg width="60" height="24" class="text-cyan-300">
+          <div class="stat-card">
+            <div class="stat-header">
+              <div class="stat-value">{{ stats.totalMessagesSent }}</div>
+              <div class="sparkline-wrapper">
+                <svg width="60" height="24" class="sparkline">
                   <path
                     :d="sparklinePath"
                     fill="none"
@@ -691,20 +650,18 @@ onMounted(fetchData);
                 </svg>
               </div>
             </div>
-            <div class="mt-1 text-sm text-teal-100/80">SMS envoyes</div>
+            <div class="stat-label">SMS envoyes</div>
           </div>
 
           <!-- Success Rate Ring -->
-          <div class="group rounded-2xl bg-white/10 p-5 backdrop-blur-sm transition-all hover:bg-white/15">
-            <div class="flex items-center justify-between">
+          <div class="stat-card">
+            <div class="stat-header">
               <div>
-                <div class="text-3xl font-bold tabular-nums text-emerald-300">
-                  {{ stats.totalSuccess }}
-                </div>
-                <span v-if="stats.totalFailed > 0" class="text-sm text-rose-300">{{ stats.totalFailed }} echecs</span>
+                <div class="stat-value success-value">{{ stats.totalSuccess }}</div>
+                <span v-if="stats.totalFailed > 0" class="failed-count">{{ stats.totalFailed }} echecs</span>
               </div>
-              <div class="relative h-12 w-12">
-                <svg class="h-12 w-12 -rotate-90" viewBox="0 0 36 36">
+              <div class="ring-wrapper">
+                <svg class="ring-svg" viewBox="0 0 36 36">
                   <circle cx="18" cy="18" r="14" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="3" />
                   <circle
                     cx="18" cy="18" r="14"
@@ -713,163 +670,145 @@ onMounted(fetchData);
                     stroke-width="3"
                     stroke-linecap="round"
                     :stroke-dasharray="`${stats.totalMessagesSent > 0 ? (stats.totalSuccess / stats.totalMessagesSent) * 88 : 0} 88`"
-                    class="transition-all duration-700"
+                    class="ring-progress"
                   />
                 </svg>
-                <div class="absolute inset-0 flex items-center justify-center">
-                  <span class="text-xs font-bold text-emerald-300">
-                    {{ stats.totalMessagesSent > 0 ? Math.round((stats.totalSuccess / stats.totalMessagesSent) * 100) : 0 }}%
-                  </span>
-                </div>
+                <span class="ring-text">
+                  {{ stats.totalMessagesSent > 0 ? Math.round((stats.totalSuccess / stats.totalMessagesSent) * 100) : 0 }}%
+                </span>
               </div>
             </div>
-            <div class="mt-1 text-sm text-teal-100/80">Taux de succes</div>
+            <div class="stat-label">Taux de succes</div>
           </div>
 
           <!-- Insights Card -->
-          <div class="group rounded-2xl bg-gradient-to-br from-white/15 to-white/5 p-5 backdrop-blur-sm transition-all hover:from-white/20 hover:to-white/10 col-span-2 lg:col-span-1">
-            <div class="flex items-center gap-2 mb-3">
-              <svg class="h-4 w-4 text-yellow-300" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-              </svg>
-              <span class="text-xs font-medium uppercase tracking-wider text-teal-200">Insights</span>
+          <div class="stat-card insights-card">
+            <div class="insights-header">
+              <ExclamationCircleOutlined />
+              <span>Insights</span>
             </div>
-            <div class="space-y-2">
-              <div class="flex items-center justify-between text-sm">
-                <span class="text-teal-100/70">Messages délivrés</span>
-                <span class="font-semibold">{{ insights.monthlyReach }} clients</span>
+            <div class="insights-content">
+              <div class="insight-row">
+                <span class="insight-label">Messages delivres</span>
+                <span class="insight-value">{{ insights.monthlyReach }} clients</span>
               </div>
-              <div class="flex items-center justify-between text-sm">
-                <span class="text-teal-100/70">Meilleur horaire</span>
-                <span class="font-semibold">{{ insights.bestTime }}</span>
+              <div class="insight-row">
+                <span class="insight-label">Meilleur horaire</span>
+                <span class="insight-value">{{ insights.bestTime }}</span>
               </div>
             </div>
           </div>
         </div>
       </div>
-    </div>
+    </a-card>
 
     <!-- Filters Bar -->
-    <div class="flex flex-col gap-4 rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-100 sm:flex-row sm:items-center">
-      <div class="relative flex-1">
-        <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4">
-          <svg class="h-5 w-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-          </svg>
-        </div>
-        <input
-          v-model="searchQuery"
-          type="text"
-          placeholder="Rechercher une campagne..."
-          class="w-full rounded-xl border-0 bg-slate-50 py-3 pl-12 pr-4 text-slate-900 ring-1 ring-inset ring-slate-200 placeholder:text-slate-400 focus:bg-white focus:ring-2 focus:ring-teal-500 transition-all"
-        />
-      </div>
+    <a-card :bordered="false" class="filters-card">
+      <a-row :gutter="16" align="middle">
+        <a-col :xs="24" :sm="12" :lg="10">
+          <a-input
+            v-model:value="searchQuery"
+            placeholder="Rechercher une campagne..."
+            size="large"
+            allow-clear
+          >
+            <template #prefix>
+              <SearchOutlined class="text-gray-400" />
+            </template>
+          </a-input>
+        </a-col>
+        <a-col :xs="24" :sm="12" :lg="8">
+          <a-select
+            v-model:value="statusFilter"
+            placeholder="Tous les statuts"
+            size="large"
+            style="width: 100%"
+            allow-clear
+          >
+            <a-select-option value="">Tous les statuts</a-select-option>
+            <a-select-option value="draft">Brouillon</a-select-option>
+            <a-select-option value="scheduled">Programmee</a-select-option>
+            <a-select-option value="sending">En cours</a-select-option>
+            <a-select-option value="completed">Terminee</a-select-option>
+            <a-select-option value="failed">Echouee</a-select-option>
+            <a-select-option value="cancelled">Annulee</a-select-option>
+          </a-select>
+        </a-col>
+        <a-col :xs="24" :lg="6" class="hidden lg:block">
+          <span class="text-gray-500">
+            {{ filteredCampaigns.length }} campagne{{ filteredCampaigns.length !== 1 ? 's' : '' }}
+          </span>
+        </a-col>
+      </a-row>
+    </a-card>
 
-      <div class="flex items-center gap-3">
-        <select
-          v-model="statusFilter"
-          class="rounded-xl border-0 bg-slate-50 py-3 pl-4 pr-10 text-slate-900 ring-1 ring-inset ring-slate-200 focus:bg-white focus:ring-2 focus:ring-teal-500"
-        >
-          <option value="">Tous les statuts</option>
-          <option value="draft">Brouillon</option>
-          <option value="scheduled">Programmee</option>
-          <option value="sending">En cours</option>
-          <option value="completed">Terminee</option>
-          <option value="failed">Echouee</option>
-          <option value="cancelled">Annulee</option>
-        </select>
-
-        <div class="hidden text-sm text-slate-500 sm:block">
-          {{ filteredCampaigns.length }} campagne{{ filteredCampaigns.length !== 1 ? 's' : '' }}
-        </div>
-      </div>
-    </div>
-
-    <!-- Loading State with Shimmer -->
-    <div v-if="isLoading" class="space-y-4">
-      <div v-for="n in 3" :key="n" class="skeleton-card rounded-2xl bg-white p-6 shadow-sm">
-        <div class="flex items-start justify-between">
-          <div class="space-y-3 flex-1">
-            <div class="skeleton-shimmer h-6 w-48 rounded-lg"></div>
-            <div class="skeleton-shimmer h-4 w-full max-w-md rounded"></div>
-            <div class="flex gap-4 pt-2">
-              <div class="skeleton-shimmer h-4 w-24 rounded"></div>
-              <div class="skeleton-shimmer h-4 w-20 rounded"></div>
-              <div class="skeleton-shimmer h-4 w-28 rounded"></div>
-            </div>
-          </div>
-          <div class="skeleton-shimmer h-10 w-24 rounded-xl"></div>
-        </div>
-      </div>
+    <!-- Loading State -->
+    <div v-if="isLoading" class="loading-container">
+      <a-spin size="large" />
     </div>
 
     <!-- Error State -->
-    <div v-else-if="error" class="rounded-2xl bg-rose-50 p-8 text-center ring-1 ring-rose-100">
-      <div class="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-rose-100">
-        <svg class="h-8 w-8 text-rose-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-        </svg>
-      </div>
-      <h3 class="text-lg font-semibold text-rose-900">Une erreur est survenue</h3>
-      <p class="mt-2 text-rose-600">{{ error }}</p>
-      <button
-        @click="fetchData"
-        class="mt-4 rounded-xl bg-rose-500 px-6 py-2.5 font-medium text-white transition hover:bg-rose-600 active:scale-[0.98]"
-      >
-        Reessayer
-      </button>
-    </div>
+    <a-result
+      v-else-if="error"
+      status="error"
+      :title="error"
+      sub-title="Impossible de charger les campagnes"
+    >
+      <template #extra>
+        <a-button type="primary" @click="() => fetchData()">Reessayer</a-button>
+      </template>
+    </a-result>
 
     <!-- Empty State -->
-    <div v-else-if="filteredCampaigns.length === 0" class="rounded-2xl bg-white p-12 text-center shadow-sm ring-1 ring-slate-100">
-      <div class="mx-auto mb-6 flex h-24 w-24 items-center justify-center rounded-full bg-gradient-to-br from-teal-50 to-cyan-50">
-        <svg class="h-12 w-12 text-teal-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-        </svg>
-      </div>
-      <h3 class="text-xl font-semibold text-slate-900">
-        {{ searchQuery || statusFilter ? 'Aucun resultat' : 'Aucune campagne' }}
-      </h3>
-      <p class="mx-auto mt-2 max-w-sm text-slate-500">
-        {{ searchQuery || statusFilter
-          ? 'Essayez de modifier vos filtres de recherche'
-          : 'Creez votre premiere campagne SMS pour engager vos clients'
-        }}
-      </p>
-
-      <!-- Getting Started Steps -->
-      <div v-if="!searchQuery && !statusFilter" class="mt-8 grid gap-4 sm:grid-cols-3 max-w-lg mx-auto">
-        <div class="rounded-xl bg-slate-50 p-4 text-left">
-          <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-teal-100 text-teal-600 font-bold text-sm">1</div>
-          <div class="mt-2 font-medium text-slate-700">Creez</div>
-          <div class="text-sm text-slate-500">Nouvelle campagne</div>
-        </div>
-        <div class="rounded-xl bg-slate-50 p-4 text-left">
-          <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-cyan-100 text-cyan-600 font-bold text-sm">2</div>
-          <div class="mt-2 font-medium text-slate-700">Redigez</div>
-          <div class="text-sm text-slate-500">Votre message SMS</div>
-        </div>
-        <div class="rounded-xl bg-slate-50 p-4 text-left">
-          <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-100 text-emerald-600 font-bold text-sm">3</div>
-          <div class="mt-2 font-medium text-slate-700">Envoyez</div>
-          <div class="text-sm text-slate-500">A vos clients</div>
-        </div>
-      </div>
-
-      <button
-        v-if="!searchQuery && !statusFilter"
-        @click="openCreateModal"
-        class="mt-8 inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-teal-500 to-cyan-500 px-6 py-3 font-semibold text-white shadow-lg transition-all hover:shadow-xl active:scale-[0.98]"
+    <a-card v-else-if="filteredCampaigns.length === 0" :bordered="false" class="empty-card">
+      <a-empty
+        :description="searchQuery || statusFilter ? 'Aucun resultat' : 'Aucune campagne'"
       >
-        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-        </svg>
-        Creer ma premiere campagne
-      </button>
-    </div>
+        <template #image>
+          <div class="empty-icon">
+            <MessageOutlined />
+          </div>
+        </template>
+        <p class="empty-description">
+          {{ searchQuery || statusFilter
+            ? 'Essayez de modifier vos filtres de recherche'
+            : 'Creez votre premiere campagne SMS pour engager vos clients'
+          }}
+        </p>
+
+        <!-- Getting Started Steps -->
+        <div v-if="!searchQuery && !statusFilter" class="getting-started">
+          <div class="step-card">
+            <div class="step-number teal">1</div>
+            <div class="step-title">Creez</div>
+            <div class="step-desc">Nouvelle campagne</div>
+          </div>
+          <div class="step-card">
+            <div class="step-number cyan">2</div>
+            <div class="step-title">Redigez</div>
+            <div class="step-desc">Votre message SMS</div>
+          </div>
+          <div class="step-card">
+            <div class="step-number emerald">3</div>
+            <div class="step-title">Envoyez</div>
+            <div class="step-desc">A vos clients</div>
+          </div>
+        </div>
+
+        <a-button
+          v-if="!searchQuery && !statusFilter"
+          type="primary"
+          size="large"
+          @click="openCreateModal"
+        >
+          <template #icon><PlusOutlined /></template>
+          Creer ma premiere campagne
+        </a-button>
+      </a-empty>
+    </a-card>
 
     <!-- Campaigns List -->
-    <div v-else class="space-y-4">
+    <div v-else class="campaigns-list">
       <TransitionGroup
         tag="div"
         class="space-y-4"
@@ -881,81 +820,67 @@ onMounted(fetchData);
         leave-to-class="opacity-0 scale-95"
         move-class="transition-all duration-300"
       >
-        <div
+        <a-card
           v-for="(campaign, index) in filteredCampaigns"
           :key="campaign._id"
+          :bordered="false"
           :style="{ animationDelay: `${index * 50}ms` }"
-          class="campaign-card group relative overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-slate-100 transition-all hover:shadow-md hover:ring-slate-200"
+          class="campaign-card"
         >
           <!-- Status Gradient Border -->
-          <div
-            :class="['absolute inset-y-0 left-0 w-1 bg-gradient-to-b', statusConfig[campaign.status].gradient]"
-          ></div>
+          <div :class="['status-border', statusConfig[campaign.status]?.gradient ?? 'from-slate-400']"></div>
 
           <!-- Sending progress indicator -->
-          <div
-            v-if="campaign.status === 'sending'"
-            class="absolute inset-x-0 top-0 h-1 overflow-hidden bg-amber-100"
-          >
+          <div v-if="campaign.status === 'sending'" class="sending-progress">
             <div
-              class="h-full animate-pulse bg-gradient-to-r from-amber-400 via-amber-500 to-amber-400"
+              class="progress-bar"
               :style="{ width: `${(campaign.stats.sent / campaign.stats.totalRecipients) * 100}%` }"
             ></div>
           </div>
 
-          <div class="p-6 pl-5">
-            <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div class="campaign-content">
+            <div class="campaign-main">
               <!-- Content -->
-              <div class="min-w-0 flex-1">
-                <div class="flex flex-wrap items-center gap-3">
-                  <h3 class="text-lg font-bold text-slate-900">{{ campaign.name }}</h3>
-                  <span
-                    :class="[
-                      statusConfig[campaign.status].bg,
-                      statusConfig[campaign.status].color,
-                      statusConfig[campaign.status].pulse && 'animate-pulse'
-                    ]"
-                    class="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium"
+              <div class="campaign-info">
+                <div class="campaign-header">
+                  <h3 class="campaign-name">{{ campaign.name }}</h3>
+                  <a-tag
+                    :class="[statusConfig[campaign.status]?.bg ?? 'bg-slate-100', statusConfig[campaign.status]?.color ?? 'text-slate-600']"
                   >
-                    <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="statusConfig[campaign.status].icon" />
-                    </svg>
-                    {{ statusConfig[campaign.status].label }}
-                  </span>
+                    <template #icon>
+                      <svg class="h-3.5 w-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="statusConfig[campaign.status]?.icon ?? ''" />
+                      </svg>
+                    </template>
+                    {{ statusConfig[campaign.status]?.label ?? campaign.status }}
+                  </a-tag>
                 </div>
 
                 <!-- Message Quote Box -->
-                <div class="mt-3 relative pl-4 before:absolute before:left-0 before:top-0 before:bottom-0 before:w-0.5 before:bg-slate-200 before:rounded-full">
-                  <p class="line-clamp-2 text-slate-600 italic">{{ campaign.message }}</p>
+                <div class="message-quote">
+                  <p class="message-text">{{ campaign.message }}</p>
                 </div>
 
                 <!-- Performance Bar (for sent campaigns) -->
-                <div v-if="campaign.stats.sent > 0" class="mt-4 flex items-center gap-3">
-                  <div class="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden flex">
+                <div v-if="campaign.stats.sent > 0" class="performance-bar">
+                  <div class="bar-container">
                     <div
-                      class="h-full bg-emerald-500 transition-all duration-500"
+                      class="bar-success"
                       :style="{ width: `${(campaign.stats.success / campaign.stats.totalRecipients) * 100}%` }"
                     ></div>
                     <div
-                      class="h-full bg-rose-400 transition-all duration-500"
+                      class="bar-failed"
                       :style="{ width: `${(campaign.stats.failed / campaign.stats.totalRecipients) * 100}%` }"
                     ></div>
                   </div>
-                  <span class="text-xs font-medium text-slate-500 tabular-nums">
-                    {{ campaign.stats.success }}/{{ campaign.stats.totalRecipients }}
-                  </span>
+                  <span class="bar-label">{{ campaign.stats.success }}/{{ campaign.stats.totalRecipients }}</span>
                 </div>
 
                 <!-- Timeline -->
-                <div class="mt-4 flex items-center gap-1">
+                <div class="timeline-dots">
                   <template v-for="(step, stepIndex) in getTimelineSteps(campaign)" :key="step.id">
                     <div
-                      :class="[
-                        'flex items-center justify-center h-5 w-5 rounded-full text-xs font-medium transition-all',
-                        step.done
-                          ? 'bg-teal-500 text-white'
-                          : 'bg-slate-100 text-slate-400'
-                      ]"
+                      :class="['timeline-dot', { done: step.done }]"
                       :title="step.label"
                     >
                       <svg v-if="step.done" class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -963,741 +888,486 @@ onMounted(fetchData);
                       </svg>
                       <span v-else>{{ stepIndex + 1 }}</span>
                     </div>
-                    <div
-                      v-if="stepIndex < 3"
-                      :class="[
-                        'h-0.5 w-6 rounded-full transition-all',
-                        step.done ? 'bg-teal-500' : 'bg-slate-200'
-                      ]"
-                    ></div>
+                    <div v-if="stepIndex < 3" :class="['timeline-connector', { done: step.done }]"></div>
                   </template>
                 </div>
 
                 <!-- Meta info -->
-                <div class="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-slate-500">
-                  <span class="inline-flex items-center gap-1.5">
-                    <svg class="h-4 w-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
-                    </svg>
+                <div class="campaign-meta">
+                  <span class="meta-item">
+                    <UserOutlined />
                     {{ campaign.stats.totalRecipients }}
                   </span>
-
-                  <span v-if="campaign.scheduledAt && campaign.status === 'scheduled'" class="inline-flex items-center gap-1.5 text-blue-600">
-                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
+                  <span v-if="campaign.scheduledAt && campaign.status === 'scheduled'" class="meta-item scheduled">
+                    <ClockCircleOutlined />
                     {{ formatDate(campaign.scheduledAt) }}
                   </span>
-
-                  <span class="inline-flex items-center gap-1.5 text-slate-400">
+                  <span class="meta-item muted">
                     {{ formatRelativeTime(campaign.createdAt) }}
                   </span>
                 </div>
               </div>
 
               <!-- Actions -->
-              <div class="flex flex-shrink-0 items-center gap-2">
+              <div class="campaign-actions">
                 <!-- Primary action -->
-                <button
+                <a-button
                   v-if="campaign.status === 'draft'"
+                  type="primary"
                   @click="openSendModal(campaign)"
-                  class="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-teal-500 to-cyan-500 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition-all hover:shadow-md active:scale-[0.98]"
                 >
-                  <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-                  </svg>
+                  <template #icon><SendOutlined /></template>
                   Envoyer
-                </button>
+                </a-button>
 
-                <button
+                <a-button
                   v-if="campaign.status === 'scheduled'"
                   @click="cancelCampaign(campaign)"
-                  class="inline-flex items-center gap-2 rounded-xl bg-slate-100 px-4 py-2.5 text-sm font-medium text-slate-700 transition-all hover:bg-slate-200 active:scale-[0.98]"
                 >
-                  <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                  </svg>
+                  <template #icon><CloseCircleOutlined /></template>
                   Annuler
-                </button>
+                </a-button>
 
                 <!-- Icon buttons -->
-                <div class="flex items-center gap-1 rounded-xl bg-slate-50 p-1">
-                  <button
-                    @click="openPreviewModal(campaign)"
-                    class="rounded-lg p-2 text-slate-500 transition-colors hover:bg-white hover:text-teal-600 hover:shadow-sm active:scale-95"
-                    title="Voir les details"
-                  >
-                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                    </svg>
-                  </button>
+                <a-space class="action-buttons">
+                  <a-tooltip title="Voir les details">
+                    <a-button type="text" @click="openPreviewModal(campaign)">
+                      <template #icon><EyeOutlined /></template>
+                    </a-button>
+                  </a-tooltip>
 
-                  <button
-                    v-if="campaign.status === 'draft'"
-                    @click="openEditModal(campaign)"
-                    class="rounded-lg p-2 text-slate-500 transition-colors hover:bg-white hover:text-blue-600 hover:shadow-sm active:scale-95"
-                    title="Modifier"
-                  >
-                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                    </svg>
-                  </button>
+                  <a-tooltip v-if="campaign.status === 'draft'" title="Modifier">
+                    <a-button type="text" @click="openEditModal(campaign)">
+                      <template #icon><EditOutlined /></template>
+                    </a-button>
+                  </a-tooltip>
 
-                  <button
-                    @click="duplicateCampaign(campaign)"
-                    class="rounded-lg p-2 text-slate-500 transition-colors hover:bg-white hover:text-purple-600 hover:shadow-sm active:scale-95"
-                    title="Dupliquer"
-                  >
-                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                    </svg>
-                  </button>
+                  <a-tooltip title="Dupliquer">
+                    <a-button type="text" @click="duplicateCampaign(campaign)">
+                      <template #icon><CopyOutlined /></template>
+                    </a-button>
+                  </a-tooltip>
 
-                  <button
-                    v-if="campaign.status !== 'sending'"
-                    @click="confirmDelete(campaign)"
-                    class="rounded-lg p-2 text-slate-500 transition-colors hover:bg-rose-50 hover:text-rose-600 active:scale-95"
-                    title="Supprimer"
-                  >
-                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                    </svg>
-                  </button>
-                </div>
+                  <a-tooltip v-if="campaign.status !== 'sending'" title="Supprimer">
+                    <a-button type="text" danger @click="confirmDelete(campaign)">
+                      <template #icon><DeleteOutlined /></template>
+                    </a-button>
+                  </a-tooltip>
+                </a-space>
               </div>
             </div>
           </div>
-        </div>
+        </a-card>
       </TransitionGroup>
     </div>
 
-    <!-- Create/Edit Modal with Templates -->
-    <Teleport to="body">
-      <Transition
-        enter-active-class="transition duration-300 ease-out"
-        enter-from-class="opacity-0"
-        enter-to-class="opacity-100"
-        leave-active-class="transition duration-200 ease-in"
-        leave-from-class="opacity-100"
-        leave-to-class="opacity-0"
-      >
-        <div v-if="showModal" class="fixed inset-0 z-50 overflow-y-auto">
-          <div class="flex min-h-full items-center justify-center p-4">
-            <div class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm" @click="closeModal"></div>
-
-            <Transition
-              enter-active-class="transition duration-300 ease-out"
-              enter-from-class="opacity-0 scale-95 translate-y-4"
-              enter-to-class="opacity-100 scale-100 translate-y-0"
-              leave-active-class="transition duration-200 ease-in"
-              leave-from-class="opacity-100 scale-100"
-              leave-to-class="opacity-0 scale-95"
+    <!-- Create/Edit Modal -->
+    <a-modal
+      v-model:open="showModal"
+      :title="editingCampaign ? 'Modifier la campagne' : 'Nouvelle campagne'"
+      :footer="null"
+      :width="800"
+      class="campaign-modal"
+      @cancel="closeModal"
+    >
+      <form @submit.prevent="handleSubmit" class="modal-form">
+        <!-- Message Templates -->
+        <div class="templates-section">
+          <label class="section-label">Modeles de messages</label>
+          <div class="templates-scroll">
+            <button
+              v-for="template in messageTemplates"
+              :key="template.id"
+              type="button"
+              @click="selectTemplate(template)"
+              :class="['template-chip', { selected: selectedTemplate === template.id }]"
             >
-              <div v-if="showModal" class="relative w-full max-w-3xl rounded-3xl bg-white shadow-2xl">
-                <!-- Header -->
-                <div class="flex items-center justify-between border-b border-slate-100 px-8 py-6">
-                  <div>
-                    <h2 class="text-2xl font-bold text-slate-900">
-                      {{ editingCampaign ? 'Modifier la campagne' : 'Nouvelle campagne' }}
-                    </h2>
-                    <p class="mt-1 text-slate-500">
-                      {{ editingCampaign ? 'Modifiez les details de votre campagne' : 'Creez une campagne SMS pour vos clients' }}
-                    </p>
-                  </div>
-                  <button
-                    @click="closeModal"
-                    class="rounded-full p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600"
-                  >
-                    <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </button>
-                </div>
-
-                <form @submit.prevent="handleSubmit" class="p-8">
-                  <!-- Message Templates -->
-                  <div class="mb-6">
-                    <label class="block text-sm font-medium text-slate-700 mb-3">Modeles de messages</label>
-                    <div class="flex gap-2 overflow-x-auto pb-2 -mx-2 px-2 scrollbar-hide">
-                      <button
-                        v-for="template in messageTemplates"
-                        :key="template.id"
-                        type="button"
-                        @click="selectTemplate(template)"
-                        :class="[
-                          'flex-shrink-0 flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium transition-all active:scale-95',
-                          selectedTemplate === template.id
-                            ? 'bg-teal-500 text-white shadow-md'
-                            : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                        ]"
-                      >
-                        <span class="text-lg">{{ template.icon }}</span>
-                        <span>{{ template.label }}</span>
-                      </button>
-                    </div>
-                  </div>
-
-                  <div class="grid gap-6 lg:grid-cols-2">
-                    <!-- Form Fields -->
-                    <div class="space-y-6">
-                      <div>
-                        <label class="block text-sm font-medium text-slate-700">Nom de la campagne</label>
-                        <input
-                          v-model="formData.name"
-                          type="text"
-                          required
-                          maxlength="100"
-                          placeholder="Ex: Promo de Noel"
-                          class="mt-2 w-full rounded-xl border-0 bg-slate-50 px-4 py-3 text-slate-900 ring-1 ring-inset ring-slate-200 placeholder:text-slate-400 focus:bg-white focus:ring-2 focus:ring-teal-500 transition-all"
-                        />
-                      </div>
-
-                      <div>
-                        <div class="flex items-center justify-between mb-2">
-                          <label class="block text-sm font-medium text-slate-700">Message SMS</label>
-                          <div class="flex items-center gap-3">
-                            <!-- SMS Segment indicator -->
-                            <div v-if="messageLength > 0" class="flex items-center gap-1.5 text-xs">
-                              <span class="text-slate-400">SMS:</span>
-                              <span :class="smsSegments > 1 ? 'text-amber-600 font-semibold' : 'text-slate-600'">
-                                {{ smsSegments }}
-                              </span>
-                            </div>
-                            <!-- Character ring -->
-                            <div class="flex items-center gap-2">
-                              <svg class="h-8 w-8 -rotate-90" viewBox="0 0 36 36">
-                                <circle cx="18" cy="18" r="15" fill="none" stroke="#e2e8f0" stroke-width="3" />
-                                <circle
-                                  cx="18" cy="18" r="15"
-                                  fill="none"
-                                  :stroke="charPercentage > 90 ? '#f43f5e' : charPercentage > 70 ? '#f59e0b' : '#14b8a6'"
-                                  stroke-width="3"
-                                  stroke-linecap="round"
-                                  :stroke-dasharray="`${charPercentage * 0.94} 100`"
-                                  class="transition-all duration-300"
-                                />
-                              </svg>
-                              <span
-                                :class="[
-                                  'text-sm font-medium tabular-nums',
-                                  messageCharsRemaining < 20 ? 'text-rose-500' : messageCharsRemaining < 50 ? 'text-amber-500' : 'text-slate-500'
-                                ]"
-                              >
-                                {{ messageCharsRemaining }}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-
-                        <!-- Personalization Tokens -->
-                        <div class="flex flex-wrap gap-2 mb-2">
-                          <button
-                            v-for="token in personalizationTokens"
-                            :key="token.token"
-                            type="button"
-                            @click="insertToken(token.token)"
-                            class="inline-flex items-center gap-1 rounded-lg bg-cyan-50 px-2 py-1 text-xs font-medium text-cyan-700 hover:bg-cyan-100 transition-colors"
-                          >
-                            <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-                            </svg>
-                            {{ token.label }}
-                          </button>
-                        </div>
-
-                        <textarea
-                          ref="messageTextareaRef"
-                          v-model="formData.message"
-                          required
-                          maxlength="320"
-                          rows="5"
-                          placeholder="Ex: Beneficiez de 20% de reduction ce week-end!"
-                          class="w-full resize-none rounded-xl border-0 bg-slate-50 px-4 py-3 text-slate-900 ring-1 ring-inset ring-slate-200 placeholder:text-slate-400 focus:bg-white focus:ring-2 focus:ring-teal-500 transition-all"
-                        ></textarea>
-
-                        <!-- Emoji Warning -->
-                        <div v-if="hasEmoji" class="mt-2 flex items-center gap-2 text-xs text-amber-600">
-                          <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                          </svg>
-                          Les emojis reduisent la limite a 70 caracteres/SMS
-                        </div>
-                      </div>
-                    </div>
-
-                    <!-- Phone Preview -->
-                    <div class="flex items-center justify-center">
-                      <div class="relative">
-                        <!-- Phone frame -->
-                        <div class="phone-frame relative h-[440px] w-[220px] rounded-[40px] bg-slate-900 p-2.5 shadow-2xl">
-                          <!-- Screen -->
-                          <div class="h-full overflow-hidden rounded-[32px] bg-slate-100">
-                            <!-- Status bar -->
-                            <div class="flex items-center justify-between bg-slate-200/80 px-5 py-2.5">
-                              <span class="text-xs font-semibold text-slate-700">9:41</span>
-                              <div class="flex items-center gap-1.5">
-                                <svg class="h-3 w-3 text-slate-600" fill="currentColor" viewBox="0 0 24 24">
-                                  <path d="M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9c.83 0 1.5-.67 1.5-1.5 0-.39-.15-.74-.39-1.01-.23-.26-.38-.61-.38-.99 0-.83.67-1.5 1.5-1.5H16c2.76 0 5-2.24 5-5 0-4.42-4.03-8-9-8z"/>
-                                </svg>
-                                <div class="h-2.5 w-5 rounded-sm bg-slate-600"></div>
-                              </div>
-                            </div>
-
-                            <!-- Message header -->
-                            <div class="border-b border-slate-200 bg-white px-4 py-3">
-                              <div class="flex items-center gap-3">
-                                <div class="flex h-11 w-11 items-center justify-center rounded-full bg-gradient-to-br from-teal-400 to-cyan-500 text-white shadow-md">
-                                  <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                                  </svg>
-                                </div>
-                                <div>
-                                  <div class="text-sm font-semibold text-slate-900">Le Gourmet</div>
-                                  <div class="text-xs text-slate-500">SMS</div>
-                                </div>
-                              </div>
-                            </div>
-
-                            <!-- Messages area -->
-                            <div class="flex-1 overflow-y-auto p-4">
-                              <Transition
-                                enter-active-class="transition-all duration-300 ease-out"
-                                enter-from-class="opacity-0 translate-y-2 scale-95"
-                                enter-to-class="opacity-100 translate-y-0 scale-100"
-                              >
-                                <div v-if="previewMessage" class="max-w-[90%]">
-                                  <div class="message-bubble rounded-2xl rounded-tl-md bg-slate-200 px-4 py-3 shadow-sm">
-                                    <p class="text-sm text-slate-800 whitespace-pre-wrap break-words leading-relaxed">{{ previewMessage }}</p>
-                                  </div>
-                                  <div class="mt-1.5 flex items-center gap-1.5 text-xs text-slate-400">
-                                    <span>Maintenant</span>
-                                    <svg class="h-3.5 w-3.5 text-blue-500 delivered-check" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
-                                    </svg>
-                                  </div>
-                                </div>
-                              </Transition>
-                              <div v-if="!previewMessage" class="flex h-32 items-center justify-center text-center text-sm text-slate-400">
-                                <div>
-                                  <svg class="h-8 w-8 mx-auto mb-2 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                                  </svg>
-                                  <p>Tapez votre message</p>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                          <!-- Notch -->
-                          <div class="absolute left-1/2 top-4 h-7 w-24 -translate-x-1/2 rounded-full bg-slate-900"></div>
-                          <!-- Side button -->
-                          <div class="absolute -right-0.5 top-24 h-8 w-1 rounded-l-sm bg-slate-700"></div>
-                          <div class="absolute -left-0.5 top-20 h-6 w-1 rounded-r-sm bg-slate-700"></div>
-                          <div class="absolute -left-0.5 top-32 h-10 w-1 rounded-r-sm bg-slate-700"></div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <!-- Actions -->
-                  <div class="mt-8 flex items-center justify-end gap-3 border-t border-slate-100 pt-6">
-                    <button
-                      type="button"
-                      @click="closeModal"
-                      class="rounded-xl px-6 py-3 font-medium text-slate-600 transition hover:bg-slate-100 active:scale-[0.98]"
-                    >
-                      Annuler
-                    </button>
-                    <button
-                      type="submit"
-                      :disabled="isSubmitting || !formData.name.trim() || !formData.message.trim()"
-                      class="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-teal-500 to-cyan-500 px-6 py-3 font-semibold text-white shadow-lg transition-all hover:shadow-xl disabled:cursor-not-allowed disabled:opacity-50 active:scale-[0.98]"
-                    >
-                      <svg v-if="isSubmitting" class="h-5 w-5 animate-spin" fill="none" viewBox="0 0 24 24">
-                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                      </svg>
-                      {{ isSubmitting ? 'Enregistrement...' : (editingCampaign ? 'Enregistrer' : 'Creer la campagne') }}
-                    </button>
-                  </div>
-                </form>
-              </div>
-            </Transition>
+              <span class="template-icon">{{ template.icon }}</span>
+              <span>{{ template.label }}</span>
+            </button>
           </div>
         </div>
-      </Transition>
-    </Teleport>
 
-    <!-- Send Modal -->
-    <Teleport to="body">
-      <Transition
-        enter-active-class="transition duration-300 ease-out"
-        enter-from-class="opacity-0"
-        enter-to-class="opacity-100"
-        leave-active-class="transition duration-200 ease-in"
-        leave-from-class="opacity-100"
-        leave-to-class="opacity-0"
-      >
-        <div v-if="showSendModal" class="fixed inset-0 z-50 overflow-y-auto">
-          <div class="flex min-h-full items-center justify-center p-4">
-            <div class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm" @click="closeSendModal"></div>
+        <a-row :gutter="24">
+          <!-- Form Fields -->
+          <a-col :xs="24" :lg="12">
+            <a-form layout="vertical">
+              <a-form-item label="Nom de la campagne" required>
+                <a-input
+                  v-model:value="formData.name"
+                  placeholder="Ex: Promo de Noel"
+                  :maxlength="100"
+                  size="large"
+                />
+              </a-form-item>
 
-            <div class="relative w-full max-w-md rounded-3xl bg-white p-8 shadow-2xl">
-              <div class="text-center">
-                <div class="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-teal-100 to-cyan-100">
-                  <svg class="h-8 w-8 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-                  </svg>
-                </div>
-                <h2 class="mt-4 text-xl font-bold text-slate-900">Envoyer la campagne</h2>
-                <p class="mt-2 text-slate-500">{{ campaignToSend?.name }}</p>
-              </div>
-
-              <div class="mt-6 rounded-2xl bg-gradient-to-br from-teal-50 to-cyan-50 p-4 text-center">
-                <div class="text-3xl font-bold text-teal-700">{{ campaignToSend?.stats.totalRecipients }}</div>
-                <div class="mt-1 text-sm text-teal-600">client{{ (campaignToSend?.stats.totalRecipients ?? 0) !== 1 ? 's' : '' }} recevront ce SMS</div>
-              </div>
-
-              <div class="mt-6 space-y-3">
-                <label
-                  class="flex cursor-pointer items-center gap-4 rounded-xl border-2 p-4 transition-all"
-                  :class="sendOptions.sendNow ? 'border-teal-500 bg-teal-50' : 'border-slate-200 hover:border-slate-300'"
-                >
-                  <input
-                    v-model="sendOptions.sendNow"
-                    type="radio"
-                    :value="true"
-                    class="h-5 w-5 text-teal-600 focus:ring-teal-500"
-                  />
-                  <div>
-                    <div class="font-medium text-slate-900">Envoyer maintenant</div>
-                    <div class="text-sm text-slate-500">Les SMS seront envoyes immediatement</div>
-                  </div>
-                </label>
-
-                <label
-                  class="flex cursor-pointer items-center gap-4 rounded-xl border-2 p-4 transition-all"
-                  :class="!sendOptions.sendNow ? 'border-teal-500 bg-teal-50' : 'border-slate-200 hover:border-slate-300'"
-                >
-                  <input
-                    v-model="sendOptions.sendNow"
-                    type="radio"
-                    :value="false"
-                    class="h-5 w-5 text-teal-600 focus:ring-teal-500"
-                  />
-                  <div class="flex-1">
-                    <div class="font-medium text-slate-900">Programmer l'envoi</div>
-                    <div class="text-sm text-slate-500">Choisissez une date et heure</div>
-                  </div>
-                </label>
-
-                <Transition
-                  enter-active-class="transition-all duration-200 ease-out"
-                  enter-from-class="opacity-0 -translate-y-2"
-                  enter-to-class="opacity-100 translate-y-0"
-                  leave-active-class="transition-all duration-150 ease-in"
-                  leave-from-class="opacity-100"
-                  leave-to-class="opacity-0"
-                >
-                  <div v-if="!sendOptions.sendNow" class="pl-9">
-                    <input
-                      v-model="sendOptions.scheduledAt"
-                      type="datetime-local"
-                      required
-                      class="w-full rounded-xl border-0 bg-slate-50 px-4 py-3 ring-1 ring-inset ring-slate-200 focus:bg-white focus:ring-2 focus:ring-teal-500"
-                    />
-                  </div>
-                </Transition>
-              </div>
-
-              <div class="mt-8 flex gap-3">
-                <button
-                  @click="closeSendModal"
-                  class="flex-1 rounded-xl px-6 py-3 font-medium text-slate-600 transition hover:bg-slate-100 active:scale-[0.98]"
-                >
-                  Annuler
-                </button>
-                <button
-                  @click="sendCampaign"
-                  :disabled="isSubmitting || (!sendOptions.sendNow && !sendOptions.scheduledAt)"
-                  class="flex-1 inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-teal-500 to-cyan-500 px-6 py-3 font-semibold text-white shadow-lg transition-all hover:shadow-xl disabled:opacity-50 active:scale-[0.98]"
-                >
-                  <svg v-if="isSubmitting" class="h-5 w-5 animate-spin" fill="none" viewBox="0 0 24 24">
-                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
-                  </svg>
-                  {{ isSubmitting ? 'Envoi...' : (sendOptions.sendNow ? 'Envoyer' : 'Programmer') }}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </Transition>
-    </Teleport>
-
-    <!-- Delete Modal -->
-    <Teleport to="body">
-      <Transition
-        enter-active-class="transition duration-300 ease-out"
-        enter-from-class="opacity-0"
-        enter-to-class="opacity-100"
-        leave-active-class="transition duration-200 ease-in"
-        leave-from-class="opacity-100"
-        leave-to-class="opacity-0"
-      >
-        <div v-if="showDeleteModal" class="fixed inset-0 z-50 overflow-y-auto">
-          <div class="flex min-h-full items-center justify-center p-4">
-            <div class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm" @click="closeDeleteModal"></div>
-
-            <div class="relative w-full max-w-md rounded-3xl bg-white p-8 shadow-2xl">
-              <div class="text-center">
-                <div class="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-rose-100">
-                  <svg class="h-8 w-8 text-rose-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                  </svg>
-                </div>
-                <h2 class="mt-4 text-xl font-bold text-slate-900">Supprimer la campagne</h2>
-                <p class="mt-2 text-slate-500">
-                  Etes-vous sur de vouloir supprimer<br>
-                  <span class="font-medium text-slate-700">"{{ campaignToDelete?.name }}"</span> ?
-                </p>
-                <p class="mt-2 text-sm text-rose-500">Cette action est irreversible.</p>
-              </div>
-
-              <div class="mt-8 flex gap-3">
-                <button
-                  @click="closeDeleteModal"
-                  class="flex-1 rounded-xl px-6 py-3 font-medium text-slate-600 transition hover:bg-slate-100 active:scale-[0.98]"
-                >
-                  Annuler
-                </button>
-                <button
-                  @click="deleteCampaign"
-                  :disabled="isSubmitting"
-                  class="flex-1 inline-flex items-center justify-center gap-2 rounded-xl bg-rose-500 px-6 py-3 font-semibold text-white shadow-lg transition-all hover:bg-rose-600 disabled:opacity-50 active:scale-[0.98]"
-                >
-                  <svg v-if="isSubmitting" class="h-5 w-5 animate-spin" fill="none" viewBox="0 0 24 24">
-                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
-                  </svg>
-                  {{ isSubmitting ? 'Suppression...' : 'Supprimer' }}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </Transition>
-    </Teleport>
-
-    <!-- Preview Modal with Phone Mockup -->
-    <Teleport to="body">
-      <Transition
-        enter-active-class="transition duration-300 ease-out"
-        enter-from-class="opacity-0"
-        enter-to-class="opacity-100"
-        leave-active-class="transition duration-200 ease-in"
-        leave-from-class="opacity-100"
-        leave-to-class="opacity-0"
-      >
-        <div v-if="showPreviewModal && previewCampaign" class="fixed inset-0 z-50 overflow-y-auto">
-          <div class="flex min-h-full items-center justify-center p-4">
-            <div class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm" @click="closePreviewModal"></div>
-
-            <div class="relative w-full max-w-2xl max-h-[90vh] overflow-hidden rounded-3xl bg-white shadow-2xl">
-              <!-- Header -->
-              <div class="sticky top-0 z-10 flex items-center justify-between border-b border-slate-100 bg-white/95 px-6 py-4 backdrop-blur-xl">
-                <div class="flex items-center gap-3">
-                  <h2 class="text-xl font-bold text-slate-900">{{ previewCampaign.name }}</h2>
-                  <span
-                    :class="[statusConfig[previewCampaign.status].bg, statusConfig[previewCampaign.status].color]"
-                    class="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium"
-                  >
-                    {{ statusConfig[previewCampaign.status].label }}
-                  </span>
-                </div>
-                <button
-                  @click="closePreviewModal"
-                  class="rounded-full p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600"
-                >
-                  <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
-
-              <div class="overflow-y-auto p-6 max-h-[calc(90vh-140px)]">
-                <div class="grid gap-6 lg:grid-cols-2">
-                  <!-- Phone Preview -->
-                  <div class="flex justify-center">
-                    <div class="phone-frame relative h-[360px] w-[180px] rounded-[32px] bg-slate-900 p-2 shadow-xl">
-                      <div class="h-full overflow-hidden rounded-[24px] bg-slate-100">
-                        <div class="flex items-center justify-between bg-slate-200/80 px-4 py-2">
-                          <span class="text-[10px] font-semibold text-slate-700">9:41</span>
-                          <div class="h-2 w-4 rounded-sm bg-slate-600"></div>
-                        </div>
-                        <div class="border-b border-slate-200 bg-white px-3 py-2">
-                          <div class="flex items-center gap-2">
-                            <div class="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-teal-400 to-cyan-500 text-white">
-                              <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                              </svg>
-                            </div>
-                            <div class="text-xs font-semibold text-slate-900">Restaurant</div>
-                          </div>
-                        </div>
-                        <div class="p-3">
-                          <div class="max-w-[95%]">
-                            <div class="rounded-xl rounded-tl-sm bg-slate-200 px-3 py-2">
-                              <p class="text-xs text-slate-800 leading-relaxed">{{ previewCampaign.message }}</p>
-                            </div>
-                            <div class="mt-1 flex items-center gap-1 text-[10px] text-slate-400">
-                              <span>{{ formatDate(previewCampaign.createdAt) }}</span>
-                              <svg v-if="previewCampaign.status === 'completed'" class="h-3 w-3 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
-                              </svg>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                      <div class="absolute left-1/2 top-3 h-5 w-16 -translate-x-1/2 rounded-full bg-slate-900"></div>
-                    </div>
-                  </div>
-
-                  <!-- Stats & Details -->
-                  <div class="space-y-4">
-                    <!-- Stats Grid -->
-                    <div class="grid grid-cols-2 gap-3">
-                      <div class="rounded-xl bg-slate-50 p-3">
-                        <div class="text-xs font-medium uppercase tracking-wider text-slate-400">Destinataires</div>
-                        <div class="mt-1 text-xl font-bold text-slate-900">{{ previewCampaign.stats.totalRecipients }}</div>
-                      </div>
-                      <div class="rounded-xl bg-emerald-50 p-3">
-                        <div class="text-xs font-medium uppercase tracking-wider text-emerald-600">Succes</div>
-                        <div class="mt-1 text-xl font-bold text-emerald-600">{{ previewCampaign.stats.success }}</div>
-                      </div>
-                      <div class="rounded-xl bg-rose-50 p-3">
-                        <div class="text-xs font-medium uppercase tracking-wider text-rose-600">Echecs</div>
-                        <div class="mt-1 text-xl font-bold text-rose-600">{{ previewCampaign.stats.failed }}</div>
-                      </div>
-                      <div class="rounded-xl bg-amber-50 p-3">
-                        <div class="text-xs font-medium uppercase tracking-wider text-amber-600">En attente</div>
-                        <div class="mt-1 text-xl font-bold text-amber-600">
-                          {{ previewCampaign.stats.totalRecipients - previewCampaign.stats.sent }}
-                        </div>
-                      </div>
-                    </div>
-
-                    <!-- Progress bar -->
-                    <div v-if="previewCampaign.stats.sent > 0" class="space-y-2">
-                      <div class="flex items-center justify-between text-sm">
-                        <span class="text-slate-600">Progression</span>
-                        <span class="font-medium text-slate-900">
-                          {{ Math.round((previewCampaign.stats.sent / previewCampaign.stats.totalRecipients) * 100) }}%
+              <a-form-item required>
+                <template #label>
+                  <div class="message-label">
+                    <span>Message SMS</span>
+                    <div class="char-counter">
+                      <span v-if="messageLength > 0" class="sms-count">
+                        SMS: <span :class="{ 'text-amber-600': smsSegments > 1 }">{{ smsSegments }}</span>
+                      </span>
+                      <div class="char-ring">
+                        <svg class="ring-svg-small" viewBox="0 0 36 36">
+                          <circle cx="18" cy="18" r="15" fill="none" stroke="#e2e8f0" stroke-width="3" />
+                          <circle
+                            cx="18" cy="18" r="15"
+                            fill="none"
+                            :stroke="charPercentage > 90 ? '#f43f5e' : charPercentage > 70 ? '#f59e0b' : '#14b8a6'"
+                            stroke-width="3"
+                            stroke-linecap="round"
+                            :stroke-dasharray="`${charPercentage * 0.94} 100`"
+                          />
+                        </svg>
+                        <span :class="['char-count', { warning: messageCharsRemaining < 20, danger: messageCharsRemaining < 10 }]">
+                          {{ messageCharsRemaining }}
                         </span>
                       </div>
-                      <div class="h-2 overflow-hidden rounded-full bg-slate-100">
-                        <div
-                          class="h-full rounded-full bg-gradient-to-r from-teal-500 to-cyan-500 transition-all duration-500"
-                          :style="{ width: `${(previewCampaign.stats.sent / previewCampaign.stats.totalRecipients) * 100}%` }"
-                        ></div>
-                      </div>
                     </div>
+                  </div>
+                </template>
 
-                    <!-- Delivery Timeline -->
-                    <div class="space-y-2">
-                      <h4 class="text-sm font-medium text-slate-700">Timeline</h4>
-                      <div class="relative pl-6 space-y-3">
-                        <div class="absolute left-2 top-2 bottom-2 w-0.5 bg-slate-200"></div>
+                <!-- Personalization Tokens -->
+                <div class="tokens-row">
+                  <a-button
+                    v-for="token in personalizationTokens"
+                    :key="token.token"
+                    type="text"
+                    size="small"
+                    class="token-chip"
+                    @click="insertToken(token.token)"
+                  >
+                    <template #icon><PlusOutlined /></template>
+                    {{ token.label }}
+                  </a-button>
+                </div>
 
-                        <div class="relative flex items-center gap-3">
-                          <div class="absolute left-[-16px] h-4 w-4 rounded-full bg-teal-500 ring-4 ring-white"></div>
-                          <div class="text-sm">
-                            <span class="text-slate-500">Creee</span>
-                            <span class="ml-2 text-slate-700">{{ formatDate(previewCampaign.createdAt) }}</span>
-                          </div>
-                        </div>
+                <a-textarea
+                  ref="messageTextareaRef"
+                  v-model:value="formData.message"
+                  placeholder="Ex: Beneficiez de 20% de reduction ce week-end!"
+                  :rows="5"
+                  :maxlength="320"
+                />
 
-                        <div v-if="previewCampaign.scheduledAt" class="relative flex items-center gap-3">
-                          <div :class="['absolute left-[-16px] h-4 w-4 rounded-full ring-4 ring-white', previewCampaign.status !== 'draft' ? 'bg-blue-500' : 'bg-slate-300']"></div>
-                          <div class="text-sm">
-                            <span class="text-slate-500">Programmee</span>
-                            <span class="ml-2 text-slate-700">{{ formatDate(previewCampaign.scheduledAt) }}</span>
-                          </div>
-                        </div>
+                <a-alert
+                  v-if="hasEmoji"
+                  type="warning"
+                  message="Les emojis reduisent la limite a 70 caracteres/SMS"
+                  show-icon
+                  class="mt-2"
+                />
+              </a-form-item>
+            </a-form>
+          </a-col>
 
-                        <div v-if="previewCampaign.startedAt" class="relative flex items-center gap-3">
-                          <div class="absolute left-[-16px] h-4 w-4 rounded-full bg-amber-500 ring-4 ring-white"></div>
-                          <div class="text-sm">
-                            <span class="text-slate-500">Debut d'envoi</span>
-                            <span class="ml-2 text-slate-700">{{ formatDate(previewCampaign.startedAt) }}</span>
-                          </div>
-                        </div>
+          <!-- Phone Preview -->
+          <a-col :xs="24" :lg="12" class="phone-preview-col">
+            <div class="phone-frame">
+              <div class="phone-screen">
+                <!-- Status bar -->
+                <div class="phone-status-bar">
+                  <span>9:41</span>
+                  <div class="battery-icon"></div>
+                </div>
 
-                        <div v-if="previewCampaign.completedAt" class="relative flex items-center gap-3">
-                          <div class="absolute left-[-16px] h-4 w-4 rounded-full bg-emerald-500 ring-4 ring-white"></div>
-                          <div class="text-sm">
-                            <span class="text-slate-500">Terminee</span>
-                            <span class="ml-2 text-slate-700">{{ formatDate(previewCampaign.completedAt) }}</span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
+                <!-- Message header -->
+                <div class="phone-header">
+                  <div class="phone-avatar">
+                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                    </svg>
+                  </div>
+                  <div>
+                    <div class="phone-name">Le Gourmet</div>
+                    <div class="phone-type">SMS</div>
                   </div>
                 </div>
 
-                <!-- Recipients list -->
-                <div v-if="previewCampaign.recipients && previewCampaign.recipients.length > 0" class="mt-6">
-                  <div class="mb-3 flex items-center justify-between">
-                    <h3 class="font-medium text-slate-900">Destinataires</h3>
-                    <span class="text-sm text-slate-500">{{ previewCampaign.recipients.length }} contact{{ previewCampaign.recipients.length !== 1 ? 's' : '' }}</span>
-                  </div>
-                  <div class="max-h-48 overflow-y-auto rounded-xl border border-slate-200">
-                    <div
-                      v-for="(recipient, index) in previewCampaign.recipients"
-                      :key="index"
-                      class="flex items-center justify-between border-b border-slate-100 px-4 py-3 last:border-0"
-                    >
-                      <span class="font-mono text-sm text-slate-600">{{ recipient.phone }}</span>
-                      <span
-                        :class="{
-                          'bg-emerald-100 text-emerald-700': recipient.status === 'sent',
-                          'bg-rose-100 text-rose-700': recipient.status === 'failed',
-                          'bg-slate-100 text-slate-500': recipient.status === 'pending'
-                        }"
-                        class="rounded-full px-2.5 py-0.5 text-xs font-medium"
-                      >
-                        {{ recipient.status === 'sent' ? 'Envoye' : recipient.status === 'failed' ? 'Echec' : 'En attente' }}
-                      </span>
+                <!-- Messages area -->
+                <div class="phone-messages">
+                  <Transition
+                    enter-active-class="transition-all duration-300 ease-out"
+                    enter-from-class="opacity-0 translate-y-2 scale-95"
+                    enter-to-class="opacity-100 translate-y-0 scale-100"
+                  >
+                    <div v-if="previewMessage" class="message-bubble-container">
+                      <div class="message-bubble">
+                        <p>{{ previewMessage }}</p>
+                      </div>
+                      <div class="message-meta">
+                        <span>Maintenant</span>
+                        <svg class="delivered-check" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
+                        </svg>
+                      </div>
                     </div>
+                  </Transition>
+                  <div v-if="!previewMessage" class="empty-messages">
+                    <MessageOutlined />
+                    <p>Tapez votre message</p>
                   </div>
                 </div>
               </div>
-
-              <!-- Footer -->
-              <div class="sticky bottom-0 border-t border-slate-100 bg-white/95 px-6 py-4 backdrop-blur-xl">
-                <button
-                  @click="closePreviewModal"
-                  class="w-full rounded-xl bg-slate-100 px-6 py-3 font-medium text-slate-700 transition hover:bg-slate-200 active:scale-[0.98]"
-                >
-                  Fermer
-                </button>
-              </div>
+              <div class="phone-notch"></div>
             </div>
-          </div>
+          </a-col>
+        </a-row>
+
+        <!-- Actions -->
+        <div class="modal-actions">
+          <a-button size="large" @click="closeModal">Annuler</a-button>
+          <a-button
+            type="primary"
+            size="large"
+            html-type="submit"
+            :loading="isSubmitting"
+            :disabled="!formData.name.trim() || !formData.message.trim()"
+          >
+            {{ editingCampaign ? 'Enregistrer' : 'Creer la campagne' }}
+          </a-button>
         </div>
-      </Transition>
-    </Teleport>
+      </form>
+    </a-modal>
+
+    <!-- Send Modal -->
+    <a-modal
+      v-model:open="showSendModal"
+      title="Envoyer la campagne"
+      :footer="null"
+      :width="500"
+      @cancel="closeSendModal"
+    >
+      <div class="send-modal-content">
+        <div class="send-icon-wrapper">
+          <SendOutlined />
+        </div>
+        <h3 class="send-campaign-name">{{ campaignToSend?.name }}</h3>
+
+        <div class="recipients-count">
+          <div class="recipients-number">{{ campaignToSend?.stats.totalRecipients }}</div>
+          <div class="recipients-label">client{{ (campaignToSend?.stats.totalRecipients ?? 0) !== 1 ? 's' : '' }} recevront ce SMS</div>
+        </div>
+
+        <a-radio-group v-model:value="sendOptions.sendNow" class="send-options">
+          <a-radio :value="true" class="send-option">
+            <div>
+              <div class="option-title">Envoyer maintenant</div>
+              <div class="option-desc">Les SMS seront envoyes immediatement</div>
+            </div>
+          </a-radio>
+          <a-radio :value="false" class="send-option">
+            <div>
+              <div class="option-title">Programmer l'envoi</div>
+              <div class="option-desc">Choisissez une date et heure</div>
+            </div>
+          </a-radio>
+        </a-radio-group>
+
+        <Transition
+          enter-active-class="transition-all duration-200 ease-out"
+          enter-from-class="opacity-0 -translate-y-2"
+          enter-to-class="opacity-100 translate-y-0"
+        >
+          <a-input
+            v-if="!sendOptions.sendNow"
+            v-model:value="sendOptions.scheduledAt"
+            type="datetime-local"
+            size="large"
+            class="schedule-input"
+          />
+        </Transition>
+
+        <div class="send-actions">
+          <a-button size="large" @click="closeSendModal">Annuler</a-button>
+          <a-button
+            type="primary"
+            size="large"
+            :loading="isSubmitting"
+            :disabled="!sendOptions.sendNow && !sendOptions.scheduledAt"
+            @click="sendCampaign"
+          >
+            {{ sendOptions.sendNow ? 'Envoyer' : 'Programmer' }}
+          </a-button>
+        </div>
+      </div>
+    </a-modal>
+
+    <!-- Delete Modal -->
+    <a-modal
+      v-model:open="showDeleteModal"
+      title="Supprimer la campagne"
+      :footer="null"
+      :width="420"
+      @cancel="closeDeleteModal"
+    >
+      <div class="delete-modal-content">
+        <div class="delete-icon-wrapper">
+          <DeleteOutlined />
+        </div>
+        <p class="delete-message">
+          Etes-vous sur de vouloir supprimer<br>
+          <strong>"{{ campaignToDelete?.name }}"</strong> ?
+        </p>
+        <p class="delete-warning">Cette action est irreversible.</p>
+
+        <div class="delete-actions">
+          <a-button size="large" @click="closeDeleteModal">Annuler</a-button>
+          <a-button
+            type="primary"
+            danger
+            size="large"
+            :loading="isSubmitting"
+            @click="deleteCampaign"
+          >
+            Supprimer
+          </a-button>
+        </div>
+      </div>
+    </a-modal>
+
+    <!-- Preview Modal -->
+    <a-modal
+      v-model:open="showPreviewModal"
+      :title="previewCampaign?.name || 'Details'"
+      :footer="null"
+      :width="720"
+      @cancel="closePreviewModal"
+    >
+      <template v-if="previewCampaign">
+        <a-row :gutter="24">
+          <!-- Phone Preview -->
+          <a-col :xs="24" :lg="10" class="mb-6 lg:mb-0">
+            <div class="phone-frame small">
+              <div class="phone-screen">
+                <div class="phone-status-bar">
+                  <span>9:41</span>
+                </div>
+                <div class="phone-header small">
+                  <div class="phone-avatar small">
+                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                    </svg>
+                  </div>
+                  <div class="phone-name small">Restaurant</div>
+                </div>
+                <div class="phone-messages small">
+                  <div class="message-bubble small">
+                    <p>{{ previewCampaign.message }}</p>
+                  </div>
+                  <div class="message-meta">
+                    <span>{{ formatDate(previewCampaign.createdAt) }}</span>
+                    <svg v-if="previewCampaign.status === 'completed'" class="delivered-check" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
+                    </svg>
+                  </div>
+                </div>
+              </div>
+              <div class="phone-notch small"></div>
+            </div>
+          </a-col>
+
+          <!-- Stats & Details -->
+          <a-col :xs="24" :lg="14">
+            <a-row :gutter="[12, 12]">
+              <a-col :span="12">
+                <a-statistic title="Destinataires" :value="previewCampaign.stats.totalRecipients" />
+              </a-col>
+              <a-col :span="12">
+                <a-statistic
+                  title="Succes"
+                  :value="previewCampaign.stats.success"
+                  value-style="color: #10b981"
+                />
+              </a-col>
+              <a-col :span="12">
+                <a-statistic
+                  title="Echecs"
+                  :value="previewCampaign.stats.failed"
+                  value-style="color: #ef4444"
+                />
+              </a-col>
+              <a-col :span="12">
+                <a-statistic
+                  title="En attente"
+                  :value="previewCampaign.stats.totalRecipients - previewCampaign.stats.sent"
+                  value-style="color: #f59e0b"
+                />
+              </a-col>
+            </a-row>
+
+            <!-- Progress bar -->
+            <div v-if="previewCampaign.stats.sent > 0" class="mt-6">
+              <div class="flex justify-between text-sm mb-2">
+                <span class="text-gray-600">Progression</span>
+                <span class="font-medium">
+                  {{ Math.round((previewCampaign.stats.sent / previewCampaign.stats.totalRecipients) * 100) }}%
+                </span>
+              </div>
+              <a-progress
+                :percent="Math.round((previewCampaign.stats.sent / previewCampaign.stats.totalRecipients) * 100)"
+                :show-info="false"
+                stroke-color="#14b8a6"
+              />
+            </div>
+
+            <!-- Timeline -->
+            <div class="mt-6">
+              <h4 class="text-sm font-medium text-gray-700 mb-3">Timeline</h4>
+              <a-timeline>
+                <a-timeline-item color="green">
+                  <span class="text-gray-500">Creee</span>
+                  <span class="ml-2 text-gray-700">{{ formatDate(previewCampaign.createdAt) }}</span>
+                </a-timeline-item>
+                <a-timeline-item v-if="previewCampaign.scheduledAt" :color="previewCampaign.status !== 'draft' ? 'blue' : 'gray'">
+                  <span class="text-gray-500">Programmee</span>
+                  <span class="ml-2 text-gray-700">{{ formatDate(previewCampaign.scheduledAt) }}</span>
+                </a-timeline-item>
+                <a-timeline-item v-if="previewCampaign.startedAt" color="orange">
+                  <span class="text-gray-500">Debut d'envoi</span>
+                  <span class="ml-2 text-gray-700">{{ formatDate(previewCampaign.startedAt) }}</span>
+                </a-timeline-item>
+                <a-timeline-item v-if="previewCampaign.completedAt" color="green">
+                  <span class="text-gray-500">Terminee</span>
+                  <span class="ml-2 text-gray-700">{{ formatDate(previewCampaign.completedAt) }}</span>
+                </a-timeline-item>
+              </a-timeline>
+            </div>
+          </a-col>
+        </a-row>
+      </template>
+    </a-modal>
   </div>
 </template>
 
 <style scoped>
-/* Animated Mesh Gradient Background */
+.campaigns-view {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Hero Section */
+.hero-card {
+  border-radius: 24px;
+  overflow: hidden;
+}
+
+.hero-card :deep(.ant-card-body) {
+  padding: 0;
+}
+
 .hero-section {
-  background: linear-gradient(135deg, #14b8a6 0%, #06b6d4 50%, #0d9488 100%);
   position: relative;
+  padding: 32px;
+  color: white;
+  overflow: hidden;
 }
 
 .mesh-gradient {
+  position: absolute;
+  inset: 0;
   background:
     radial-gradient(ellipse 80% 50% at 20% 40%, rgba(6, 182, 212, 0.4) 0%, transparent 50%),
     radial-gradient(ellipse 60% 50% at 80% 20%, rgba(20, 184, 166, 0.3) 0%, transparent 50%),
@@ -1707,48 +1377,262 @@ onMounted(fetchData);
 }
 
 @keyframes meshMove {
-  0%, 100% {
-    background-position: 0% 0%, 100% 0%, 50% 100%, 0% 0%;
-  }
-  25% {
-    background-position: 20% 20%, 80% 30%, 40% 80%, 0% 0%;
-  }
-  50% {
-    background-position: 40% 10%, 60% 50%, 60% 70%, 0% 0%;
-  }
-  75% {
-    background-position: 10% 30%, 90% 20%, 30% 90%, 0% 0%;
-  }
+  0%, 100% { background-position: 0% 0%, 100% 0%, 50% 100%, 0% 0%; }
+  25% { background-position: 20% 20%, 80% 30%, 40% 80%, 0% 0%; }
+  50% { background-position: 40% 10%, 60% 50%, 60% 70%, 0% 0%; }
+  75% { background-position: 10% 30%, 90% 20%, 30% 90%, 0% 0%; }
 }
 
-/* Floating Orbs Animation */
 .floating-orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(40px);
+}
+
+.orb-1 {
+  right: -64px;
+  top: -64px;
+  width: 192px;
+  height: 192px;
+  background: rgba(255, 255, 255, 0.1);
   animation: floatOrb 8s ease-in-out infinite;
 }
 
-.floating-orb-delayed {
+.orb-2 {
+  left: -80px;
+  bottom: -80px;
+  width: 224px;
+  height: 224px;
+  background: rgba(103, 232, 249, 0.15);
   animation: floatOrb 10s ease-in-out infinite;
   animation-delay: -3s;
 }
 
-.floating-orb-slow {
+.orb-3 {
+  right: 33%;
+  top: 50%;
+  width: 128px;
+  height: 128px;
+  background: rgba(45, 212, 191, 0.1);
+  filter: blur(32px);
   animation: floatOrb 12s ease-in-out infinite;
   animation-delay: -6s;
 }
 
 @keyframes floatOrb {
-  0%, 100% {
-    transform: translate(0, 0) scale(1);
-  }
-  33% {
-    transform: translate(10px, -15px) scale(1.05);
-  }
-  66% {
-    transform: translate(-5px, 10px) scale(0.95);
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(10px, -15px) scale(1.05); }
+  66% { transform: translate(-5px, 10px) scale(0.95); }
+}
+
+.grid-pattern {
+  position: absolute;
+  inset: 0;
+  opacity: 0.07;
+}
+
+.hero-content {
+  position: relative;
+  z-index: 1;
+}
+
+.hero-header {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+@media (min-width: 1024px) {
+  .hero-header {
+    flex-direction: row;
+    align-items: flex-start;
+    justify-content: space-between;
   }
 }
 
-/* Sparkline Animation */
+.hero-title-section {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.hero-icon-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(8px);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+}
+
+.hero-icon {
+  font-size: 28px;
+}
+
+.hero-title {
+  font-size: 24px;
+  font-weight: 700;
+  margin: 0;
+}
+
+@media (min-width: 1024px) {
+  .hero-title {
+    font-size: 30px;
+  }
+}
+
+.hero-subtitle {
+  margin: 4px 0 0;
+  opacity: 0.9;
+}
+
+.quick-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.chip-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 9999px;
+  color: white;
+  font-weight: 500;
+  backdrop-filter: blur(8px);
+}
+
+.chip-button:hover {
+  background: rgba(255, 255, 255, 0.25);
+  color: white;
+}
+
+.chip-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.chip-dot.draft {
+  background: #cbd5e1;
+}
+
+.chip-dot.scheduled {
+  background: #93c5fd;
+}
+
+.hero-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+@media (min-width: 1024px) {
+  .hero-actions {
+    margin-top: 0;
+  }
+}
+
+.refresh-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  background: rgba(255, 255, 255, 0.15);
+  color: white;
+  border-radius: 12px;
+}
+
+.refresh-button:hover {
+  background: rgba(255, 255, 255, 0.25);
+  color: white;
+}
+
+.create-button {
+  background: white;
+  color: #0d9488;
+  border: none;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+}
+
+.create-button:hover {
+  background: #f0fdfa;
+  color: #0d9488;
+}
+
+/* Stats Grid */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+  margin-top: 32px;
+}
+
+@media (min-width: 1024px) {
+  .stats-grid {
+    grid-template-columns: repeat(5, 1fr);
+  }
+}
+
+.stat-card {
+  padding: 20px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  backdrop-filter: blur(8px);
+  transition: background 0.2s;
+}
+
+.stat-card:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.stat-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.stat-value {
+  font-size: 30px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.stat-icon-wrapper {
+  padding: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+}
+
+.stat-icon-wrapper.success {
+  background: rgba(52, 211, 153, 0.2);
+  color: #a7f3d0;
+}
+
+.stat-label {
+  margin-top: 4px;
+  font-size: 14px;
+  opacity: 0.8;
+}
+
+.sparkline-wrapper {
+  padding: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+}
+
+.sparkline {
+  color: #67e8f9;
+}
+
 .sparkline-path {
   stroke-dasharray: 200;
   stroke-dashoffset: 200;
@@ -1756,85 +1640,861 @@ onMounted(fetchData);
 }
 
 @keyframes drawSparkline {
-  to {
-    stroke-dashoffset: 0;
+  to { stroke-dashoffset: 0; }
+}
+
+.success-value {
+  color: #a7f3d0;
+}
+
+.failed-count {
+  font-size: 14px;
+  color: #fda4af;
+}
+
+.ring-wrapper {
+  position: relative;
+  width: 48px;
+  height: 48px;
+}
+
+.ring-svg {
+  width: 48px;
+  height: 48px;
+  transform: rotate(-90deg);
+}
+
+.ring-progress {
+  transition: stroke-dasharray 0.7s;
+}
+
+.ring-text {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  color: #a7f3d0;
+}
+
+.insights-card {
+  background: linear-gradient(to bottom right, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0.05));
+  grid-column: span 2;
+}
+
+@media (min-width: 1024px) {
+  .insights-card {
+    grid-column: span 1;
   }
 }
 
-/* Skeleton Shimmer */
-.skeleton-shimmer {
-  background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
-  background-size: 200% 100%;
-  animation: shimmer 1.5s ease-in-out infinite;
+.insights-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  font-size: 12px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #fde68a;
 }
 
-@keyframes shimmer {
-  0% {
-    background-position: 200% 0;
-  }
-  100% {
-    background-position: -200% 0;
-  }
+.insights-content {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
-/* Phone Frame Glow */
-.phone-frame {
-  box-shadow:
-    0 25px 50px -12px rgba(0, 0, 0, 0.25),
-    0 0 0 1px rgba(255, 255, 255, 0.1) inset;
+.insight-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 14px;
 }
 
-/* Message Bubble Animation */
-.message-bubble {
-  animation: bubbleAppear 0.3s ease-out;
+.insight-label {
+  opacity: 0.7;
 }
 
-@keyframes bubbleAppear {
-  0% {
-    opacity: 0;
-    transform: translateY(10px) scale(0.95);
-  }
-  100% {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
+.insight-value {
+  font-weight: 600;
 }
 
-/* Delivered Check Animation */
-.delivered-check {
-  animation: checkAppear 0.4s ease-out 0.3s both;
+/* Filters Card */
+.filters-card {
+  border-radius: 16px;
 }
 
-@keyframes checkAppear {
-  0% {
-    opacity: 0;
-    transform: scale(0);
-  }
-  50% {
-    transform: scale(1.2);
-  }
-  100% {
-    opacity: 1;
-    transform: scale(1);
-  }
+/* Loading */
+.loading-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 300px;
 }
 
-/* Campaign Card Hover Effect */
+/* Empty State */
+.empty-card {
+  border-radius: 16px;
+  text-align: center;
+  padding: 48px;
+}
+
+.empty-icon {
+  width: 96px;
+  height: 96px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: linear-gradient(to bottom right, #f0fdfa, #ecfeff);
+  font-size: 48px;
+  color: #14b8a6;
+}
+
+.empty-description {
+  max-width: 384px;
+  margin: 8px auto 0;
+  color: #6b7280;
+}
+
+.getting-started {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  max-width: 400px;
+  margin: 32px auto;
+}
+
+.step-card {
+  padding: 16px;
+  background: #f9fafb;
+  border-radius: 12px;
+  text-align: left;
+}
+
+.step-number {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.step-number.teal {
+  background: #ccfbf1;
+  color: #0d9488;
+}
+
+.step-number.cyan {
+  background: #cffafe;
+  color: #0891b2;
+}
+
+.step-number.emerald {
+  background: #d1fae5;
+  color: #059669;
+}
+
+.step-title {
+  margin-top: 8px;
+  font-weight: 500;
+  color: #374151;
+}
+
+.step-desc {
+  font-size: 14px;
+  color: #6b7280;
+}
+
+/* Campaign Cards */
+.campaigns-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
 .campaign-card {
-  transition: all 0.2s ease;
+  position: relative;
+  border-radius: 16px;
+  overflow: hidden;
+  transition: all 0.2s;
 }
 
 .campaign-card:hover {
   transform: translateY(-2px);
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
 }
 
-/* Scrollbar Hide for Templates */
-.scrollbar-hide {
+.campaign-card :deep(.ant-card-body) {
+  padding: 0;
+}
+
+.status-border {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+}
+
+.status-border.from-slate-400 { background: linear-gradient(to bottom, #94a3b8, #64748b); }
+.status-border.from-blue-400 { background: linear-gradient(to bottom, #60a5fa, #2563eb); }
+.status-border.from-amber-400 { background: linear-gradient(to bottom, #fbbf24, #f97316); }
+.status-border.from-emerald-400 { background: linear-gradient(to bottom, #34d399, #14b8a6); }
+.status-border.from-rose-400 { background: linear-gradient(to bottom, #fb7185, #ef4444); }
+.status-border.from-slate-300 { background: linear-gradient(to bottom, #cbd5e1, #94a3b8); }
+
+.sending-progress {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 4px;
+  background: #fef3c7;
+  overflow: hidden;
+}
+
+.progress-bar {
+  height: 100%;
+  background: linear-gradient(to right, #fbbf24, #f59e0b);
+  animation: pulse 2s infinite;
+}
+
+.campaign-content {
+  padding: 24px;
+  padding-left: 20px;
+}
+
+.campaign-main {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+@media (min-width: 1024px) {
+  .campaign-main {
+    flex-direction: row;
+    align-items: flex-start;
+    justify-content: space-between;
+  }
+}
+
+.campaign-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.campaign-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+.campaign-name {
+  font-size: 18px;
+  font-weight: 700;
+  color: #111827;
+  margin: 0;
+}
+
+.message-quote {
+  margin-top: 12px;
+  padding-left: 16px;
+  border-left: 2px solid #e5e7eb;
+}
+
+.message-text {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  color: #6b7280;
+  font-style: italic;
+  margin: 0;
+}
+
+.performance-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.bar-container {
+  flex: 1;
+  height: 8px;
+  background: #f1f5f9;
+  border-radius: 9999px;
+  overflow: hidden;
+  display: flex;
+}
+
+.bar-success {
+  height: 100%;
+  background: #10b981;
+  transition: width 0.5s;
+}
+
+.bar-failed {
+  height: 100%;
+  background: #f87171;
+  transition: width 0.5s;
+}
+
+.bar-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: #6b7280;
+  font-variant-numeric: tabular-nums;
+}
+
+.timeline-dots {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 16px;
+}
+
+.timeline-dot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  font-size: 12px;
+  font-weight: 500;
+  background: #f1f5f9;
+  color: #9ca3af;
+  transition: all 0.2s;
+}
+
+.timeline-dot.done {
+  background: #14b8a6;
+  color: white;
+}
+
+.timeline-connector {
+  width: 24px;
+  height: 2px;
+  border-radius: 9999px;
+  background: #e5e7eb;
+  transition: background 0.2s;
+}
+
+.timeline-connector.done {
+  background: #14b8a6;
+}
+
+.campaign-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-top: 16px;
+  font-size: 14px;
+  color: #6b7280;
+}
+
+.meta-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.meta-item.scheduled {
+  color: #2563eb;
+}
+
+.meta-item.muted {
+  color: #9ca3af;
+}
+
+.campaign-actions {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 8px;
+}
+
+.action-buttons {
+  background: #f9fafb;
+  border-radius: 12px;
+  padding: 4px;
+}
+
+/* Modal Styles */
+.modal-form {
+  padding: 8px 0;
+}
+
+.templates-section {
+  margin-bottom: 24px;
+}
+
+.section-label {
+  display: block;
+  font-size: 14px;
+  font-weight: 500;
+  color: #374151;
+  margin-bottom: 12px;
+}
+
+.templates-scroll {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 8px;
+  margin: 0 -8px;
+  padding: 0 8px;
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
 
-.scrollbar-hide::-webkit-scrollbar {
+.templates-scroll::-webkit-scrollbar {
   display: none;
+}
+
+.template-chip {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 500;
+  background: #f1f5f9;
+  color: #374151;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.template-chip:hover {
+  background: #e2e8f0;
+}
+
+.template-chip.selected {
+  background: #14b8a6;
+  color: white;
+  box-shadow: 0 4px 6px -1px rgba(20, 184, 166, 0.3);
+}
+
+.template-icon {
+  font-size: 18px;
+}
+
+.message-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.char-counter {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.sms-count {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.char-ring {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ring-svg-small {
+  width: 32px;
+  height: 32px;
+  transform: rotate(-90deg);
+}
+
+.char-count {
+  font-size: 14px;
+  font-weight: 500;
+  color: #6b7280;
+  font-variant-numeric: tabular-nums;
+}
+
+.char-count.warning {
+  color: #f59e0b;
+}
+
+.char-count.danger {
+  color: #ef4444;
+}
+
+.tokens-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.token-chip {
+  background: #ecfeff;
+  color: #0e7490;
+  border-radius: 8px;
+}
+
+.token-chip:hover {
+  background: #cffafe;
+  color: #0e7490;
+}
+
+.phone-preview-col {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Phone Frame */
+.phone-frame {
+  position: relative;
+  width: 220px;
+  height: 440px;
+  border-radius: 40px;
+  background: #1e293b;
+  padding: 10px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+}
+
+.phone-frame.small {
+  width: 180px;
+  height: 360px;
+  border-radius: 32px;
+  padding: 8px;
+}
+
+.phone-screen {
+  height: 100%;
+  border-radius: 32px;
+  background: #f1f5f9;
+  overflow: hidden;
+}
+
+.phone-frame.small .phone-screen {
+  border-radius: 24px;
+}
+
+.phone-status-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 20px;
+  background: rgba(226, 232, 240, 0.8);
+  font-size: 12px;
+  font-weight: 600;
+  color: #374151;
+}
+
+.battery-icon {
+  width: 20px;
+  height: 10px;
+  border-radius: 2px;
+  background: #475569;
+}
+
+.phone-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: white;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.phone-header.small {
+  gap: 8px;
+  padding: 8px 12px;
+}
+
+.phone-avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: linear-gradient(to bottom right, #2dd4bf, #06b6d4);
+  color: white;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.phone-avatar.small {
+  width: 32px;
+  height: 32px;
+}
+
+.phone-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.phone-name.small {
+  font-size: 12px;
+}
+
+.phone-type {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.phone-messages {
+  padding: 16px;
+  flex: 1;
+  overflow-y: auto;
+}
+
+.phone-messages.small {
+  padding: 12px;
+}
+
+.message-bubble-container {
+  max-width: 90%;
+}
+
+.message-bubble {
+  padding: 12px 16px;
+  background: #e2e8f0;
+  border-radius: 16px;
+  border-top-left-radius: 4px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.message-bubble.small {
+  padding: 8px 12px;
+  border-radius: 12px;
+  border-top-left-radius: 2px;
+}
+
+.message-bubble p {
+  font-size: 14px;
+  color: #1e293b;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+  margin: 0;
+}
+
+.message-bubble.small p {
+  font-size: 12px;
+}
+
+.message-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+  font-size: 12px;
+  color: #9ca3af;
+}
+
+.delivered-check {
+  width: 14px;
+  height: 14px;
+  color: #3b82f6;
+  animation: checkAppear 0.4s ease-out 0.3s both;
+}
+
+@keyframes checkAppear {
+  0% { opacity: 0; transform: scale(0); }
+  50% { transform: scale(1.2); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+.empty-messages {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 128px;
+  text-align: center;
+  color: #9ca3af;
+  font-size: 14px;
+}
+
+.empty-messages .anticon {
+  font-size: 32px;
+  color: #cbd5e1;
+  margin-bottom: 8px;
+}
+
+.phone-notch {
+  position: absolute;
+  left: 50%;
+  top: 16px;
+  width: 96px;
+  height: 28px;
+  transform: translateX(-50%);
+  border-radius: 9999px;
+  background: #1e293b;
+}
+
+.phone-notch.small {
+  width: 64px;
+  height: 20px;
+  top: 12px;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 24px;
+  padding-top: 24px;
+  border-top: 1px solid #e5e7eb;
+}
+
+/* Send Modal */
+.send-modal-content {
+  text-align: center;
+}
+
+.send-icon-wrapper {
+  width: 64px;
+  height: 64px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: linear-gradient(to bottom right, #ccfbf1, #cffafe);
+  font-size: 32px;
+  color: #0d9488;
+}
+
+.send-campaign-name {
+  margin-top: 16px;
+  font-size: 18px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.recipients-count {
+  margin-top: 24px;
+  padding: 16px;
+  border-radius: 16px;
+  background: linear-gradient(to bottom right, #f0fdfa, #ecfeff);
+  text-align: center;
+}
+
+.recipients-number {
+  font-size: 30px;
+  font-weight: 700;
+  color: #0f766e;
+}
+
+.recipients-label {
+  margin-top: 4px;
+  font-size: 14px;
+  color: #0d9488;
+}
+
+.send-options {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.send-option {
+  display: flex;
+  align-items: flex-start;
+  padding: 16px;
+  border: 2px solid #e5e7eb;
+  border-radius: 12px;
+  transition: all 0.2s;
+}
+
+.send-option:hover {
+  border-color: #d1d5db;
+}
+
+.send-option :deep(.ant-radio-checked) + * {
+  /* Handled by ant-design */
+}
+
+.option-title {
+  font-weight: 500;
+  color: #111827;
+}
+
+.option-desc {
+  font-size: 14px;
+  color: #6b7280;
+}
+
+.schedule-input {
+  margin-top: 12px;
+  margin-left: 36px;
+}
+
+.send-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 32px;
+}
+
+.send-actions .ant-btn {
+  flex: 1;
+}
+
+/* Delete Modal */
+.delete-modal-content {
+  text-align: center;
+}
+
+.delete-icon-wrapper {
+  width: 64px;
+  height: 64px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: #fee2e2;
+  font-size: 32px;
+  color: #dc2626;
+}
+
+.delete-message {
+  margin-top: 16px;
+  color: #6b7280;
+}
+
+.delete-message strong {
+  color: #374151;
+}
+
+.delete-warning {
+  margin-top: 8px;
+  font-size: 14px;
+  color: #ef4444;
+}
+
+.delete-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 32px;
+}
+
+.delete-actions .ant-btn {
+  flex: 1;
 }
 </style>

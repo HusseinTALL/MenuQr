@@ -40,8 +40,8 @@ export function useQRCode() {
         errorCorrectionLevel: 'M',
       });
       return dataUrl;
-    } catch (error) {
-      console.error('Failed to generate QR code:', error);
+    } catch (_error) {
+      console.error('Failed to generate QR code:');
       throw new Error('Impossible de générer le QR code');
     }
   };
@@ -63,8 +63,8 @@ export function useQRCode() {
         color: mergedOptions.color,
         errorCorrectionLevel: 'M',
       });
-    } catch (error) {
-      console.error('Failed to generate QR code to canvas:', error);
+    } catch (_error) {
+      console.error('Failed to generate QR code to canvas:');
       throw new Error('Impossible de générer le QR code');
     }
   };
@@ -86,8 +86,8 @@ export function useQRCode() {
 
       // Download using file-saver
       saveAs(blob, `${filename}.png`);
-    } catch (error) {
-      console.error('Failed to download QR code:', error);
+    } catch (_error) {
+      console.error('Failed to download QR code:');
       throw new Error('Impossible de télécharger le QR code');
     }
   };
@@ -134,7 +134,7 @@ export function useQRCode() {
 
       // Add QR code for each table
       for (const table of tables) {
-        if (!table.isActive) continue; // Skip inactive tables
+        if (!table.isActive) {continue;} // Skip inactive tables
 
         const tableUrl = getTableUrl(restaurantSlug, table.name);
         const qrDataUrl = await generateQRCode(tableUrl, { width: 500 });
@@ -148,8 +148,8 @@ export function useQRCode() {
       // Generate and download ZIP
       const content = await zip.generateAsync({ type: 'blob' });
       saveAs(content, `${restaurantSlug}-qr-codes.zip`);
-    } catch (error) {
-      console.error('Failed to download all QR codes:', error);
+    } catch (_error) {
+      console.error('Failed to download all QR codes:');
       throw new Error('Impossible de télécharger les QR codes');
     }
   };
@@ -161,8 +161,8 @@ export function useQRCode() {
     try {
       await navigator.clipboard.writeText(url);
       return true;
-    } catch (error) {
-      console.error('Failed to copy to clipboard:', error);
+    } catch (_error) {
+      console.error('Failed to copy to clipboard:');
       return false;
     }
   };

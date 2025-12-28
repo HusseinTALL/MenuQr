@@ -19,14 +19,18 @@ const currencyConfig: Record<string, { symbol: string; position: 'before' | 'aft
  * @param currency - Currency code (default: XOF)
  */
 export function formatPrice(amount: number, currency: string = 'XOF'): string {
-  const config = currencyConfig[currency] || currencyConfig.XOF;
+  const defaultConfig = { symbol: 'FCFA', position: 'after' as const, decimals: 0, locale: 'fr-FR' };
+  const config = currencyConfig[currency] ?? defaultConfig;
+
+  // Handle NaN, null, undefined, or invalid numbers
+  const safeAmount = (amount === null || amount === undefined || isNaN(amount)) ? 0 : amount;
 
   const formatted = new Intl.NumberFormat(config.locale, {
     style: 'decimal',
     minimumFractionDigits: config.decimals,
     maximumFractionDigits: config.decimals,
   })
-    .format(amount)
+    .format(safeAmount)
     .replace(/\s/g, ' ');
 
   if (config.position === 'before') {
@@ -39,12 +43,15 @@ export function formatPrice(amount: number, currency: string = 'XOF'): string {
  * Format price without currency suffix
  */
 export function formatNumber(amount: number): string {
+  // Handle NaN, null, undefined, or invalid numbers
+  const safeAmount = (amount === null || amount === undefined || isNaN(amount)) ? 0 : amount;
+
   return new Intl.NumberFormat('fr-FR', {
     style: 'decimal',
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
   })
-    .format(amount)
+    .format(safeAmount)
     .replace(/\s/g, ' ');
 }
 

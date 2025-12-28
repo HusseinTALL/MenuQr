@@ -1,5 +1,7 @@
 import { Router } from 'express';
 import authRoutes from './authRoutes.js';
+import twoFactorRoutes from './twoFactorRoutes.js';
+import sessionRoutes from './sessionRoutes.js';
 import restaurantRoutes from './restaurantRoutes.js';
 import categoryRoutes from './categoryRoutes.js';
 import dishRoutes from './dishRoutes.js';
@@ -18,6 +20,8 @@ import {
   adminRouter as scheduledOrderAdminRouter,
   customerRouter as scheduledOrderCustomerRouter,
 } from './scheduledOrderRoutes.js';
+import superAdminRoutes from './superAdminRoutes.js';
+import { getCaptchaConfig } from '../services/captchaService.js';
 
 const router = Router();
 
@@ -30,8 +34,18 @@ router.get('/health', (_req, res) => {
   });
 });
 
+// CAPTCHA configuration (for frontend)
+router.get('/captcha-config', (_req, res) => {
+  res.json({
+    success: true,
+    data: getCaptchaConfig(),
+  });
+});
+
 // Admin/Staff API routes
 router.use('/auth', authRoutes);
+router.use('/auth/2fa', twoFactorRoutes);
+router.use('/auth/sessions', sessionRoutes);
 router.use('/restaurants', restaurantRoutes);
 router.use('/categories', categoryRoutes);
 router.use('/dishes', dishRoutes);
@@ -55,5 +69,8 @@ router.use('/customer/reservations', customerReservationRouter);
 router.use('/customer/reviews', reviewCustomerRoutes);
 router.use('/customer/scheduled-orders', scheduledOrderCustomerRouter);
 router.use('/customer', customerRoutes);
+
+// Super Admin routes
+router.use('/superadmin', superAdminRoutes);
 
 export default router;

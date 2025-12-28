@@ -1,0 +1,24 @@
+# CODEOWNERS file for MenuQR
+# These owners will be requested for review when someone opens a pull request
+
+# Default owners for everything in the repo
+* @menuqr/core-team
+
+# Frontend code
+/menuqr-app/ @menuqr/frontend-team
+
+# Backend code
+/menuqr-api/ @menuqr/backend-team
+
+# CI/CD and DevOps
+/.github/ @menuqr/devops-team
+/docker* @menuqr/devops-team
+
+# Documentation
+*.md @menuqr/docs-team
+/docs/ @menuqr/docs-team
+
+# Security-sensitive files require security team review
+**/auth* @menuqr/security-team
+**/middleware/auth* @menuqr/security-team
+**/*.env* @menuqr/security-team
