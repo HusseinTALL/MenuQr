@@ -3,6 +3,7 @@ import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import api from '@/services/api';
 import { useDeliveryTracking } from '@/composables/useSocket';
+import { useGoogleMaps } from '@/composables/useGoogleMaps';
 import ChatBox from '@/components/chat/ChatBox.vue';
 import {
   CarOutlined,
@@ -14,6 +15,7 @@ import {
   StarOutlined,
   MessageOutlined,
   WifiOutlined,
+  ReloadOutlined,
 } from '@ant-design/icons-vue';
 
 interface TrackingData {
@@ -58,9 +60,38 @@ const router = useRouter();
 const loading = ref(true);
 const tracking = ref<TrackingData | null>(null);
 const refreshInterval = ref<ReturnType<typeof setInterval> | null>(null);
+const etaRefreshInterval = ref<ReturnType<typeof setInterval> | null>(null);
 const isLiveTracking = ref(false);
 const showChat = ref(false);
 const unreadMessages = ref(0);
+
+// ETA data from API
+const etaData = ref<{
+  eta: string;
+  durationMinutes: number;
+  distanceKm: number;
+  trafficCondition: 'light' | 'moderate' | 'heavy' | 'unknown';
+  driverLocation?: { lat: number; lng: number };
+  route?: { polyline: string };
+} | null>(null);
+
+// Map refs
+const mapContainer = ref<HTMLElement | null>(null);
+const {
+  isLoaded: mapLoaded,
+  error: mapError,
+  hasApiKey,
+  setMarker,
+  setPolyline,
+  fitBounds,
+  panTo,
+  createDriverIcon,
+  createLocationIcon,
+} = useGoogleMaps(mapContainer, {
+  zoom: 14,
+  disableDefaultUI: true,
+  zoomControl: true,
+});
 
 const orderId = computed(() => route.params.orderId as string);
 
@@ -157,6 +188,9 @@ const fetchTracking = async () => {
       if (response.data.deliveryId && !liveTracking) {
         liveTracking = useDeliveryTracking(response.data.deliveryId);
         isLiveTracking.value = true;
+
+        // Start ETA polling for active deliveries
+        startETAPolling();
       }
     }
   } catch (error) {
@@ -165,6 +199,122 @@ const fetchTracking = async () => {
     loading.value = false;
   }
 };
+
+// Fetch real-time ETA from API
+const fetchETA = async () => {
+  if (!tracking.value?.deliveryId) return;
+
+  // Only fetch ETA for active delivery statuses
+  const activeStatuses = ['accepted', 'arriving_restaurant', 'at_restaurant', 'picked_up', 'in_transit', 'arrived'];
+  if (!activeStatuses.includes(tracking.value.status)) return;
+
+  try {
+    const response = await api.getDeliveryETA(tracking.value.deliveryId);
+
+    if (response.success && response.data) {
+      etaData.value = {
+        eta: response.data.eta,
+        durationMinutes: response.data.durationMinutes,
+        distanceKm: response.data.distanceKm,
+        trafficCondition: response.data.trafficCondition,
+        driverLocation: response.data.driverLocation,
+        route: response.data.route,
+      };
+
+      // Update tracking data with new ETA
+      if (response.data.eta) {
+        tracking.value.estimatedArrival = response.data.eta;
+      }
+      if (response.data.distanceKm) {
+        tracking.value.distanceRemaining = response.data.distanceKm;
+      }
+      if (response.data.driverLocation) {
+        tracking.value.driverLocation = response.data.driverLocation;
+      }
+
+      // Update map markers and route
+      updateMapMarkers();
+    }
+  } catch (error) {
+    console.error('Failed to fetch ETA:', error);
+  }
+};
+
+// Update map with current positions
+const updateMapMarkers = () => {
+  if (!mapLoaded.value || !tracking.value) return;
+
+  // Add restaurant marker
+  if (tracking.value.pickupAddress) {
+    // We need coordinates - for now use a placeholder or fetch from delivery route
+  }
+
+  // Add driver marker if we have location
+  if (tracking.value.driverLocation) {
+    setMarker('driver', {
+      position: tracking.value.driverLocation,
+      title: tracking.value.driverInfo?.name || 'Livreur',
+      icon: createDriverIcon('#1890ff'),
+    });
+
+    // Pan to driver location
+    panTo(tracking.value.driverLocation);
+  }
+
+  // Add route polyline if available
+  if (etaData.value?.route?.polyline) {
+    setPolyline('route', etaData.value.route.polyline, {
+      strokeColor: '#1890ff',
+      strokeWeight: 4,
+      strokeOpacity: 0.8,
+    });
+  }
+};
+
+// Start polling for ETA updates
+const startETAPolling = () => {
+  // Initial fetch
+  fetchETA();
+
+  // Poll every 15 seconds for active deliveries
+  etaRefreshInterval.value = setInterval(() => {
+    if (tracking.value && !['delivered', 'cancelled'].includes(tracking.value.status)) {
+      fetchETA();
+    }
+  }, 15000);
+};
+
+// Stop ETA polling
+const stopETAPolling = () => {
+  if (etaRefreshInterval.value) {
+    clearInterval(etaRefreshInterval.value);
+    etaRefreshInterval.value = null;
+  }
+};
+
+// Traffic condition label
+const trafficLabel = computed(() => {
+  if (!etaData.value?.trafficCondition) return null;
+  const labels: Record<string, string> = {
+    light: 'Trafic fluide',
+    moderate: 'Trafic modéré',
+    heavy: 'Trafic dense',
+    unknown: '',
+  };
+  return labels[etaData.value.trafficCondition];
+});
+
+// Traffic condition color
+const trafficColor = computed(() => {
+  if (!etaData.value?.trafficCondition) return '#8c8c8c';
+  const colors: Record<string, string> = {
+    light: '#52c41a',
+    moderate: '#faad14',
+    heavy: '#ff4d4f',
+    unknown: '#8c8c8c',
+  };
+  return colors[etaData.value.trafficCondition];
+});
 
 // Watch for live location updates from WebSocket
 watch(
@@ -259,6 +409,7 @@ onMounted(() => {
 
 onUnmounted(() => {
   stopAutoRefresh();
+  stopETAPolling();
 });
 </script>
 
@@ -367,13 +518,72 @@ onUnmounted(() => {
         </div>
       </div>
 
-      <!-- Map Placeholder -->
+      <!-- Map Section -->
       <div class="map-section">
-        <div class="map-placeholder">
+        <!-- Real Google Map -->
+        <div v-if="hasApiKey" class="map-container">
+          <div ref="mapContainer" class="google-map"></div>
+
+          <!-- Map overlay with ETA info -->
+          <div v-if="etaData" class="map-overlay">
+            <div class="eta-card">
+              <div class="eta-time">
+                <ClockCircleOutlined />
+                <span>{{ etaData.durationMinutes }} min</span>
+              </div>
+              <div class="eta-distance">
+                {{ etaData.distanceKm.toFixed(1) }} km
+              </div>
+              <div v-if="trafficLabel" class="traffic-badge" :style="{ backgroundColor: trafficColor }">
+                {{ trafficLabel }}
+              </div>
+            </div>
+          </div>
+
+          <!-- Map loading state -->
+          <div v-if="!mapLoaded" class="map-loading">
+            <a-spin />
+            <span>Chargement de la carte...</span>
+          </div>
+
+          <!-- Map error state -->
+          <div v-if="mapError" class="map-error">
+            <EnvironmentOutlined />
+            <span>{{ mapError }}</span>
+          </div>
+        </div>
+
+        <!-- Fallback when no API key -->
+        <div v-else class="map-placeholder">
           <EnvironmentOutlined />
           <p>Carte de suivi en temps réel</p>
-          <span class="map-hint">La position du livreur sera affichée ici</span>
+          <span v-if="tracking?.driverLocation" class="map-hint">
+            Position: {{ tracking.driverLocation.lat.toFixed(4) }}, {{ tracking.driverLocation.lng.toFixed(4) }}
+          </span>
+          <span v-else class="map-hint">La position du livreur sera affichée ici</span>
+
+          <!-- Show ETA info even without map -->
+          <div v-if="etaData" class="eta-fallback">
+            <div class="eta-info">
+              <ClockCircleOutlined />
+              <span><strong>{{ etaData.durationMinutes }} min</strong> ({{ etaData.distanceKm.toFixed(1) }} km)</span>
+            </div>
+            <div v-if="trafficLabel" class="traffic-info" :style="{ color: trafficColor }">
+              {{ trafficLabel }}
+            </div>
+          </div>
         </div>
+
+        <!-- Refresh ETA button -->
+        <a-button
+          v-if="tracking && !['delivered', 'cancelled'].includes(tracking.status)"
+          type="text"
+          size="small"
+          class="refresh-eta-btn"
+          @click="fetchETA"
+        >
+          <ReloadOutlined /> Actualiser
+        </a-button>
       </div>
 
       <!-- Addresses -->
@@ -731,6 +941,81 @@ onUnmounted(() => {
 
 .map-section {
   margin-bottom: 24px;
+  position: relative;
+}
+
+.map-container {
+  position: relative;
+  height: 250px;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.google-map {
+  width: 100%;
+  height: 100%;
+}
+
+.map-overlay {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  right: 12px;
+  pointer-events: none;
+}
+
+.eta-card {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  pointer-events: auto;
+}
+
+.eta-time {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 16px;
+  font-weight: 600;
+  color: #1890ff;
+}
+
+.eta-distance {
+  font-size: 14px;
+  color: #595959;
+}
+
+.traffic-badge {
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 500;
+  color: #fff;
+}
+
+.map-loading,
+.map-error {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  background: rgba(255, 255, 255, 0.9);
+  color: #8c8c8c;
+}
+
+.map-error {
+  color: #ff4d4f;
 }
 
 .map-placeholder {
@@ -751,6 +1036,40 @@ onUnmounted(() => {
 
 .map-hint {
   font-size: 12px;
+}
+
+.eta-fallback {
+  margin-top: 12px;
+  padding: 12px 16px;
+  background: rgba(255, 255, 255, 0.8);
+  border-radius: 12px;
+  text-align: center;
+}
+
+.eta-info {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: #1890ff;
+  font-size: 14px;
+}
+
+.traffic-info {
+  font-size: 12px;
+  margin-top: 4px;
+}
+
+.refresh-eta-btn {
+  position: absolute;
+  bottom: -32px;
+  right: 0;
+  color: #8c8c8c;
+  font-size: 12px;
+}
+
+.refresh-eta-btn:hover {
+  color: #1890ff;
 }
 
 .addresses-section {

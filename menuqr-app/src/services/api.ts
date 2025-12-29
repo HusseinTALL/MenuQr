@@ -2067,6 +2067,61 @@ class ApiService {
   }
 
   /**
+   * Get delivery ETA (public - for customer tracking)
+   */
+  async getDeliveryETA(deliveryId: string) {
+    return this.request<{
+      deliveryId: string;
+      status: string;
+      etaType: 'to_restaurant' | 'to_customer';
+      eta: string;
+      durationMinutes: number;
+      distanceKm: number;
+      trafficCondition: 'light' | 'moderate' | 'heavy' | 'unknown';
+      driverLocation: { lat: number; lng: number; updatedAt: string };
+      destination: { lat: number; lng: number; type: string };
+      route?: { polyline: string; distanceKm: number; durationMinutes: number };
+      mapsApiEnabled: boolean;
+    }>(`/deliveries/${deliveryId}/eta`, {
+      auth: 'none',
+    });
+  }
+
+  /**
+   * Get delivery route with polyline (public - for customer tracking)
+   */
+  async getDeliveryRoute(deliveryId: string) {
+    return this.request<{
+      deliveryId: string;
+      status: string;
+      driverLocation: { lat: number; lng: number };
+      restaurant: { coordinates: { lat: number; lng: number }; address: string };
+      customer: { coordinates: { lat: number; lng: number }; address: string; instructions?: string };
+      eta: {
+        toRestaurant: { eta: string; durationMinutes: number; distanceKm: number };
+        toCustomer: { eta: string; durationMinutes: number; distanceKm: number };
+        total: { eta: string; minutes: number };
+      };
+      routes: {
+        toRestaurant?: { polyline: string; distanceKm: number; durationMinutes: number };
+        toCustomer?: { polyline: string; distanceKm: number; durationMinutes: number };
+      };
+      mapsApiEnabled: boolean;
+    }>(`/deliveries/${deliveryId}/route`, {
+      auth: 'none',
+    });
+  }
+
+  /**
+   * Track delivery by tracking code (public)
+   */
+  async trackDelivery(trackingCode: string) {
+    return this.request<unknown>(`/deliveries/track/${trackingCode}`, {
+      auth: 'none',
+    });
+  }
+
+  /**
    * Get driver earnings
    */
   async getDriverEarnings(params?: { startDate?: string; endDate?: string }) {

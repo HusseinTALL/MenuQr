@@ -159,6 +159,12 @@ export const config = {
     },
   },
 
+  // Google Maps API
+  googleMaps: {
+    apiKey: process.env.GOOGLE_MAPS_API_KEY || '',
+    enabled: !!process.env.GOOGLE_MAPS_API_KEY,
+  },
+
   // Sentry Error Tracking
   sentry: {
     dsn: process.env.SENTRY_DSN || '',

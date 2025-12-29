@@ -16,6 +16,8 @@ import {
   acceptDelivery,
   rejectDelivery,
   completeDelivery,
+  getDeliveryETA,
+  getDeliveryRoute,
 } from '../controllers/deliveryController.js';
 import { authenticate, authenticateDriver, authenticateUserOrDriver } from '../middleware/auth.js';
 import { hasPermission, hasAnyPermission } from '../middleware/permission.js';
@@ -28,6 +30,12 @@ const router = Router();
 
 // GET /api/deliveries/track/:trackingCode - Track delivery (public)
 router.get('/track/:trackingCode', trackDelivery);
+
+// GET /api/deliveries/:id/eta - Get real-time ETA (public for customers)
+router.get('/:id/eta', getDeliveryETA);
+
+// GET /api/deliveries/:id/route - Get delivery route with polyline (public for customers)
+router.get('/:id/route', getDeliveryRoute);
 
 // ============================================
 // Authenticated Routes

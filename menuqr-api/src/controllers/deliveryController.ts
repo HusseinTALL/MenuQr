@@ -3,6 +3,7 @@ import { Delivery, DeliveryStatus, PODType } from '../models/Delivery.js';
 import { DeliveryDriver } from '../models/DeliveryDriver.js';
 import { Order } from '../models/Order.js';
 import { Restaurant } from '../models/Restaurant.js';
+import { routingService } from '../services/routingService.js';
 
 // ============================================
 // Delivery CRUD Operations
@@ -371,7 +372,7 @@ export const assignDriver = async (req: Request, res: Response): Promise<void> =
 export const updateDeliveryStatus = async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
-    const { status, note, location } = req.body;
+    const { status, note: _note, location: _location } = req.body;
 
     const delivery = await Delivery.findById(id);
     if (!delivery) {
@@ -1048,7 +1049,7 @@ export const acceptDelivery = async (req: Request, res: Response): Promise<void>
 export const rejectDelivery = async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
-    const { reason } = req.body;
+    const { reason: _reason } = req.body;
     const driverId = (req as any).user?.driverId;
 
     if (!driverId) {
@@ -1224,6 +1225,252 @@ export const completeDelivery = async (req: Request, res: Response): Promise<voi
   }
 };
 
+/**
+ * Get real-time ETA for a delivery
+ * GET /api/deliveries/:id/eta
+ */
+export const getDeliveryETA = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+
+    const delivery = await Delivery.findById(id).populate('driverId');
+    if (!delivery) {
+      res.status(404).json({
+        success: false,
+        message: 'Livraison non trouvée',
+      });
+      return;
+    }
+
+    // Check if delivery is in a trackable state
+    const trackableStatuses: DeliveryStatus[] = [
+      'accepted',
+      'arriving_restaurant',
+      'at_restaurant',
+      'picked_up',
+      'in_transit',
+      'arrived',
+    ];
+
+    if (!trackableStatuses.includes(delivery.status)) {
+      res.status(400).json({
+        success: false,
+        message: 'Cette livraison n\'est pas en cours de suivi',
+        data: {
+          status: delivery.status,
+          canTrack: false,
+        },
+      });
+      return;
+    }
+
+    // Get driver location
+    const driver = delivery.driverId as any;
+    const driverLocation = driver?.currentLocation || delivery.locationHistory?.[delivery.locationHistory.length - 1];
+
+    if (!driverLocation) {
+      res.status(400).json({
+        success: false,
+        message: 'Position du livreur non disponible',
+        data: {
+          status: delivery.status,
+          canTrack: true,
+          hasLocation: false,
+        },
+      });
+      return;
+    }
+
+    // Determine destination based on status
+    let destination: { lat: number; lng: number };
+    let etaType: 'to_restaurant' | 'to_customer';
+    let additionalMinutes = 0;
+
+    if (['accepted', 'arriving_restaurant'].includes(delivery.status)) {
+      // Driver going to restaurant
+      destination = delivery.pickupAddress.coordinates;
+      etaType = 'to_restaurant';
+      // Add estimated prep time if order not ready
+      additionalMinutes = 5; // Default prep buffer
+    } else {
+      // Driver going to customer
+      destination = delivery.deliveryAddress.coordinates;
+      etaType = 'to_customer';
+    }
+
+    // Calculate ETA using routing service
+    const etaResult = await routingService.calculateETA(
+      { lat: driverLocation.lat, lng: driverLocation.lng },
+      destination,
+      additionalMinutes
+    );
+
+    // Get route polyline if available
+    let route = null;
+    if (routingService.isEnabled()) {
+      const routeInfo = await routingService.getRoute(
+        { lat: driverLocation.lat, lng: driverLocation.lng },
+        destination
+      );
+      route = {
+        polyline: routeInfo.polyline,
+        distanceKm: routeInfo.distanceKm,
+        durationMinutes: routeInfo.durationMinutes,
+      };
+    }
+
+    // Update delivery with new ETA
+    if (etaType === 'to_customer') {
+      delivery.estimatedDeliveryTime = etaResult.eta;
+      await delivery.save();
+    }
+
+    res.json({
+      success: true,
+      data: {
+        deliveryId: delivery._id,
+        status: delivery.status,
+        etaType,
+        eta: etaResult.eta,
+        durationMinutes: etaResult.durationMinutes,
+        distanceKm: etaResult.distanceKm,
+        trafficCondition: etaResult.trafficCondition,
+        driverLocation: {
+          lat: driverLocation.lat,
+          lng: driverLocation.lng,
+          updatedAt: driverLocation.timestamp || driverLocation.updatedAt || new Date(),
+        },
+        destination: {
+          lat: destination.lat,
+          lng: destination.lng,
+          type: etaType === 'to_restaurant' ? 'restaurant' : 'customer',
+        },
+        route,
+        mapsApiEnabled: routingService.isEnabled(),
+      },
+    });
+  } catch (error) {
+    console.error('Get delivery ETA error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur lors du calcul de l\'ETA',
+    });
+  }
+};
+
+/**
+ * Get full route for delivery tracking
+ * GET /api/deliveries/:id/route
+ */
+export const getDeliveryRoute = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+
+    const delivery = await Delivery.findById(id).populate('driverId');
+    if (!delivery) {
+      res.status(404).json({
+        success: false,
+        message: 'Livraison non trouvée',
+      });
+      return;
+    }
+
+    // Get driver location
+    const driver = delivery.driverId as any;
+    const driverLocation = driver?.currentLocation || delivery.locationHistory?.[delivery.locationHistory.length - 1];
+
+    if (!driverLocation) {
+      res.status(400).json({
+        success: false,
+        message: 'Position du livreur non disponible',
+      });
+      return;
+    }
+
+    // Calculate full delivery route
+    const fullRoute = await routingService.calculateDeliveryETA(
+      { lat: driverLocation.lat, lng: driverLocation.lng },
+      delivery.pickupAddress.coordinates,
+      delivery.deliveryAddress.coordinates,
+      5 // Default prep time buffer
+    );
+
+    // Get route polylines
+    let routeToRestaurant = null;
+    let routeToCustomer = null;
+
+    if (routingService.isEnabled()) {
+      // Driver to restaurant
+      if (['accepted', 'arriving_restaurant'].includes(delivery.status)) {
+        const route = await routingService.getRoute(
+          { lat: driverLocation.lat, lng: driverLocation.lng },
+          delivery.pickupAddress.coordinates
+        );
+        routeToRestaurant = {
+          polyline: route.polyline,
+          distanceKm: route.distanceKm,
+          durationMinutes: route.durationMinutes,
+        };
+      }
+
+      // Restaurant to customer (or driver to customer if already picked up)
+      const customerRouteOrigin = ['picked_up', 'in_transit', 'arrived'].includes(delivery.status)
+        ? { lat: driverLocation.lat, lng: driverLocation.lng }
+        : delivery.pickupAddress.coordinates;
+
+      const route = await routingService.getRoute(
+        customerRouteOrigin,
+        delivery.deliveryAddress.coordinates
+      );
+      routeToCustomer = {
+        polyline: route.polyline,
+        distanceKm: route.distanceKm,
+        durationMinutes: route.durationMinutes,
+      };
+    }
+
+    res.json({
+      success: true,
+      data: {
+        deliveryId: delivery._id,
+        status: delivery.status,
+        driverLocation: {
+          lat: driverLocation.lat,
+          lng: driverLocation.lng,
+        },
+        restaurant: {
+          coordinates: delivery.pickupAddress.coordinates,
+          address: `${delivery.pickupAddress.street}, ${delivery.pickupAddress.city}`,
+        },
+        customer: {
+          coordinates: delivery.deliveryAddress.coordinates,
+          address: `${delivery.deliveryAddress.street}, ${delivery.deliveryAddress.city}`,
+          instructions: delivery.deliveryAddress.instructions,
+        },
+        eta: {
+          toRestaurant: fullRoute.toRestaurant,
+          toCustomer: fullRoute.toCustomer,
+          total: {
+            eta: fullRoute.totalETA,
+            minutes: fullRoute.totalMinutes,
+          },
+        },
+        routes: {
+          toRestaurant: routeToRestaurant,
+          toCustomer: routeToCustomer,
+        },
+        mapsApiEnabled: routingService.isEnabled(),
+      },
+    });
+  } catch (error) {
+    console.error('Get delivery route error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur lors de la récupération de la route',
+    });
+  }
+};
+
 export default {
   createDelivery,
   getDeliveries,
@@ -1241,4 +1488,6 @@ export default {
   acceptDelivery,
   rejectDelivery,
   completeDelivery,
+  getDeliveryETA,
+  getDeliveryRoute,
 };
