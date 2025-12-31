@@ -56,7 +56,7 @@ const defaultFlags: FeatureFlags = {
  * Parse boolean from environment variable
  */
 function parseEnvBoolean(value: string | undefined, defaultValue: boolean): boolean {
-  if (value === undefined) return defaultValue;
+  if (value === undefined) {return defaultValue;}
   return value.toLowerCase() === 'true' || value === '1';
 }
 
@@ -93,7 +93,7 @@ export function isFeatureEnabled(flag: keyof FeatureFlags): boolean {
  * Returns 404 if feature is disabled (feature doesn't exist from user perspective)
  */
 export function requireFeature(flag: keyof FeatureFlags) {
-  return (req: any, res: any, next: any) => {
+  return (_req: any, res: any, next: any) => {
     if (!isFeatureEnabled(flag)) {
       return res.status(404).json({
         success: false,

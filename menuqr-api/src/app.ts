@@ -340,6 +340,63 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 });
 
 // ===========================================
+// HTTP Caching Headers
+// ===========================================
+
+// Cache control middleware for different route patterns
+const cacheMiddleware = (req: Request, res: Response, next: NextFunction): void => {
+  // Skip caching for non-GET requests
+  if (req.method !== 'GET') {
+    res.set('Cache-Control', 'no-store');
+    return next();
+  }
+
+  // Define caching rules based on route patterns
+  const path = req.path;
+
+  // Public menu data - cache for 5 minutes
+  if (path.match(/^\/api\/v1\/menu\/[^/]+$/) ||
+      path.match(/^\/api\/v1\/menu\/[^/]+\/categories/) ||
+      path.match(/^\/api\/v1\/menu\/[^/]+\/dishes/) ||
+      path.match(/^\/api\/v1\/hotel\/guest\/menu/)) {
+    res.set('Cache-Control', 'public, max-age=300, stale-while-revalidate=60');
+    return next();
+  }
+
+  // Restaurant list and public info - cache for 1 minute
+  if (path.match(/^\/api\/v1\/restaurants/) && !req.headers.authorization) {
+    res.set('Cache-Control', 'public, max-age=60, stale-while-revalidate=30');
+    return next();
+  }
+
+  // Health check - no caching needed
+  if (path === '/api/v1/health') {
+    res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+    return next();
+  }
+
+  // Static documentation - cache for 1 hour
+  if (path.startsWith('/api/v1/docs') || path.startsWith('/api-docs')) {
+    res.set('Cache-Control', 'public, max-age=3600');
+    return next();
+  }
+
+  // Authenticated/dynamic endpoints - prevent caching
+  if (req.headers.authorization) {
+    res.set('Cache-Control', 'private, no-cache, no-store, must-revalidate');
+    res.set('Pragma', 'no-cache');
+    res.set('Expires', '0');
+    return next();
+  }
+
+  // Default: short cache for public GET requests
+  res.set('Cache-Control', 'public, max-age=30, stale-while-revalidate=10');
+  next();
+};
+
+app.use(cacheMiddleware);
+
+// ===========================================
 // API Documentation (Swagger)
 // ===========================================
 
