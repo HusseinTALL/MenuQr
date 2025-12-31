@@ -269,10 +269,103 @@ app.use(
     origin: config.corsOrigin,
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
     exposedHeaders: ['RateLimit-Limit', 'RateLimit-Remaining', 'RateLimit-Reset'],
   })
 );
+
+// ===========================================
+// CSRF Protection (Defense in Depth)
+// ===========================================
+// JWT in Authorization headers provides inherent CSRF protection.
+// This middleware adds additional defense layers:
+// 1. Origin/Referer validation for state-changing requests
+// 2. Blocks requests from unexpected origins
+
+const csrfProtection = (req: Request, res: Response, next: NextFunction): void => {
+  // Skip CSRF check for safe methods
+  const safeMethods = ['GET', 'HEAD', 'OPTIONS'];
+  if (safeMethods.includes(req.method)) {
+    return next();
+  }
+
+  // Skip for webhook endpoints that need external access
+  const webhookPaths = ['/api/v1/webhooks', '/api/v1/stripe/webhook'];
+  if (webhookPaths.some(path => req.path.startsWith(path))) {
+    return next();
+  }
+
+  // Get origin from request
+  const origin = req.get('Origin');
+  const referer = req.get('Referer');
+  const requestedWith = req.get('X-Requested-With');
+
+  // Allow requests with valid Authorization header (JWT-based auth)
+  // These are protected by the token itself
+  if (req.headers.authorization?.startsWith('Bearer ')) {
+    return next();
+  }
+
+  // For requests without Authorization, validate Origin/Referer
+  const allowedOrigins = Array.isArray(config.corsOrigin)
+    ? config.corsOrigin
+    : [config.corsOrigin];
+
+  // Check Origin header
+  if (origin) {
+    if (!allowedOrigins.includes(origin)) {
+      logger.warn('CSRF: Invalid origin', { origin, path: req.path, ip: req.ip });
+      res.status(403).json({
+        success: false,
+        message: 'Invalid request origin.',
+      });
+      return;
+    }
+    return next();
+  }
+
+  // Check Referer header if no Origin
+  if (referer) {
+    try {
+      const refererUrl = new URL(referer);
+      const refererOrigin = refererUrl.origin;
+      if (!allowedOrigins.includes(refererOrigin)) {
+        logger.warn('CSRF: Invalid referer', { referer, path: req.path, ip: req.ip });
+        res.status(403).json({
+          success: false,
+          message: 'Invalid request referer.',
+        });
+        return;
+      }
+      return next();
+    } catch {
+      // Invalid referer URL format
+      logger.warn('CSRF: Malformed referer', { referer, path: req.path });
+    }
+  }
+
+  // Allow if X-Requested-With header is present (indicates AJAX call)
+  // Browsers don't allow cross-origin JavaScript to set custom headers
+  if (requestedWith) {
+    return next();
+  }
+
+  // Block requests without any origin verification
+  // In production, this catches cross-origin form submissions
+  if (!config.isDevelopment) {
+    logger.warn('CSRF: No origin verification', { path: req.path, ip: req.ip, method: req.method });
+    res.status(403).json({
+      success: false,
+      message: 'Request origin could not be verified.',
+    });
+    return;
+  }
+
+  // Allow in development mode for easier testing
+  next();
+};
+
+app.use(csrfProtection);
 
 // ===========================================
 // Body Parsing with Size Limits

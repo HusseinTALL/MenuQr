@@ -70,8 +70,14 @@ export const createTable = asyncHandler(async (req: Request, res: Response): Pro
     .select('order');
   const order = lastTable ? lastTable.order + 1 : 0;
 
+  // Extract only allowed fields (prevent field injection)
+  const { name, capacity, minCapacity, location } = req.body;
+
   const table = await Table.create({
-    ...req.body,
+    name,
+    capacity,
+    minCapacity,
+    location,
     restaurantId: restaurant._id,
     order,
   });

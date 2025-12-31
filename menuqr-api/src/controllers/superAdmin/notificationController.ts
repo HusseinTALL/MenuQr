@@ -545,8 +545,31 @@ export const getAlertRule = asyncHandler(async (req: Request, res: Response) => 
 export const createAlertRule = asyncHandler(async (req: Request, res: Response) => {
   const userId = (req as any).user?.userId;
 
+  // Extract only allowed fields (prevent field injection)
+  const {
+    name,
+    description,
+    trigger,
+    isEnabled,
+    channels,
+    emailTemplate,
+    customEmailSubject,
+    customEmailBody,
+    recipientType,
+    recipientFilter,
+  } = req.body;
+
   const alertRule = new AlertRule({
-    ...req.body,
+    name,
+    description,
+    trigger,
+    isEnabled,
+    channels,
+    emailTemplate,
+    customEmailSubject,
+    customEmailBody,
+    recipientType,
+    recipientFilter,
     createdBy: userId,
   });
 

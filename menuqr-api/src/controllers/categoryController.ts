@@ -18,9 +18,15 @@ export const createCategory = asyncHandler(async (req: Request, res: Response): 
     .select('order');
   const order = lastCategory ? lastCategory.order + 1 : 0;
 
+  // Extract only allowed fields (prevent field injection)
+  const { name, description, image, icon } = req.body;
+
   // Create category
   const category = await Category.create({
-    ...req.body,
+    name,
+    description,
+    image,
+    icon,
     restaurantId: restaurant._id,
     order,
   });
