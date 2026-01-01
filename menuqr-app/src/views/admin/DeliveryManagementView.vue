@@ -101,7 +101,7 @@ const stats = ref<DeliveryStats>({
 // Filters
 const searchQuery = ref('');
 const statusFilter = ref<string>('all');
-const dateFilter = ref<string>('today');
+const dateFilter = ref<string>('week');
 
 // Modal states
 const detailModalVisible = ref(false);
@@ -235,7 +235,7 @@ const getStatusLabel = (status: string) => {
 };
 
 const formatTime = (dateStr: string) => {
-  if (!dateStr) return '-';
+  if (!dateStr) {return '-';}
   return new Date(dateStr).toLocaleTimeString('fr-FR', {
     hour: '2-digit',
     minute: '2-digit',
@@ -243,7 +243,7 @@ const formatTime = (dateStr: string) => {
 };
 
 const formatDuration = (minutes: number) => {
-  if (minutes < 60) return `${minutes} min`;
+  if (minutes < 60) {return `${minutes} min`;}
   const hours = Math.floor(minutes / 60);
   const mins = minutes % 60;
   return `${hours}h${mins > 0 ? mins : ''}`;
@@ -318,7 +318,7 @@ const openAssignModal = async (delivery: Delivery) => {
 };
 
 const assignDriver = async (driverId: string) => {
-  if (!selectedDelivery.value) return;
+  if (!selectedDelivery.value) {return;}
 
   try {
     const response = await api.post(`/deliveries/${selectedDelivery.value._id}/assign`, {
