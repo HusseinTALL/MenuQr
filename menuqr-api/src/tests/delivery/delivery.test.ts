@@ -4,17 +4,14 @@
  */
 
 import '../setup.js'; // Initialize MongoDB Memory Server and mocks
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import request from 'supertest';
 import mongoose from 'mongoose';
 import app from '../../app.js';
 import { Delivery } from '../../models/Delivery.js';
-import { DeliveryDriver } from '../../models/DeliveryDriver.js';
 import {
-  createTestRestaurant,
   createTestDriver,
   createTestDeliveryOrder,
-  createTestDelivery,
   createDeliveryScenario,
   createSuperAdmin,
 } from './deliveryHelpers.js';
@@ -44,7 +41,7 @@ describe('Delivery Controller', () => {
     });
 
     it('should reject delivery creation for non-delivery order', async () => {
-      const { restaurant, ownerToken, order } = await createDeliveryScenario();
+      const { restaurant, ownerToken, order: _order } = await createDeliveryScenario();
 
       // Create a dine-in order
       const dineInOrder = await createTestDeliveryOrder(restaurant._id, {
@@ -64,7 +61,7 @@ describe('Delivery Controller', () => {
     });
 
     it('should reject duplicate delivery for same order', async () => {
-      const { ownerToken, order, delivery } = await createDeliveryScenario();
+      const { ownerToken, order, delivery: _delivery } = await createDeliveryScenario();
 
       const res = await request(app)
         .post('/api/v1/deliveries')
@@ -111,7 +108,7 @@ describe('Delivery Controller', () => {
   // =====================================================
   describe('GET /api/v1/deliveries', () => {
     it('should list deliveries for restaurant owner', async () => {
-      const { ownerToken, delivery } = await createDeliveryScenario();
+      const { ownerToken, delivery: _delivery } = await createDeliveryScenario();
 
       const res = await request(app)
         .get('/api/v1/deliveries')
@@ -124,7 +121,7 @@ describe('Delivery Controller', () => {
     });
 
     it('should filter deliveries by status', async () => {
-      const { ownerToken, delivery } = await createDeliveryScenario();
+      const { ownerToken, delivery: _delivery } = await createDeliveryScenario();
 
       const res = await request(app)
         .get('/api/v1/deliveries?status=pending')
@@ -323,7 +320,7 @@ describe('Delivery Controller', () => {
       const { restaurant, delivery } = await createDeliveryScenario();
 
       // Create a different driver
-      const { driver: otherDriver, accessToken: otherToken } = await createTestDriver([restaurant._id]);
+      const { driver: _otherDriver, accessToken: otherToken } = await createTestDriver([restaurant._id]);
 
       const res = await request(app)
         .post(`/api/v1/deliveries/${delivery._id}/accept`)
@@ -556,7 +553,7 @@ describe('Delivery Controller', () => {
   // =====================================================
   describe('GET /api/v1/deliveries/stats', () => {
     it('should return delivery statistics', async () => {
-      const { ownerToken, delivery } = await createDeliveryScenario();
+      const { ownerToken, delivery: _delivery } = await createDeliveryScenario();
 
       const res = await request(app)
         .get('/api/v1/deliveries/stats')
@@ -581,7 +578,7 @@ describe('Delivery Controller', () => {
   // =====================================================
   describe('GET /api/v1/deliveries/active', () => {
     it('should return active deliveries', async () => {
-      const { ownerToken, delivery } = await createDeliveryScenario();
+      const { ownerToken, delivery: _delivery } = await createDeliveryScenario();
 
       const res = await request(app)
         .get('/api/v1/deliveries/active')
@@ -641,7 +638,7 @@ describe('Delivery Controller', () => {
   // =====================================================
   describe('Superadmin Access', () => {
     it('should allow superadmin to view all deliveries', async () => {
-      const { delivery } = await createDeliveryScenario();
+      const { delivery: _delivery } = await createDeliveryScenario();
       const { accessToken: superadminToken } = await createSuperAdmin();
 
       const res = await request(app)
