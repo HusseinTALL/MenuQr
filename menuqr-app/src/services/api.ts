@@ -2017,6 +2017,43 @@ class ApiService {
     return this.request<T>(url);
   }
 
+  /**
+   * Download a file as Blob (for CSV, PDF exports)
+   */
+  async downloadBlob(endpoint: string, params?: Record<string, string | number | boolean | undefined>): Promise<Blob> {
+    let url = endpoint;
+    if (params) {
+      const query = new URLSearchParams();
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined) {
+          query.set(key, String(value));
+        }
+      });
+      const queryString = query.toString();
+      if (queryString) {
+        url = `${endpoint}?${queryString}`;
+      }
+    }
+
+    const token = this.getAccessToken();
+    const headers: Record<string, string> = {};
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    const response = await fetch(`${this.baseUrl}${url}`, {
+      method: 'GET',
+      headers,
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ message: 'Download failed' }));
+      throw new ApiError(errorData.message || 'Download failed', response.status);
+    }
+
+    return response.blob();
+  }
+
   // ==================== DRIVER ENDPOINTS ====================
 
   /**

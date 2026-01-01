@@ -138,18 +138,17 @@ const fetchStats = async () => {
   }
 };
 
-// Build query params from filters
-const buildQueryParams = (format: string): URLSearchParams => {
-  const params = new URLSearchParams();
-  params.append('format', format);
+// Build filter params object for API calls
+const buildFilterParams = (): Record<string, string> => {
+  const params: Record<string, string> = {};
 
-  if (filters.startDate) {params.append('startDate', filters.startDate);}
-  if (filters.endDate) {params.append('endDate', filters.endDate);}
-  if (filters.status) {params.append('status', filters.status);}
-  if (filters.role) {params.append('role', filters.role);}
-  if (filters.restaurantId) {params.append('restaurantId', filters.restaurantId);}
-  if (filters.action) {params.append('action', filters.action);}
-  if (filters.category) {params.append('category', filters.category);}
+  if (filters.startDate) {params.startDate = filters.startDate;}
+  if (filters.endDate) {params.endDate = filters.endDate;}
+  if (filters.status) {params.status = filters.status;}
+  if (filters.role) {params.role = filters.role;}
+  if (filters.restaurantId) {params.restaurantId = filters.restaurantId;}
+  if (filters.action) {params.action = filters.action;}
+  if (filters.category) {params.category = filters.category;}
 
   return params;
 };
@@ -158,14 +157,12 @@ const buildQueryParams = (format: string): URLSearchParams => {
 const downloadCSV = async (reportId: string) => {
   try {
     loading.value = true;
-    const params = buildQueryParams('csv');
+    const params = buildFilterParams();
+    params.format = 'csv';
 
-    const response = await api.get<Blob>(`/superadmin/reports/${reportId}?${params.toString()}`, {
-      responseType: 'blob',
-    });
+    const blob = await api.downloadBlob(`/superadmin/reports/${reportId}`, params);
 
     // Create download link
-    const blob = new Blob([response.data as BlobPart], { type: 'text/csv;charset=utf-8;' });
     const url = window.URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
@@ -188,14 +185,12 @@ const downloadCSV = async (reportId: string) => {
 const downloadDirectPDF = async (reportId: string) => {
   try {
     loading.value = true;
-    const params = buildQueryParams('pdf');
+    const params = buildFilterParams();
+    params.format = 'pdf';
 
-    const response = await api.get<Blob>(`/superadmin/reports/${reportId}?${params.toString()}`, {
-      responseType: 'blob',
-    });
+    const blob = await api.downloadBlob(`/superadmin/reports/${reportId}`, params);
 
     // Create download link for PDF
-    const blob = new Blob([response.data as BlobPart], { type: 'application/pdf' });
     const url = window.URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
@@ -218,9 +213,10 @@ const downloadDirectPDF = async (reportId: string) => {
 const previewReport = async (reportId: string) => {
   try {
     loading.value = true;
-    const params = buildQueryParams('json');
+    const params = buildFilterParams();
+    params.format = 'json';
 
-    const response = await api.get<ReportPreview>(`/superadmin/reports/${reportId}?${params.toString()}`);
+    const response = await api.get<ReportPreview>(`/superadmin/reports/${reportId}`, params);
     previewData.value = response.data || null;
     selectedReport.value = reportId;
     previewModalVisible.value = true;
