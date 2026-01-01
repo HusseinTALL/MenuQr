@@ -138,20 +138,27 @@ const fetchStats = async () => {
   }
 };
 
+// Build query params from filters
+const buildQueryParams = (format: string): URLSearchParams => {
+  const params = new URLSearchParams();
+  params.append('format', format);
+
+  if (filters.startDate) {params.append('startDate', filters.startDate);}
+  if (filters.endDate) {params.append('endDate', filters.endDate);}
+  if (filters.status) {params.append('status', filters.status);}
+  if (filters.role) {params.append('role', filters.role);}
+  if (filters.restaurantId) {params.append('restaurantId', filters.restaurantId);}
+  if (filters.action) {params.append('action', filters.action);}
+  if (filters.category) {params.append('category', filters.category);}
+
+  return params;
+};
+
 // Download report as CSV
 const downloadCSV = async (reportId: string) => {
   try {
     loading.value = true;
-    const params = new URLSearchParams();
-    params.append('format', 'csv');
-
-    if (filters.startDate) {params.append('startDate', filters.startDate);}
-    if (filters.endDate) {params.append('endDate', filters.endDate);}
-    if (filters.status) {params.append('status', filters.status);}
-    if (filters.role) {params.append('role', filters.role);}
-    if (filters.restaurantId) {params.append('restaurantId', filters.restaurantId);}
-    if (filters.action) {params.append('action', filters.action);}
-    if (filters.category) {params.append('category', filters.category);}
+    const params = buildQueryParams('csv');
 
     const response = await api.get<Blob>(`/superadmin/reports/${reportId}?${params.toString()}`, {
       responseType: 'blob',
@@ -168,29 +175,50 @@ const downloadCSV = async (reportId: string) => {
     document.body.removeChild(link);
     window.URL.revokeObjectURL(url);
 
-    message.success('Rapport telecharge avec succes');
+    message.success('Rapport CSV telecharge avec succes');
   } catch {
-    message.error('Erreur lors du telechargement');
+    message.error('Erreur lors du telechargement CSV');
     console.error("Operation failed");
   } finally {
     loading.value = false;
   }
 };
 
-// Preview report (PDF data)
+// Download report as PDF directly from backend
+const downloadDirectPDF = async (reportId: string) => {
+  try {
+    loading.value = true;
+    const params = buildQueryParams('pdf');
+
+    const response = await api.get<Blob>(`/superadmin/reports/${reportId}?${params.toString()}`, {
+      responseType: 'blob',
+    });
+
+    // Create download link for PDF
+    const blob = new Blob([response.data as BlobPart], { type: 'application/pdf' });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `${reportId}_${new Date().toISOString().split('T')[0]}.pdf`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+
+    message.success('Rapport PDF telecharge avec succes');
+  } catch {
+    message.error('Erreur lors du telechargement PDF');
+    console.error("Operation failed");
+  } finally {
+    loading.value = false;
+  }
+};
+
+// Preview report (JSON data for modal)
 const previewReport = async (reportId: string) => {
   try {
     loading.value = true;
-    const params = new URLSearchParams();
-    params.append('format', 'json');
-
-    if (filters.startDate) {params.append('startDate', filters.startDate);}
-    if (filters.endDate) {params.append('endDate', filters.endDate);}
-    if (filters.status) {params.append('status', filters.status);}
-    if (filters.role) {params.append('role', filters.role);}
-    if (filters.restaurantId) {params.append('restaurantId', filters.restaurantId);}
-    if (filters.action) {params.append('action', filters.action);}
-    if (filters.category) {params.append('category', filters.category);}
+    const params = buildQueryParams('json');
 
     const response = await api.get<ReportPreview>(`/superadmin/reports/${reportId}?${params.toString()}`);
     previewData.value = response.data || null;
@@ -202,102 +230,6 @@ const previewReport = async (reportId: string) => {
   } finally {
     loading.value = false;
   }
-};
-
-// Generate and download PDF
-const downloadPDF = async () => {
-  if (!previewData.value) {return;}
-
-  try {
-    // Create a printable HTML document
-    const printWindow = window.open('', '_blank');
-    if (!printWindow) {
-      message.error('Veuillez autoriser les popups pour telecharger le PDF');
-      return;
-    }
-
-    const htmlContent = generatePDFHtml(previewData.value);
-    printWindow.document.write(htmlContent);
-    printWindow.document.close();
-
-    // Wait for content to load then print
-    printWindow.onload = () => {
-      printWindow.print();
-    };
-
-    message.success('Rapport PDF genere - utilisez Imprimer > Enregistrer en PDF');
-  } catch {
-    message.error('Erreur lors de la generation du PDF');
-  }
-};
-
-// Generate HTML for PDF
-const generatePDFHtml = (data: ReportPreview): string => {
-  const summaryHtml = data.summary ? `
-    <div class="summary">
-      <h2>Resume</h2>
-      <table>
-        ${Object.entries(data.summary).map(([key, value]) => `
-          <tr>
-            <td><strong>${formatLabel(key)}</strong></td>
-            <td>${typeof value === 'object' ? JSON.stringify(value) : value}</td>
-          </tr>
-        `).join('')}
-      </table>
-    </div>
-  ` : '';
-
-  const firstRow = data.data?.[0];
-  const dataHtml = data.data && data.data.length > 0 && firstRow ? `
-    <div class="data">
-      <h2>Donnees (${data.totalCount || data.data.length} enregistrements)</h2>
-      <table>
-        <thead>
-          <tr>
-            ${Object.keys(firstRow).map(key => `<th>${formatLabel(key)}</th>`).join('')}
-          </tr>
-        </thead>
-        <tbody>
-          ${data.data.slice(0, 100).map(row => `
-            <tr>
-              ${Object.values(row).map(val => `<td>${String(val)}</td>`).join('')}
-            </tr>
-          `).join('')}
-        </tbody>
-      </table>
-      ${data.data.length > 100 ? '<p><em>... et plus</em></p>' : ''}
-    </div>
-  ` : '';
-
-  return `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <title>${data.title}</title>
-      <style>
-        body { font-family: Arial, sans-serif; padding: 20px; }
-        h1 { color: #1890ff; border-bottom: 2px solid #1890ff; padding-bottom: 10px; }
-        h2 { color: #333; margin-top: 30px; }
-        .meta { color: #666; margin-bottom: 20px; }
-        table { width: 100%; border-collapse: collapse; margin: 15px 0; }
-        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-        th { background-color: #1890ff; color: white; }
-        tr:nth-child(even) { background-color: #f9f9f9; }
-        .summary table { max-width: 500px; }
-        @media print {
-          body { padding: 0; }
-          table { font-size: 10px; }
-        }
-      </style>
-    </head>
-    <body>
-      <h1>${data.title}</h1>
-      <p class="meta">Genere le: ${new Date(data.generatedAt).toLocaleString('fr-FR')}</p>
-      ${summaryHtml}
-      ${dataHtml}
-    </body>
-    </html>
-  `;
 };
 
 // Reset filters
@@ -501,6 +433,18 @@ onMounted(async () => {
                     CSV
                   </a-button>
                 </a-tooltip>
+                <a-tooltip v-if="report.formats.includes('pdf')" title="Telecharger PDF">
+                  <a-button
+                    type="default"
+                    size="small"
+                    :loading="loading"
+                    @click="downloadDirectPDF(report.id)"
+                    class="pdf-btn"
+                  >
+                    <template #icon><FilePdfOutlined /></template>
+                    PDF
+                  </a-button>
+                </a-tooltip>
               </a-space>
             </div>
             <div class="report-formats">
@@ -600,9 +544,9 @@ onMounted(async () => {
               <template #icon><FileExcelOutlined /></template>
               Telecharger CSV
             </a-button>
-            <a-button type="primary" ghost @click="downloadPDF">
+            <a-button type="primary" ghost @click="downloadDirectPDF(selectedReport)" :loading="loading">
               <template #icon><FilePdfOutlined /></template>
-              Generer PDF
+              Telecharger PDF
             </a-button>
           </a-space>
         </div>
@@ -685,6 +629,17 @@ onMounted(async () => {
   margin-top: 16px;
   display: flex;
   justify-content: center;
+}
+
+.report-actions .pdf-btn {
+  color: #ff4d4f;
+  border-color: #ff4d4f;
+}
+
+.report-actions .pdf-btn:hover {
+  color: #fff;
+  background-color: #ff4d4f;
+  border-color: #ff4d4f;
 }
 
 .report-formats {
