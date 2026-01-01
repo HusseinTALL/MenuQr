@@ -781,3 +781,153 @@ export const checkCanReview = asyncHandler(async (req: Request, res: Response): 
     data: result,
   });
 });
+
+/**
+ * Get review rating distribution (admin)
+ * Returns count per star rating (1-5)
+ */
+export const getReviewDistribution = asyncHandler(
+  async (req: Request, res: Response): Promise<void> => {
+    const user = req.user!;
+
+    const restaurant = await Restaurant.findOne({ ownerId: user._id });
+    if (!restaurant) {
+      throw new ApiError(404, 'Restaurant non trouvé');
+    }
+
+    const distribution = await Review.aggregate([
+      {
+        $match: {
+          restaurantId: restaurant._id,
+          status: 'approved',
+        },
+      },
+      {
+        $group: {
+          _id: '$rating',
+          count: { $sum: 1 },
+        },
+      },
+      { $sort: { _id: -1 } },
+    ]);
+
+    // Ensure all ratings 1-5 are represented
+    const result = [5, 4, 3, 2, 1].map((rating) => {
+      const found = distribution.find((d) => d._id === rating);
+      return {
+        rating,
+        count: found?.count || 0,
+      };
+    });
+
+    const total = result.reduce((sum, r) => sum + r.count, 0);
+    const resultWithPercentages = result.map((r) => ({
+      ...r,
+      percentage: total > 0 ? Math.round((r.count / total) * 100) : 0,
+    }));
+
+    res.json({
+      success: true,
+      data: {
+        distribution: resultWithPercentages,
+        total,
+      },
+    });
+  }
+);
+
+/**
+ * Get review rating trend over time (admin)
+ * Returns average rating per period (day/week/month)
+ */
+export const getReviewTrend = asyncHandler(
+  async (req: Request, res: Response): Promise<void> => {
+    const user = req.user!;
+    const { period = 'week', months = 6 } = req.query;
+
+    const restaurant = await Restaurant.findOne({ ownerId: user._id });
+    if (!restaurant) {
+      throw new ApiError(404, 'Restaurant non trouvé');
+    }
+
+    const monthsNum = Math.min(Number(months), 12);
+    const startDate = new Date();
+    startDate.setMonth(startDate.getMonth() - monthsNum);
+    startDate.setHours(0, 0, 0, 0);
+
+    let groupBy: Record<string, unknown>;
+    let sortKey: Record<string, 1 | -1>;
+
+    if (period === 'day') {
+      groupBy = {
+        year: { $year: '$createdAt' },
+        month: { $month: '$createdAt' },
+        day: { $dayOfMonth: '$createdAt' },
+      };
+      sortKey = { '_id.year': 1, '_id.month': 1, '_id.day': 1 };
+    } else if (period === 'month') {
+      groupBy = {
+        year: { $year: '$createdAt' },
+        month: { $month: '$createdAt' },
+      };
+      sortKey = { '_id.year': 1, '_id.month': 1 };
+    } else {
+      // week (default)
+      groupBy = {
+        year: { $isoWeekYear: '$createdAt' },
+        week: { $isoWeek: '$createdAt' },
+      };
+      sortKey = { '_id.year': 1, '_id.week': 1 };
+    }
+
+    const trend = await Review.aggregate([
+      {
+        $match: {
+          restaurantId: restaurant._id,
+          status: 'approved',
+          createdAt: { $gte: startDate },
+        },
+      },
+      {
+        $group: {
+          _id: groupBy,
+          avgRating: { $avg: '$rating' },
+          count: { $sum: 1 },
+          ratings: { $push: '$rating' },
+        },
+      },
+      { $sort: sortKey },
+      {
+        $project: {
+          _id: 0,
+          period: '$_id',
+          avgRating: { $round: ['$avgRating', 2] },
+          count: 1,
+        },
+      },
+    ]);
+
+    // Format period labels
+    const result = trend.map((t) => {
+      let label: string;
+      if (period === 'day') {
+        label = `${t.period.day}/${t.period.month}/${t.period.year}`;
+      } else if (period === 'month') {
+        const monthNames = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Août', 'Sep', 'Oct', 'Nov', 'Déc'];
+        label = `${monthNames[t.period.month - 1]} ${t.period.year}`;
+      } else {
+        label = `S${t.period.week} ${t.period.year}`;
+      }
+      return {
+        label,
+        avgRating: t.avgRating,
+        count: t.count,
+      };
+    });
+
+    res.json({
+      success: true,
+      data: result,
+    });
+  }
+);

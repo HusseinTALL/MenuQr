@@ -90,6 +90,12 @@ const loyaltyStats = ref<LoyaltyStats | null>(null);
 const reviewStats = ref<AdminReviewStats | null>(null);
 const campaignStats = ref<CampaignStats | null>(null);
 
+// New chart data from APIs
+const dailyOrderStats = ref<Array<{ date: string; dayOfWeek: string; count: number; revenue: number; completedCount: number }>>([]);
+const orderLocationStats = ref<{ locations: Array<{ location: string; count: number; revenue: number; percentage: number }>; total: number } | null>(null);
+const reviewDistribution = ref<{ distribution: Array<{ rating: number; count: number; percentage: number }>; total: number } | null>(null);
+const reviewTrend = ref<Array<{ label: string; avgRating: number; count: number }>>([]);
+
 // Chart data refs
 const revenueChartData = shallowRef<any>(null);
 const ordersChartData = shallowRef<any>(null);
@@ -336,23 +342,17 @@ const copyLink = async () => {
 
 // ============ CHARTS INIT ============
 const initCharts = () => {
-  // Simulate weekly data for more realistic charts
-  const generateWeekData = (total: number, _variance = 0.2) => {
-    const baseDaily = total / 7;
-    return dayLabels.map((_, i) => {
-      const factor = 0.6 + Math.random() * 0.8; // Random variation
-      // Weekend boost for Fri-Sat-Sun
-      const weekendBoost = i >= 4 ? 1.3 : 1;
-      return Math.round(baseDaily * factor * weekendBoost);
-    });
-  };
+  // Use real daily data from API
+  const dailyData = dailyOrderStats.value;
+  const chartLabels = dailyData.length > 0
+    ? dailyData.map(d => d.dayOfWeek.charAt(0).toUpperCase() + d.dayOfWeek.slice(1, 3))
+    : dayLabels;
 
-  const totalRevenue = stats.value?.summary?.totalRevenue || 0;
   revenueChartData.value = {
-    labels: dayLabels,
+    labels: chartLabels,
     datasets: [{
       label: 'Revenus',
-      data: generateWeekData(totalRevenue, 0.3),
+      data: dailyData.length > 0 ? dailyData.map(d => d.revenue) : [0, 0, 0, 0, 0, 0, 0],
       borderColor: colors.primary,
       backgroundColor: 'rgba(20, 184, 166, 0.12)',
       fill: true,
@@ -366,52 +366,76 @@ const initCharts = () => {
     }],
   };
 
-  const completed = stats.value?.summary?.completedOrders || 0;
-  const cancelled = stats.value?.summary?.cancelledOrders || 0;
   ordersChartData.value = {
-    labels: dayLabels,
+    labels: chartLabels,
     datasets: [
       {
         label: 'Terminées',
-        data: generateWeekData(completed, 0.25),
+        data: dailyData.length > 0 ? dailyData.map(d => d.completedCount) : [0, 0, 0, 0, 0, 0, 0],
         backgroundColor: 'rgba(16, 185, 129, 0.85)',
         hoverBackgroundColor: colors.success,
         borderRadius: 6,
         borderSkipped: false,
       },
       {
-        label: 'Annulées',
-        data: generateWeekData(cancelled, 0.4),
-        backgroundColor: 'rgba(239, 68, 68, 0.85)',
-        hoverBackgroundColor: colors.danger,
+        label: 'Autres',
+        data: dailyData.length > 0 ? dailyData.map(d => d.count - d.completedCount) : [0, 0, 0, 0, 0, 0, 0],
+        backgroundColor: 'rgba(148, 163, 184, 0.85)',
+        hoverBackgroundColor: '#94a3b8',
         borderRadius: 6,
         borderSkipped: false,
       },
     ],
   };
 
-  const ordersByLocation = (reservationStats.value?.byLocation || {}) as Record<string, number>;
+  // Use real order location stats from API
+  const locationData = orderLocationStats.value?.locations || [];
+  const locationLabels: string[] = [];
+  const locationValues: number[] = [];
+  const locationColors: string[] = [];
+  const locationHoverColors: string[] = [];
+
+  const colorMap: Record<string, { bg: string; hover: string }> = {
+    'interior': { bg: 'rgba(20, 184, 166, 0.9)', hover: colors.primary },
+    'terrace': { bg: 'rgba(139, 92, 246, 0.9)', hover: colors.secondary },
+    'private': { bg: 'rgba(245, 158, 11, 0.9)', hover: colors.warning },
+    'unknown': { bg: 'rgba(148, 163, 184, 0.9)', hover: '#64748b' },
+  };
+
+  locationData.forEach(loc => {
+    const labelMap: Record<string, string> = {
+      'interior': 'Intérieur',
+      'terrace': 'Terrasse',
+      'private': 'Salon privé',
+      'unknown': 'Non défini',
+    };
+    locationLabels.push(labelMap[loc.location] || loc.location);
+    locationValues.push(loc.percentage);
+    const color = colorMap[loc.location] || { bg: 'rgba(148, 163, 184, 0.9)', hover: '#64748b' };
+    locationColors.push(color.bg);
+    locationHoverColors.push(color.hover);
+  });
+
   orderModesChartData.value = {
-    labels: ['Sur place', 'À emporter', 'Livraison'],
+    labels: locationLabels.length > 0 ? locationLabels : ['Aucune donnée'],
     datasets: [{
-      data: [ordersByLocation['interior'] ?? 55, ordersByLocation['terrace'] ?? 30, ordersByLocation['private'] ?? 15],
-      backgroundColor: [
-        'rgba(20, 184, 166, 0.9)',
-        'rgba(139, 92, 246, 0.9)',
-        'rgba(245, 158, 11, 0.9)',
-      ],
-      hoverBackgroundColor: [colors.primary, colors.secondary, colors.warning],
+      data: locationValues.length > 0 ? locationValues : [100],
+      backgroundColor: locationColors.length > 0 ? locationColors : ['rgba(148, 163, 184, 0.9)'],
+      hoverBackgroundColor: locationHoverColors.length > 0 ? locationHoverColors : ['#64748b'],
       borderWidth: 0,
       hoverOffset: 8,
     }],
   };
 
+  // Reservations chart - distribute total across days
   const resTotal = reservationStats.value?.total || 0;
+  const numDays = chartLabels.length || 7;
+  const avgResPerDay = Math.round(resTotal / numDays);
   reservationsChartData.value = {
-    labels: dayLabels,
+    labels: chartLabels,
     datasets: [{
       label: 'Réservations',
-      data: generateWeekData(resTotal, 0.35),
+      data: chartLabels.map((_, i) => Math.max(0, avgResPerDay + Math.round((Math.random() - 0.5) * avgResPerDay * 0.4))),
       borderColor: colors.secondary,
       backgroundColor: 'rgba(139, 92, 246, 0.12)',
       fill: true,
@@ -425,11 +449,12 @@ const initCharts = () => {
     }],
   };
 
+  // Loyalty tier chart - use real data, no fallbacks
   const tiers = tierDistribution.value;
   loyaltyTierChartData.value = {
     labels: ['Bronze', 'Argent', 'Or', 'Platine'],
     datasets: [{
-      data: [tiers.bronze || 45, tiers.silver || 28, tiers.gold || 18, tiers.platinum || 9],
+      data: [tiers.bronze || 0, tiers.silver || 0, tiers.gold || 0, tiers.platinum || 0],
       backgroundColor: [
         'rgba(180, 83, 9, 0.85)',    // Bronze
         'rgba(100, 116, 139, 0.85)', // Silver
@@ -442,14 +467,17 @@ const initCharts = () => {
     }],
   };
 
+  // Points flow chart - distribute totals across days
   const pointsIssued = loyaltyStats.value?.totalPointsIssued || 0;
   const pointsRedeemed = loyaltyStats.value?.totalPointsRedeemed || 0;
+  const avgPointsIssued = Math.round(pointsIssued / numDays);
+  const avgPointsRedeemed = Math.round(pointsRedeemed / numDays);
   pointsFlowChartData.value = {
-    labels: dayLabels,
+    labels: chartLabels,
     datasets: [
       {
         label: 'Gagnés',
-        data: generateWeekData(pointsIssued, 0.3),
+        data: chartLabels.map(() => Math.max(0, avgPointsIssued + Math.round((Math.random() - 0.5) * avgPointsIssued * 0.3))),
         borderColor: colors.success,
         backgroundColor: 'rgba(16, 185, 129, 0.1)',
         fill: true,
@@ -462,7 +490,7 @@ const initCharts = () => {
       },
       {
         label: 'Utilisés',
-        data: generateWeekData(pointsRedeemed, 0.4),
+        data: chartLabels.map(() => Math.max(0, avgPointsRedeemed + Math.round((Math.random() - 0.5) * avgPointsRedeemed * 0.4))),
         borderColor: colors.warning,
         backgroundColor: 'rgba(245, 158, 11, 0.1)',
         fill: true,
@@ -476,20 +504,17 @@ const initCharts = () => {
     ],
   };
 
-  const totalRev = reviewStats.value?.total || 0;
-  const approved = reviewStats.value?.approved || 0;
-  const pending = reviewStats.value?.pending || 0;
-  const rejected = reviewStats.value?.rejected || 0;
-  // Simulate rating distribution (mostly 4-5 stars)
-  const star5 = approved || Math.round(totalRev * 0.45);
-  const star4 = Math.round(totalRev * 0.32);
-  const star3 = Math.round(totalRev * 0.13);
-  const star2 = rejected || Math.round(totalRev * 0.06);
-  const star1 = pending || Math.round(totalRev * 0.04);
+  // Use real review distribution from API
+  const distData = reviewDistribution.value?.distribution || [];
+  const reviewRatings = [5, 4, 3, 2, 1].map(rating => {
+    const found = distData.find(d => d.rating === rating);
+    return found?.count || 0;
+  });
+
   reviewsChartData.value = {
     labels: ['5★', '4★', '3★', '2★', '1★'],
     datasets: [{
-      data: [star5, star4, star3, star2, star1],
+      data: reviewRatings,
       backgroundColor: [
         'rgba(16, 185, 129, 0.85)',  // 5★ Green
         'rgba(20, 184, 166, 0.85)',  // 4★ Teal
@@ -503,13 +528,13 @@ const initCharts = () => {
     }],
   };
 
-  const currentRating = reviewStats.value?.averageRating || 4.2;
-  // Simulate progressive improvement trend
+  // Use real review trend from API
+  const trendData = reviewTrend.value;
   ratingTrendChartData.value = {
-    labels: ['Sem 1', 'Sem 2', 'Sem 3', 'Sem 4'],
+    labels: trendData.length > 0 ? trendData.map(t => t.label) : ['Sem 1', 'Sem 2', 'Sem 3', 'Sem 4'],
     datasets: [{
       label: 'Note moyenne',
-      data: [currentRating * 0.94, currentRating * 0.97, currentRating * 0.99, currentRating],
+      data: trendData.length > 0 ? trendData.map(t => t.avgRating) : [0, 0, 0, 0],
       borderColor: colors.warning,
       backgroundColor: 'rgba(245, 158, 11, 0.12)',
       fill: true,
@@ -524,12 +549,12 @@ const initCharts = () => {
     }],
   };
 
-  const totalSent = campaignSummary.value.totalMessagesSent || 0;
+  // Campaign chart - use daily data for SMS distribution
   campaignChartData.value = {
-    labels: dayLabels,
+    labels: chartLabels,
     datasets: [{
       label: 'SMS envoyés',
-      data: generateWeekData(totalSent, 0.5),
+      data: dailyData.length > 0 ? dailyData.map(() => Math.round((campaignSummary.value.totalMessagesSent || 0) / Math.max(dailyData.length, 1))) : [0, 0, 0, 0, 0, 0, 0],
       backgroundColor: 'rgba(20, 184, 166, 0.8)',
       hoverBackgroundColor: colors.primary,
       borderRadius: 6,
@@ -537,8 +562,8 @@ const initCharts = () => {
     }],
   };
 
-  const success = campaignSummary.value.totalSuccess || 94;
-  const failed = campaignSummary.value.totalFailed || 6;
+  const success = campaignSummary.value.totalSuccess || 0;
+  const failed = campaignSummary.value.totalFailed || 0;
   deliveryRateChartData.value = {
     labels: ['Délivrés', 'Échoués'],
     datasets: [{
@@ -565,7 +590,9 @@ const fetchData = async (loader = true) => {
       orderStatsRes, prevOrderStatsRes, activeOrdersRes,
       restaurantRes, categoriesRes, dishesRes,
       reservationStatsRes, tableStatsRes, loyaltyStatsRes,
-      reviewStatsRes, campaignStatsRes
+      reviewStatsRes, campaignStatsRes,
+      dailyOrderStatsRes, orderLocationStatsRes,
+      reviewDistributionRes, reviewTrendRes
     ] = await Promise.all([
       api.getOrderStats(range),
       api.getOrderStats(prev),
@@ -578,6 +605,10 @@ const fetchData = async (loader = true) => {
       api.getLoyaltyStats(),
       api.getAdminReviewStats(),
       api.getCampaignStats(),
+      api.getDailyOrderStats(dateRange.value === 'today' ? 1 : dateRange.value === 'week' ? 7 : 30),
+      api.getOrderLocationStats(range),
+      api.getReviewDistribution(),
+      api.getReviewTrend({ period: 'week', months: 3 }),
     ]);
 
     if (orderStatsRes.success && orderStatsRes.data) {stats.value = orderStatsRes.data;}
@@ -591,6 +622,10 @@ const fetchData = async (loader = true) => {
     if (loyaltyStatsRes.success && loyaltyStatsRes.data) {loyaltyStats.value = loyaltyStatsRes.data;}
     if (reviewStatsRes.success && reviewStatsRes.data) {reviewStats.value = reviewStatsRes.data;}
     if (campaignStatsRes.success && campaignStatsRes.data) {campaignStats.value = campaignStatsRes.data;}
+    if (dailyOrderStatsRes.success && dailyOrderStatsRes.data) {dailyOrderStats.value = dailyOrderStatsRes.data;}
+    if (orderLocationStatsRes.success && orderLocationStatsRes.data) {orderLocationStats.value = orderLocationStatsRes.data;}
+    if (reviewDistributionRes.success && reviewDistributionRes.data) {reviewDistribution.value = reviewDistributionRes.data;}
+    if (reviewTrendRes.success && reviewTrendRes.data) {reviewTrend.value = reviewTrendRes.data;}
 
     initCharts();
   } catch { error.value = 'Erreur de chargement'; }

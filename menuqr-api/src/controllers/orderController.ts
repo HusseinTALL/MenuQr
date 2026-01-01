@@ -34,7 +34,8 @@ export const createOrder = asyncHandler(async (req: Request, res: Response): Pro
     throw new ApiError(404, 'Restaurant not found');
   }
 
-  // Validate stock availability before processing
+  // Quick stock validation for immediate user feedback (non-blocking)
+  // The REAL validation happens atomically in reduceStockForOrder below
   const stockValidation = await inventoryService.validateOrderStock(
     (items as OrderItemInput[]).map(item => ({
       dishId: item.dishId,
@@ -155,52 +156,60 @@ export const createOrder = asyncHandler(async (req: Request, res: Response): Pro
     return `CMD-${dateStr}-${timeStr}${random}`;
   };
 
-  // Create order
-  const order = await Order.create({
-    orderNumber: generateOrderNumber(),
-    restaurantId,
-    customerId,
-    tableNumber,
-    customerName,
-    customerPhone,
-    customerEmail,
-    items: processedItems,
-    subtotal,
-    tax,
-    total,
-    specialInstructions,
-    status: 'pending',
-    paymentStatus: 'pending',
-    loyalty: loyaltyData,
-  });
+  // CRITICAL: Atomically reduce stock BEFORE creating the order
+  // This prevents race conditions where two concurrent orders could both
+  // pass validation but then oversell the stock
+  const stockResults = await inventoryService.reduceStockForOrder(
+    processedItems.map(item => ({
+      dishId: item.dishId.toString(),
+      quantity: item.quantity,
+    }))
+  );
 
-  // Reduce stock for ordered items
+  // Log any items that became low stock or out of stock
+  const lowStockItems = stockResults.filter(r => r.isLowStock || r.isOutOfStock);
+  if (lowStockItems.length > 0) {
+    logger.info('Stock alert after order', {
+      lowStockItems: lowStockItems.map(i => ({
+        dish: i.dishName,
+        stock: i.newStock,
+        outOfStock: i.isOutOfStock,
+      })),
+    });
+  }
+
+  // Create order - stock has already been reserved
+  let order;
   try {
-    const stockResults = await inventoryService.reduceStockForOrder(
+    order = await Order.create({
+      orderNumber: generateOrderNumber(),
+      restaurantId,
+      customerId,
+      tableNumber,
+      customerName,
+      customerPhone,
+      customerEmail,
+      items: processedItems,
+      subtotal,
+      tax,
+      total,
+      specialInstructions,
+      status: 'pending',
+      paymentStatus: 'pending',
+      loyalty: loyaltyData,
+    });
+  } catch (orderError) {
+    // If order creation fails, restore the stock we just reduced
+    logger.error('Order creation failed after stock reduction, restoring stock', {
+      error: orderError,
+    });
+    await inventoryService.restoreStockForCancelledOrder(
       processedItems.map(item => ({
         dishId: item.dishId.toString(),
         quantity: item.quantity,
       }))
     );
-
-    // Log any items that became low stock or out of stock
-    const lowStockItems = stockResults.filter(r => r.isLowStock || r.isOutOfStock);
-    if (lowStockItems.length > 0) {
-      logger.info('Stock alert after order', {
-        orderId: order._id,
-        lowStockItems: lowStockItems.map(i => ({
-          dish: i.dishName,
-          stock: i.newStock,
-          outOfStock: i.isOutOfStock,
-        })),
-      });
-    }
-  } catch (stockError) {
-    // Log error but don't fail the order (stock was already validated)
-    logger.error('Error reducing stock after order creation', {
-      orderId: order._id,
-      error: stockError,
-    });
+    throw orderError;
   }
 
   // Emit real-time event for new order
@@ -626,6 +635,192 @@ export const getOrderStats = asyncHandler(async (req: Request, res: Response): P
         },
         {} as Record<string, number>
       ),
+    },
+  });
+});
+
+/**
+ * Get daily order statistics for charts
+ * Returns order count and revenue per day for the specified period
+ */
+export const getDailyOrderStats = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  const user = req.user!;
+  const { days = 7 } = req.query;
+
+  // Get restaurant
+  const restaurant = await Restaurant.findOne({ ownerId: user._id });
+  if (!restaurant) {
+    throw new ApiError(404, 'Restaurant not found');
+  }
+
+  const daysNum = Math.min(Number(days), 90); // Max 90 days
+  const startDate = new Date();
+  startDate.setDate(startDate.getDate() - daysNum);
+  startDate.setHours(0, 0, 0, 0);
+
+  const dailyStats = await Order.aggregate([
+    {
+      $match: {
+        restaurantId: restaurant._id,
+        createdAt: { $gte: startDate },
+      },
+    },
+    {
+      $group: {
+        _id: {
+          year: { $year: '$createdAt' },
+          month: { $month: '$createdAt' },
+          day: { $dayOfMonth: '$createdAt' },
+        },
+        count: { $sum: 1 },
+        revenue: {
+          $sum: {
+            $cond: [{ $eq: ['$status', 'completed'] }, '$total', 0],
+          },
+        },
+        completedCount: {
+          $sum: { $cond: [{ $eq: ['$status', 'completed'] }, 1, 0] },
+        },
+      },
+    },
+    {
+      $sort: { '_id.year': 1, '_id.month': 1, '_id.day': 1 },
+    },
+    {
+      $project: {
+        _id: 0,
+        date: {
+          $dateFromParts: {
+            year: '$_id.year',
+            month: '$_id.month',
+            day: '$_id.day',
+          },
+        },
+        count: 1,
+        revenue: 1,
+        completedCount: 1,
+      },
+    },
+  ]);
+
+  // Fill in missing days with zeros
+  const result = [];
+  const current = new Date(startDate);
+  const today = new Date();
+  today.setHours(23, 59, 59, 999);
+
+  while (current <= today) {
+    const dateStr = current.toISOString().split('T')[0];
+    const existing = dailyStats.find(
+      (s) => s.date.toISOString().split('T')[0] === dateStr
+    );
+
+    result.push({
+      date: dateStr,
+      dayOfWeek: current.toLocaleDateString('fr-FR', { weekday: 'short' }),
+      count: existing?.count || 0,
+      revenue: existing?.revenue || 0,
+      completedCount: existing?.completedCount || 0,
+    });
+
+    current.setDate(current.getDate() + 1);
+  }
+
+  res.json({
+    success: true,
+    data: result,
+  });
+});
+
+/**
+ * Get order location distribution statistics
+ * Returns breakdown by tableLocation (interior, terrace, private, etc.)
+ */
+export const getOrderLocationStats = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  const user = req.user!;
+  const { dateFrom, dateTo } = req.query;
+
+  // Get restaurant
+  const restaurant = await Restaurant.findOne({ ownerId: user._id });
+  if (!restaurant) {
+    throw new ApiError(404, 'Restaurant not found');
+  }
+
+  const dateFilter: Record<string, Date> = {};
+  if (dateFrom) {
+    dateFilter.$gte = new Date(dateFrom as string);
+  }
+  if (dateTo) {
+    dateFilter.$lte = new Date(dateTo as string);
+  }
+
+  const matchStage: Record<string, unknown> = {
+    restaurantId: restaurant._id,
+    status: { $in: ['completed', 'served', 'ready', 'preparing', 'confirmed'] },
+  };
+  if (Object.keys(dateFilter).length > 0) {
+    matchStage.createdAt = dateFilter;
+  }
+
+  // Get location distribution from table numbers
+  // Tables are looked up to get their location type
+  const locationStats = await Order.aggregate([
+    { $match: matchStage },
+    {
+      $lookup: {
+        from: 'tables',
+        let: { tableNum: '$tableNumber', restId: '$restaurantId' },
+        pipeline: [
+          {
+            $match: {
+              $expr: {
+                $and: [
+                  { $eq: ['$restaurantId', '$$restId'] },
+                  { $eq: ['$name', '$$tableNum'] },
+                ],
+              },
+            },
+          },
+        ],
+        as: 'tableInfo',
+      },
+    },
+    {
+      $unwind: {
+        path: '$tableInfo',
+        preserveNullAndEmptyArrays: true,
+      },
+    },
+    {
+      $group: {
+        _id: { $ifNull: ['$tableInfo.location', 'unknown'] },
+        count: { $sum: 1 },
+        revenue: { $sum: '$total' },
+      },
+    },
+    {
+      $project: {
+        _id: 0,
+        location: '$_id',
+        count: 1,
+        revenue: 1,
+      },
+    },
+    { $sort: { count: -1 } },
+  ]);
+
+  // Calculate percentages
+  const total = locationStats.reduce((sum, s) => sum + s.count, 0);
+  const result = locationStats.map((s) => ({
+    ...s,
+    percentage: total > 0 ? Math.round((s.count / total) * 100) : 0,
+  }));
+
+  res.json({
+    success: true,
+    data: {
+      locations: result,
+      total,
     },
   });
 });

@@ -38,6 +38,8 @@ import {
   getAdminReviews,
   getPendingReviews,
   getAdminReviewStatsController,
+  getReviewDistribution,
+  getReviewTrend,
   approveReview,
   rejectReview,
   respondToReview,
@@ -170,6 +172,22 @@ adminRouter.get(
   authenticate,
   hasPermission(PERMISSIONS.REVIEWS_READ),
   getAdminReviewStatsController
+);
+
+// Get review rating distribution (for charts)
+adminRouter.get(
+  '/stats/distribution',
+  authenticate,
+  hasPermission(PERMISSIONS.REVIEWS_READ),
+  getReviewDistribution
+);
+
+// Get review rating trend over time (for charts)
+adminRouter.get(
+  '/stats/trend',
+  authenticate,
+  hasPermission(PERMISSIONS.REVIEWS_READ),
+  getReviewTrend
 );
 
 // Approve a review
