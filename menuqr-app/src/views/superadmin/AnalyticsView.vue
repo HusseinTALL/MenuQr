@@ -119,14 +119,14 @@ const fetchData = async () => {
   loading.value = true;
   try {
     const [chartResponse, statsResponse] = await Promise.all([
-      api.get<{ success: boolean; data: ChartApiResponse }>(`/superadmin/dashboard/charts?days=${period.value}`),
-      api.get<{ success: boolean; data: DashboardStats }>('/superadmin/dashboard/stats'),
+      api.get<ChartApiResponse>(`/superadmin/dashboard/charts?days=${period.value}`),
+      api.get<DashboardStats>('/superadmin/dashboard/stats'),
     ]);
-    if (chartResponse.data) {
-      chartData.value = chartResponse.data.data;
+    if (chartResponse.success && chartResponse.data) {
+      chartData.value = chartResponse.data;
     }
-    if (statsResponse.data) {
-      stats.value = statsResponse.data.data;
+    if (statsResponse.success && statsResponse.data) {
+      stats.value = statsResponse.data;
     }
   } catch (fetchError) {
     message.error('Erreur lors du chargement des donnees');
