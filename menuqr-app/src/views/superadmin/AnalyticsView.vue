@@ -284,14 +284,14 @@ const monthlyRevenueChartData = computed(() => {
       {
         label: 'Revenus',
         data: monthlyData.map((d) => d.revenue),
-        borderColor: '#10b981',
-        backgroundColor: 'rgba(16, 185, 129, 0.15)',
+        borderColor: '#059669',
+        backgroundColor: 'rgba(5, 150, 105, 0.1)',
         fill: true,
         tension: 0.4,
-        pointRadius: 4,
+        pointRadius: 5,
         pointHoverRadius: 8,
-        pointBackgroundColor: '#10b981',
-        pointBorderColor: '#0a0f1a',
+        pointBackgroundColor: '#059669',
+        pointBorderColor: '#ffffff',
         pointBorderWidth: 2,
       },
     ],
@@ -318,8 +318,8 @@ const monthlyOrdersChartData = computed(() => {
       {
         label: 'Commandes',
         data: monthlyData.map((d) => d.orders),
-        backgroundColor: 'rgba(99, 102, 241, 0.8)',
-        hoverBackgroundColor: '#818cf8',
+        backgroundColor: 'rgba(79, 70, 229, 0.85)',
+        hoverBackgroundColor: '#6366f1',
         borderRadius: 8,
         borderSkipped: false,
       },
@@ -344,28 +344,30 @@ const weeklyTrendChartData = computed(() => {
       {
         label: 'Commandes',
         data: weeklyData.map((d) => d.orders),
-        borderColor: '#6366f1',
-        backgroundColor: 'rgba(99, 102, 241, 0.15)',
+        borderColor: '#4f46e5',
+        backgroundColor: 'rgba(79, 70, 229, 0.1)',
         fill: true,
         tension: 0.4,
-        pointRadius: 3,
-        pointHoverRadius: 6,
-        pointBackgroundColor: '#6366f1',
-        pointBorderColor: '#0a0f1a',
+        pointRadius: 4,
+        pointHoverRadius: 7,
+        pointBackgroundColor: '#4f46e5',
+        pointBorderColor: '#ffffff',
         pointBorderWidth: 2,
       },
       {
         label: 'Revenus (x100)',
         data: weeklyData.map((d) => d.revenue / 100),
-        borderColor: '#10b981',
-        backgroundColor: 'rgba(16, 185, 129, 0.15)',
+        borderColor: '#059669',
+        backgroundColor: 'rgba(5, 150, 105, 0.1)',
         fill: true,
         tension: 0.4,
-        pointRadius: 3,
-        pointHoverRadius: 6,
-        pointBackgroundColor: '#10b981',
-        pointBorderColor: '#0a0f1a',
+        pointRadius: 4,
+        pointHoverRadius: 7,
+        pointBackgroundColor: '#059669',
+        pointBorderColor: '#ffffff',
         pointBorderWidth: 2,
+        borderDash: [5, 5],
+        yAxisID: 'y1',
       },
     ],
   };
@@ -387,10 +389,10 @@ const subscriptionChartData = computed(() => {
 
   const statusColors: Record<string, string> = {
     trial: '#f59e0b',
-    active: '#10b981',
-    past_due: '#ef4444',
+    active: '#059669',
+    past_due: '#dc2626',
     cancelled: '#6b7280',
-    expired: '#94a3b8',
+    expired: '#9ca3af',
   };
 
   return {
@@ -401,9 +403,10 @@ const subscriptionChartData = computed(() => {
       {
         data: chartData.value.subscriptionDistribution.map((d) => d.count),
         backgroundColor: chartData.value.subscriptionDistribution.map(
-          (d) => statusColors[d._id] || '#6366f1'
+          (d) => statusColors[d._id] || '#4f46e5'
         ),
-        borderWidth: 0,
+        borderWidth: 3,
+        borderColor: '#ffffff',
         hoverOffset: 8,
       },
     ],
@@ -431,11 +434,11 @@ const orderStatusChartData = computed(() => {
     pending: '#f59e0b',
     confirmed: '#3b82f6',
     preparing: '#8b5cf6',
-    ready: '#06b6d4',
-    delivered: '#10b981',
+    ready: '#0891b2',
+    delivered: '#059669',
     completed: '#10b981',
     paid: '#22c55e',
-    cancelled: '#ef4444',
+    cancelled: '#dc2626',
   };
 
   return {
@@ -446,9 +449,10 @@ const orderStatusChartData = computed(() => {
       {
         data: chartData.value.orderStatusDistribution.map((d) => d.count),
         backgroundColor: chartData.value.orderStatusDistribution.map(
-          (d) => statusColors[d._id] || '#6366f1'
+          (d) => statusColors[d._id] || '#4f46e5'
         ),
-        borderWidth: 0,
+        borderWidth: 3,
+        borderColor: '#ffffff',
         hoverOffset: 8,
       },
     ],
@@ -473,27 +477,27 @@ const restaurantGrowthChartData = computed(() => {
       {
         label: 'Total Restaurants',
         data: sampledData.map((d) => d.cumulative),
-        borderColor: '#6366f1',
-        backgroundColor: 'rgba(99, 102, 241, 0.15)',
+        borderColor: '#4f46e5',
+        backgroundColor: 'rgba(79, 70, 229, 0.1)',
         fill: true,
         tension: 0.4,
-        pointRadius: 2,
+        pointRadius: 3,
         pointHoverRadius: 6,
-        pointBackgroundColor: '#6366f1',
-        pointBorderColor: '#0a0f1a',
+        pointBackgroundColor: '#4f46e5',
+        pointBorderColor: '#ffffff',
         pointBorderWidth: 2,
       },
       {
         label: 'Nouvelles inscriptions',
         data: sampledData.map((d) => d.count),
-        borderColor: '#10b981',
-        backgroundColor: 'rgba(16, 185, 129, 0.2)',
+        borderColor: '#059669',
+        backgroundColor: 'rgba(5, 150, 105, 0.15)',
         fill: true,
         tension: 0.4,
         pointRadius: 3,
         pointHoverRadius: 6,
-        pointBackgroundColor: '#10b981',
-        pointBorderColor: '#0a0f1a',
+        pointBackgroundColor: '#059669',
+        pointBorderColor: '#ffffff',
         pointBorderWidth: 2,
         borderDash: [5, 5],
         yAxisID: 'y1',
@@ -514,16 +518,16 @@ const topRestaurantsChartData = computed(() => {
       {
         label: 'Commandes',
         data: chartData.value.topRestaurants.map((r) => r.orders),
-        backgroundColor: 'rgba(99, 102, 241, 0.8)',
-        hoverBackgroundColor: '#818cf8',
+        backgroundColor: 'rgba(79, 70, 229, 0.85)',
+        hoverBackgroundColor: '#6366f1',
         borderRadius: 6,
         borderSkipped: false,
       },
       {
         label: 'Revenus',
         data: chartData.value.topRestaurants.map((r) => r.revenue),
-        backgroundColor: 'rgba(16, 185, 129, 0.8)',
-        hoverBackgroundColor: '#34d399',
+        backgroundColor: 'rgba(5, 150, 105, 0.85)',
+        hoverBackgroundColor: '#10b981',
         borderRadius: 6,
         borderSkipped: false,
       },
@@ -531,40 +535,43 @@ const topRestaurantsChartData = computed(() => {
   };
 });
 
-// Dark theme chart options
-const darkChartOptions = {
+// Light theme chart options
+const lightChartOptions = {
   responsive: true,
   maintainAspectRatio: false,
   plugins: {
     legend: {
       position: 'top' as const,
       labels: {
-        color: '#94a3b8',
+        color: '#374151',
         padding: 20,
-        font: { family: "'Outfit', sans-serif", size: 12 },
+        font: { family: "'DM Sans', sans-serif", size: 12, weight: '500' as const },
+        usePointStyle: true,
+        pointStyle: 'circle',
       },
     },
     tooltip: {
-      backgroundColor: 'rgba(15, 23, 42, 0.95)',
-      titleColor: '#f8fafc',
-      bodyColor: '#cbd5e1',
-      borderColor: 'rgba(99, 102, 241, 0.3)',
+      backgroundColor: '#ffffff',
+      titleColor: '#111827',
+      bodyColor: '#4b5563',
+      borderColor: '#e5e7eb',
       borderWidth: 1,
-      padding: 12,
-      cornerRadius: 8,
-      titleFont: { family: "'Outfit', sans-serif", weight: '600' as const },
-      bodyFont: { family: "'Outfit', sans-serif" },
+      padding: 14,
+      cornerRadius: 12,
+      boxShadow: '0 10px 40px rgba(0,0,0,0.1)',
+      titleFont: { family: "'DM Sans', sans-serif", weight: '600' as const, size: 13 },
+      bodyFont: { family: "'DM Sans', sans-serif", size: 12 },
     },
   },
   scales: {
     y: {
       beginAtZero: true,
       grid: {
-        color: 'rgba(148, 163, 184, 0.08)',
+        color: 'rgba(0, 0, 0, 0.04)',
       },
       ticks: {
-        color: '#64748b',
-        font: { family: "'Outfit', sans-serif", size: 11 },
+        color: '#6b7280',
+        font: { family: "'DM Sans', sans-serif", size: 11 },
       },
     },
     x: {
@@ -572,15 +579,15 @@ const darkChartOptions = {
         display: false,
       },
       ticks: {
-        color: '#64748b',
-        font: { family: "'Outfit', sans-serif", size: 11 },
+        color: '#6b7280',
+        font: { family: "'DM Sans', sans-serif", size: 11 },
       },
     },
   },
 };
 
-const lineChartOptions = { ...darkChartOptions };
-const barChartOptions = { ...darkChartOptions };
+const lineChartOptions = { ...lightChartOptions };
+const barChartOptions = { ...lightChartOptions };
 
 const doughnutChartOptions = {
   responsive: true,
@@ -589,24 +596,24 @@ const doughnutChartOptions = {
     legend: {
       position: 'right' as const,
       labels: {
-        color: '#94a3b8',
+        color: '#374151',
         padding: 16,
-        font: { family: "'Outfit', sans-serif", size: 12 },
+        font: { family: "'DM Sans', sans-serif", size: 12, weight: '500' as const },
         usePointStyle: true,
         pointStyle: 'circle',
       },
     },
     tooltip: {
-      backgroundColor: 'rgba(15, 23, 42, 0.95)',
-      titleColor: '#f8fafc',
-      bodyColor: '#cbd5e1',
-      borderColor: 'rgba(99, 102, 241, 0.3)',
+      backgroundColor: '#ffffff',
+      titleColor: '#111827',
+      bodyColor: '#4b5563',
+      borderColor: '#e5e7eb',
       borderWidth: 1,
-      padding: 12,
-      cornerRadius: 8,
+      padding: 14,
+      cornerRadius: 12,
     },
   },
-  cutout: '65%',
+  cutout: '68%',
 };
 
 const pieChartOptions = {
@@ -615,9 +622,9 @@ const pieChartOptions = {
 };
 
 const mixedChartOptions = {
-  ...darkChartOptions,
+  ...lightChartOptions,
   scales: {
-    ...darkChartOptions.scales,
+    ...lightChartOptions.scales,
     y1: {
       beginAtZero: true,
       position: 'right' as const,
@@ -625,8 +632,8 @@ const mixedChartOptions = {
         display: false,
       },
       ticks: {
-        color: '#64748b',
-        font: { family: "'Outfit', sans-serif", size: 11 },
+        color: '#6b7280',
+        font: { family: "'DM Sans', sans-serif", size: 11 },
       },
     },
   },
@@ -697,7 +704,7 @@ const exportData = () => {
 };
 
 // SVG Sparkline generator
-const generateSparklinePath = (data: number[], width = 80, height = 24) => {
+const generateSparklinePath = (data: number[], width = 80, height = 28) => {
   if (!data.length) return '';
   const max = Math.max(...data, 1);
   const min = Math.min(...data, 0);
@@ -714,11 +721,11 @@ const generateSparklinePath = (data: number[], width = 80, height = 24) => {
 
 <template>
   <div class="analytics-view">
-    <!-- Ambient Background -->
-    <div class="ambient-bg">
-      <div class="ambient-orb orb-1"></div>
-      <div class="ambient-orb orb-2"></div>
-      <div class="ambient-orb orb-3"></div>
+    <!-- Decorative Elements -->
+    <div class="deco-shapes">
+      <div class="deco-circle deco-1"></div>
+      <div class="deco-circle deco-2"></div>
+      <div class="deco-blob"></div>
     </div>
 
     <!-- Page Header -->
@@ -729,8 +736,8 @@ const generateSparklinePath = (data: number[], width = 80, height = 24) => {
             <ThunderboltOutlined />
             <span>Analytics</span>
           </div>
-          <h1 class="page-title">Centre de Commande</h1>
-          <p class="page-subtitle">Vue en temps reel de la performance de la plateforme</p>
+          <h1 class="page-title">Tableau de Bord</h1>
+          <p class="page-subtitle">Performance et metriques de la plateforme</p>
         </div>
         <div class="header-actions">
           <a-select
@@ -784,7 +791,7 @@ const generateSparklinePath = (data: number[], width = 80, height = 24) => {
     <div class="stats-grid">
       <!-- Revenue Card -->
       <div class="stat-card revenue-card">
-        <div class="stat-glow"></div>
+        <div class="stat-decoration"></div>
         <div class="stat-content">
           <div class="stat-header">
             <div class="stat-icon-wrapper">
@@ -798,28 +805,35 @@ const generateSparklinePath = (data: number[], width = 80, height = 24) => {
           </div>
           <div class="stat-value">{{ formatCurrency(totalRevenue) }}</div>
           <div class="stat-label">Revenus totaux</div>
-          <div class="stat-period">/ {{ period }} jours</div>
-          <svg class="sparkline" viewBox="0 0 80 24" preserveAspectRatio="none">
-            <defs>
-              <linearGradient id="sparklineGradientRevenue" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stop-color="#10b981" stop-opacity="0.5"/>
-                <stop offset="100%" stop-color="#10b981" stop-opacity="0"/>
-              </linearGradient>
-            </defs>
-            <path
-              :d="generateSparklinePath(revenueSparkline)"
-              fill="none"
-              stroke="#10b981"
-              stroke-width="2"
-              stroke-linecap="round"
-            />
-          </svg>
+          <div class="stat-period">sur {{ period }} jours</div>
+          <div class="sparkline-wrapper">
+            <svg class="sparkline" viewBox="0 0 80 28" preserveAspectRatio="none">
+              <defs>
+                <linearGradient id="sparkGradientRevenue" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stop-color="#059669" stop-opacity="0.3"/>
+                  <stop offset="100%" stop-color="#059669" stop-opacity="0"/>
+                </linearGradient>
+              </defs>
+              <path
+                :d="generateSparklinePath(revenueSparkline) + ` L 80 28 L 0 28 Z`"
+                fill="url(#sparkGradientRevenue)"
+              />
+              <path
+                :d="generateSparklinePath(revenueSparkline)"
+                fill="none"
+                stroke="#059669"
+                stroke-width="2.5"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+            </svg>
+          </div>
         </div>
       </div>
 
       <!-- Orders Card -->
       <div class="stat-card orders-card">
-        <div class="stat-glow"></div>
+        <div class="stat-decoration"></div>
         <div class="stat-content">
           <div class="stat-header">
             <div class="stat-icon-wrapper">
@@ -833,22 +847,35 @@ const generateSparklinePath = (data: number[], width = 80, height = 24) => {
           </div>
           <div class="stat-value">{{ formatNumber(totalOrders) }}</div>
           <div class="stat-label">Commandes</div>
-          <div class="stat-period">/ {{ period }} jours</div>
-          <svg class="sparkline" viewBox="0 0 80 24" preserveAspectRatio="none">
-            <path
-              :d="generateSparklinePath(ordersSparkline)"
-              fill="none"
-              stroke="#6366f1"
-              stroke-width="2"
-              stroke-linecap="round"
-            />
-          </svg>
+          <div class="stat-period">sur {{ period }} jours</div>
+          <div class="sparkline-wrapper">
+            <svg class="sparkline" viewBox="0 0 80 28" preserveAspectRatio="none">
+              <defs>
+                <linearGradient id="sparkGradientOrders" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stop-color="#4f46e5" stop-opacity="0.3"/>
+                  <stop offset="100%" stop-color="#4f46e5" stop-opacity="0"/>
+                </linearGradient>
+              </defs>
+              <path
+                :d="generateSparklinePath(ordersSparkline) + ` L 80 28 L 0 28 Z`"
+                fill="url(#sparkGradientOrders)"
+              />
+              <path
+                :d="generateSparklinePath(ordersSparkline)"
+                fill="none"
+                stroke="#4f46e5"
+                stroke-width="2.5"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+            </svg>
+          </div>
         </div>
       </div>
 
       <!-- Average Order Card -->
       <div class="stat-card avg-card">
-        <div class="stat-glow"></div>
+        <div class="stat-decoration"></div>
         <div class="stat-content">
           <div class="stat-header">
             <div class="stat-icon-wrapper">
@@ -858,17 +885,17 @@ const generateSparklinePath = (data: number[], width = 80, height = 24) => {
           <div class="stat-value">{{ formatCurrency(avgOrderValue) }}</div>
           <div class="stat-label">Panier moyen</div>
           <div class="stat-progress">
-            <div class="progress-bar">
+            <div class="progress-track">
               <div class="progress-fill" :style="{ width: Math.min((avgOrderValue / 50) * 100, 100) + '%' }"></div>
             </div>
-            <span class="progress-target">Cible: 50€</span>
+            <span class="progress-target">Objectif: 50€</span>
           </div>
         </div>
       </div>
 
       <!-- Daily Orders Card -->
       <div class="stat-card daily-card">
-        <div class="stat-glow"></div>
+        <div class="stat-decoration"></div>
         <div class="stat-content">
           <div class="stat-header">
             <div class="stat-icon-wrapper">
@@ -878,10 +905,10 @@ const generateSparklinePath = (data: number[], width = 80, height = 24) => {
           <div class="stat-value">{{ avgDailyOrders.toFixed(1) }}</div>
           <div class="stat-label">Commandes/jour</div>
           <div class="stat-progress">
-            <div class="progress-bar cyan">
+            <div class="progress-track cyan">
               <div class="progress-fill" :style="{ width: Math.min((avgDailyOrders / 100) * 100, 100) + '%' }"></div>
             </div>
-            <span class="progress-target">Cible: 100/j</span>
+            <span class="progress-target">Objectif: 100/jour</span>
           </div>
         </div>
       </div>
@@ -890,7 +917,9 @@ const generateSparklinePath = (data: number[], width = 80, height = 24) => {
     <!-- Platform Metrics Row -->
     <div class="metrics-row">
       <div class="metric-item">
-        <ShopOutlined class="metric-icon blue" />
+        <div class="metric-icon-box blue">
+          <ShopOutlined />
+        </div>
         <div class="metric-data">
           <span class="metric-value">{{ stats?.overview.totalRestaurants || 0 }}</span>
           <span class="metric-label">Restaurants</span>
@@ -898,7 +927,9 @@ const generateSparklinePath = (data: number[], width = 80, height = 24) => {
       </div>
       <div class="metric-divider"></div>
       <div class="metric-item">
-        <ShopOutlined class="metric-icon green" />
+        <div class="metric-icon-box green">
+          <ShopOutlined />
+        </div>
         <div class="metric-data">
           <span class="metric-value">{{ stats?.overview.activeRestaurants || 0 }}</span>
           <span class="metric-label">Actifs</span>
@@ -906,7 +937,9 @@ const generateSparklinePath = (data: number[], width = 80, height = 24) => {
       </div>
       <div class="metric-divider"></div>
       <div class="metric-item">
-        <UserOutlined class="metric-icon purple" />
+        <div class="metric-icon-box purple">
+          <UserOutlined />
+        </div>
         <div class="metric-data">
           <span class="metric-value">{{ formatNumber(stats?.overview.totalUsers || 0) }}</span>
           <span class="metric-label">Utilisateurs</span>
@@ -914,7 +947,9 @@ const generateSparklinePath = (data: number[], width = 80, height = 24) => {
       </div>
       <div class="metric-divider"></div>
       <div class="metric-item">
-        <UserOutlined class="metric-icon orange" />
+        <div class="metric-icon-box orange">
+          <UserOutlined />
+        </div>
         <div class="metric-data">
           <span class="metric-value">{{ formatNumber(stats?.overview.totalCustomers || 0) }}</span>
           <span class="metric-label">Clients</span>
@@ -922,7 +957,9 @@ const generateSparklinePath = (data: number[], width = 80, height = 24) => {
       </div>
       <div class="metric-divider"></div>
       <div class="metric-item highlight">
-        <RiseOutlined class="metric-icon" />
+        <div class="metric-icon-box emerald">
+          <RiseOutlined />
+        </div>
         <div class="metric-data">
           <span class="metric-value">+{{ stats?.thisMonth.newRestaurants || 0 }}</span>
           <span class="metric-label">Ce mois</span>
@@ -1111,12 +1148,13 @@ const generateSparklinePath = (data: number[], width = 80, height = 24) => {
                   :loading="loading"
                   :pagination="false"
                   rowKey="_id"
-                  class="dark-table"
+                  class="premium-table"
                 >
                   <a-table-column title="Rang" :width="80">
                     <template #default="{ index }">
                       <div class="rank-badge" :class="{ gold: index === 0, silver: index === 1, bronze: index === 2 }">
-                        {{ index + 1 }}
+                        <TrophyOutlined v-if="index < 3" />
+                        <span v-else>{{ index + 1 }}</span>
                       </div>
                     </template>
                   </a-table-column>
@@ -1264,19 +1302,19 @@ const generateSparklinePath = (data: number[], width = 80, height = 24) => {
 </template>
 
 <style scoped>
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;0,9..40,800;1,9..40,400&display=swap');
 
 .analytics-view {
   padding: 0;
-  font-family: 'Outfit', sans-serif;
+  font-family: 'DM Sans', sans-serif;
   position: relative;
   min-height: 100vh;
-  background: linear-gradient(135deg, #0a0f1a 0%, #111827 50%, #0f172a 100%);
-  color: #e2e8f0;
+  background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+  color: #1e293b;
 }
 
-/* Ambient Background Effects */
-.ambient-bg {
+/* Decorative Shapes */
+.deco-shapes {
   position: fixed;
   top: 0;
   left: 0;
@@ -1287,45 +1325,36 @@ const generateSparklinePath = (data: number[], width = 80, height = 24) => {
   z-index: 0;
 }
 
-.ambient-orb {
+.deco-circle {
   position: absolute;
   border-radius: 50%;
-  filter: blur(80px);
-  opacity: 0.4;
-  animation: float 20s infinite ease-in-out;
+  opacity: 0.5;
 }
 
-.orb-1 {
+.deco-1 {
+  width: 600px;
+  height: 600px;
+  background: radial-gradient(circle, rgba(79, 70, 229, 0.08) 0%, transparent 70%);
+  top: -200px;
+  right: -100px;
+}
+
+.deco-2 {
   width: 400px;
   height: 400px;
-  background: radial-gradient(circle, rgba(99, 102, 241, 0.3) 0%, transparent 70%);
-  top: -100px;
-  right: -100px;
-  animation-delay: 0s;
+  background: radial-gradient(circle, rgba(5, 150, 105, 0.06) 0%, transparent 70%);
+  bottom: 10%;
+  left: -100px;
 }
 
-.orb-2 {
+.deco-blob {
+  position: absolute;
   width: 300px;
   height: 300px;
-  background: radial-gradient(circle, rgba(16, 185, 129, 0.25) 0%, transparent 70%);
-  bottom: 20%;
-  left: -50px;
-  animation-delay: -7s;
-}
-
-.orb-3 {
-  width: 250px;
-  height: 250px;
-  background: radial-gradient(circle, rgba(245, 158, 11, 0.2) 0%, transparent 70%);
-  top: 50%;
-  right: 20%;
-  animation-delay: -14s;
-}
-
-@keyframes float {
-  0%, 100% { transform: translate(0, 0) scale(1); }
-  33% { transform: translate(30px, -30px) scale(1.05); }
-  66% { transform: translate(-20px, 20px) scale(0.95); }
+  background: radial-gradient(circle, rgba(245, 158, 11, 0.05) 0%, transparent 70%);
+  top: 40%;
+  right: 10%;
+  border-radius: 30% 70% 70% 30% / 30% 30% 70% 70%;
 }
 
 /* Page Header */
@@ -1333,8 +1362,8 @@ const generateSparklinePath = (data: number[], width = 80, height = 24) => {
   position: relative;
   z-index: 1;
   margin-bottom: 32px;
-  padding: 24px 0;
-  border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+  padding: 28px 0 24px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
 }
 
 .header-content {
@@ -1356,12 +1385,12 @@ const generateSparklinePath = (data: number[], width = 80, height = 24) => {
   align-items: center;
   gap: 8px;
   padding: 6px 14px;
-  background: linear-gradient(135deg, rgba(99, 102, 241, 0.2) 0%, rgba(139, 92, 246, 0.2) 100%);
-  border: 1px solid rgba(99, 102, 241, 0.3);
+  background: linear-gradient(135deg, rgba(79, 70, 229, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
+  border: 1px solid rgba(79, 70, 229, 0.2);
   border-radius: 20px;
   font-size: 12px;
   font-weight: 600;
-  color: #a5b4fc;
+  color: #4f46e5;
   text-transform: uppercase;
   letter-spacing: 0.5px;
   width: fit-content;
@@ -1374,13 +1403,9 @@ const generateSparklinePath = (data: number[], width = 80, height = 24) => {
 .page-title {
   font-size: 32px;
   font-weight: 800;
-  color: #f8fafc;
+  color: #0f172a;
   margin: 0;
   letter-spacing: -0.5px;
-  background: linear-gradient(135deg, #f8fafc 0%, #cbd5e1 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
 }
 
 .page-subtitle {
@@ -1401,10 +1426,11 @@ const generateSparklinePath = (data: number[], width = 80, height = 24) => {
 }
 
 .period-select :deep(.ant-select-selector) {
-  background: rgba(30, 41, 59, 0.8) !important;
-  border: 1px solid rgba(148, 163, 184, 0.2) !important;
+  background: #ffffff !important;
+  border: 1px solid #e2e8f0 !important;
   border-radius: 10px !important;
-  color: #e2e8f0 !important;
+  color: #334155 !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
 }
 
 .period-select :deep(.ant-select-arrow) {
@@ -1412,30 +1438,32 @@ const generateSparklinePath = (data: number[], width = 80, height = 24) => {
 }
 
 .action-btn {
-  background: rgba(30, 41, 59, 0.8);
-  border: 1px solid rgba(148, 163, 184, 0.2);
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
   border-radius: 10px;
-  color: #e2e8f0;
+  color: #334155;
   font-weight: 500;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
   transition: all 0.2s ease;
 }
 
 .action-btn:hover {
-  background: rgba(51, 65, 85, 0.8);
-  border-color: rgba(148, 163, 184, 0.4);
-  color: #f8fafc;
+  background: #f8fafc;
+  border-color: #cbd5e1;
+  color: #1e293b;
   transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
 .action-btn.primary {
-  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%);
   border: none;
   color: white;
 }
 
 .action-btn.primary:hover {
-  background: linear-gradient(135deg, #818cf8 0%, #a78bfa 100%);
-  box-shadow: 0 4px 20px rgba(99, 102, 241, 0.4);
+  background: linear-gradient(135deg, #4338ca 0%, #4f46e5 100%);
+  box-shadow: 0 4px 20px rgba(79, 70, 229, 0.35);
 }
 
 /* Insights Section */
@@ -1450,7 +1478,7 @@ const generateSparklinePath = (data: number[], width = 80, height = 24) => {
   align-items: center;
   gap: 10px;
   margin-bottom: 16px;
-  color: #94a3b8;
+  color: #64748b;
   font-size: 13px;
   font-weight: 600;
   text-transform: uppercase;
@@ -1458,7 +1486,7 @@ const generateSparklinePath = (data: number[], width = 80, height = 24) => {
 }
 
 .insights-icon {
-  color: #fbbf24;
+  color: #f59e0b;
   font-size: 16px;
 }
 
@@ -1471,36 +1499,36 @@ const generateSparklinePath = (data: number[], width = 80, height = 24) => {
 .insight-card {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 14px 18px;
-  background: rgba(30, 41, 59, 0.6);
-  border: 1px solid rgba(148, 163, 184, 0.1);
-  border-radius: 12px;
-  backdrop-filter: blur(10px);
+  gap: 14px;
+  padding: 16px 20px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
   transition: all 0.2s ease;
 }
 
 .insight-card:hover {
-  background: rgba(30, 41, 59, 0.8);
   transform: translateX(4px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
 }
 
 .insight-card.success {
-  border-left: 3px solid #10b981;
+  border-left: 4px solid #059669;
 }
 
 .insight-card.warning {
-  border-left: 3px solid #f59e0b;
+  border-left: 4px solid #f59e0b;
 }
 
 .insight-card.info {
-  border-left: 3px solid #6366f1;
+  border-left: 4px solid #4f46e5;
 }
 
 .insight-icon {
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1509,24 +1537,25 @@ const generateSparklinePath = (data: number[], width = 80, height = 24) => {
 }
 
 .insight-card.success .insight-icon {
-  background: rgba(16, 185, 129, 0.15);
-  color: #34d399;
+  background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+  color: #059669;
 }
 
 .insight-card.warning .insight-icon {
-  background: rgba(245, 158, 11, 0.15);
-  color: #fbbf24;
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  color: #d97706;
 }
 
 .insight-card.info .insight-icon {
-  background: rgba(99, 102, 241, 0.15);
-  color: #818cf8;
+  background: linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%);
+  color: #4f46e5;
 }
 
 .insight-text {
   font-size: 13px;
-  color: #cbd5e1;
-  line-height: 1.4;
+  color: #475569;
+  line-height: 1.5;
+  font-weight: 500;
 }
 
 /* Stats Grid */
@@ -1553,48 +1582,45 @@ const generateSparklinePath = (data: number[], width = 80, height = 24) => {
 
 .stat-card {
   position: relative;
-  background: rgba(30, 41, 59, 0.6);
-  border: 1px solid rgba(148, 163, 184, 0.1);
-  border-radius: 16px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 20px;
   padding: 24px;
   overflow: hidden;
-  backdrop-filter: blur(10px);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
   transition: all 0.3s ease;
 }
 
 .stat-card:hover {
   transform: translateY(-4px);
-  border-color: rgba(148, 163, 184, 0.2);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.1);
 }
 
-.stat-card:hover .stat-glow {
-  opacity: 1;
-}
-
-.stat-glow {
+.stat-decoration {
   position: absolute;
   top: 0;
-  left: 0;
   right: 0;
-  height: 2px;
-  opacity: 0.6;
-  transition: opacity 0.3s ease;
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  opacity: 0.5;
+  transform: translate(40%, -40%);
 }
 
-.revenue-card .stat-glow {
-  background: linear-gradient(90deg, transparent, #10b981, transparent);
+.revenue-card .stat-decoration {
+  background: radial-gradient(circle, rgba(5, 150, 105, 0.15) 0%, transparent 70%);
 }
 
-.orders-card .stat-glow {
-  background: linear-gradient(90deg, transparent, #6366f1, transparent);
+.orders-card .stat-decoration {
+  background: radial-gradient(circle, rgba(79, 70, 229, 0.15) 0%, transparent 70%);
 }
 
-.avg-card .stat-glow {
-  background: linear-gradient(90deg, transparent, #f59e0b, transparent);
+.avg-card .stat-decoration {
+  background: radial-gradient(circle, rgba(245, 158, 11, 0.15) 0%, transparent 70%);
 }
 
-.daily-card .stat-glow {
-  background: linear-gradient(90deg, transparent, #06b6d4, transparent);
+.daily-card .stat-decoration {
+  background: radial-gradient(circle, rgba(6, 182, 212, 0.15) 0%, transparent 70%);
 }
 
 .stat-content {
@@ -1610,110 +1636,115 @@ const generateSparklinePath = (data: number[], width = 80, height = 24) => {
 }
 
 .stat-icon-wrapper {
-  width: 44px;
-  height: 44px;
-  border-radius: 12px;
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 20px;
+  font-size: 22px;
 }
 
 .revenue-card .stat-icon-wrapper {
-  background: rgba(16, 185, 129, 0.15);
-  color: #34d399;
+  background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+  color: #059669;
 }
 
 .orders-card .stat-icon-wrapper {
-  background: rgba(99, 102, 241, 0.15);
-  color: #818cf8;
+  background: linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%);
+  color: #4f46e5;
 }
 
 .avg-card .stat-icon-wrapper {
-  background: rgba(245, 158, 11, 0.15);
-  color: #fbbf24;
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  color: #d97706;
 }
 
 .daily-card .stat-icon-wrapper {
-  background: rgba(6, 182, 212, 0.15);
-  color: #22d3ee;
+  background: linear-gradient(135deg, #cffafe 0%, #a5f3fc 100%);
+  color: #0891b2;
 }
 
 .stat-trend {
   display: flex;
   align-items: center;
   gap: 4px;
-  padding: 4px 10px;
+  padding: 5px 12px;
   border-radius: 20px;
   font-size: 12px;
   font-weight: 600;
 }
 
 .stat-trend.up {
-  background: rgba(16, 185, 129, 0.15);
-  color: #34d399;
+  background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+  color: #059669;
 }
 
 .stat-trend.down {
-  background: rgba(239, 68, 68, 0.15);
-  color: #f87171;
+  background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+  color: #dc2626;
 }
 
 .stat-value {
   font-size: 32px;
-  font-weight: 700;
-  color: #f8fafc;
+  font-weight: 800;
+  color: #0f172a;
   line-height: 1.1;
   margin-bottom: 4px;
 }
 
 .stat-label {
   font-size: 14px;
-  color: #94a3b8;
+  color: #64748b;
   font-weight: 500;
 }
 
 .stat-period {
   font-size: 12px;
-  color: #64748b;
+  color: #94a3b8;
   margin-top: 2px;
 }
 
+.sparkline-wrapper {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px dashed #e2e8f0;
+}
+
 .sparkline {
-  position: absolute;
-  bottom: 16px;
-  right: 16px;
-  width: 80px;
-  height: 24px;
-  opacity: 0.8;
+  width: 100%;
+  height: 28px;
 }
 
 .stat-progress {
   margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px dashed #e2e8f0;
 }
 
-.progress-bar {
-  height: 6px;
-  background: rgba(148, 163, 184, 0.1);
-  border-radius: 3px;
+.progress-track {
+  height: 8px;
+  background: #f1f5f9;
+  border-radius: 4px;
   overflow: hidden;
-  margin-bottom: 6px;
+  margin-bottom: 8px;
 }
 
 .progress-fill {
   height: 100%;
   background: linear-gradient(90deg, #f59e0b, #fbbf24);
-  border-radius: 3px;
+  border-radius: 4px;
   transition: width 0.5s ease;
 }
 
-.progress-bar.cyan .progress-fill {
-  background: linear-gradient(90deg, #06b6d4, #22d3ee);
+.progress-track.cyan .progress-fill {
+  background: linear-gradient(90deg, #0891b2, #22d3ee);
 }
 
 .progress-target {
   font-size: 11px;
-  color: #64748b;
+  color: #94a3b8;
+  font-weight: 500;
 }
 
 /* Metrics Row */
@@ -1723,40 +1754,62 @@ const generateSparklinePath = (data: number[], width = 80, height = 24) => {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 24px;
-  padding: 20px 32px;
-  background: rgba(30, 41, 59, 0.4);
-  border: 1px solid rgba(148, 163, 184, 0.1);
-  border-radius: 16px;
+  gap: 28px;
+  padding: 22px 36px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 20px;
   margin-bottom: 28px;
   flex-wrap: wrap;
-  backdrop-filter: blur(10px);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
 }
 
 .metric-item {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 14px;
 }
 
 .metric-item.highlight {
-  padding: 8px 16px;
-  background: linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(16, 185, 129, 0.05) 100%);
-  border-radius: 10px;
-  border: 1px solid rgba(16, 185, 129, 0.2);
+  padding: 10px 18px;
+  background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+  border-radius: 12px;
+  border: 1px solid #bbf7d0;
 }
 
-.metric-icon {
-  font-size: 22px;
+.metric-icon-box {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
 }
 
-.metric-icon.blue { color: #60a5fa; }
-.metric-icon.green { color: #34d399; }
-.metric-icon.purple { color: #a78bfa; }
-.metric-icon.orange { color: #fb923c; }
+.metric-icon-box.blue {
+  background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+  color: #2563eb;
+}
 
-.metric-item.highlight .metric-icon {
-  color: #34d399;
+.metric-icon-box.green {
+  background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+  color: #059669;
+}
+
+.metric-icon-box.purple {
+  background: linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%);
+  color: #7c3aed;
+}
+
+.metric-icon-box.orange {
+  background: linear-gradient(135deg, #ffedd5 0%, #fed7aa 100%);
+  color: #ea580c;
+}
+
+.metric-icon-box.emerald {
+  background: linear-gradient(135deg, #d1fae5 0%, #6ee7b7 100%);
+  color: #059669;
 }
 
 .metric-data {
@@ -1765,20 +1818,21 @@ const generateSparklinePath = (data: number[], width = 80, height = 24) => {
 }
 
 .metric-value {
-  font-size: 20px;
+  font-size: 22px;
   font-weight: 700;
-  color: #f8fafc;
+  color: #0f172a;
 }
 
 .metric-label {
   font-size: 12px;
   color: #64748b;
+  font-weight: 500;
 }
 
 .metric-divider {
   width: 1px;
-  height: 40px;
-  background: rgba(148, 163, 184, 0.15);
+  height: 44px;
+  background: linear-gradient(180deg, transparent, #e2e8f0, transparent);
 }
 
 /* Tabs Wrapper */
@@ -1788,11 +1842,11 @@ const generateSparklinePath = (data: number[], width = 80, height = 24) => {
 }
 
 .analytics-tabs {
-  background: rgba(30, 41, 59, 0.4);
-  border: 1px solid rgba(148, 163, 184, 0.1);
-  border-radius: 16px;
-  padding: 20px;
-  backdrop-filter: blur(10px);
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 20px;
+  padding: 24px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
 }
 
 .analytics-tabs :deep(.ant-tabs-nav) {
@@ -1800,42 +1854,43 @@ const generateSparklinePath = (data: number[], width = 80, height = 24) => {
 }
 
 .analytics-tabs :deep(.ant-tabs-nav::before) {
-  border-color: rgba(148, 163, 184, 0.1);
+  border-color: #f1f5f9;
 }
 
 .analytics-tabs :deep(.ant-tabs-tab) {
   color: #64748b;
   font-weight: 500;
   transition: all 0.2s ease;
+  padding: 10px 16px;
 }
 
 .analytics-tabs :deep(.ant-tabs-tab:hover) {
-  color: #94a3b8;
+  color: #4f46e5;
 }
 
 .analytics-tabs :deep(.ant-tabs-tab-active .ant-tabs-tab-btn) {
-  color: #f8fafc !important;
+  color: #4f46e5 !important;
+  font-weight: 600;
 }
 
 .analytics-tabs :deep(.ant-tabs-ink-bar) {
-  background: linear-gradient(90deg, #6366f1, #8b5cf6);
+  background: linear-gradient(90deg, #4f46e5, #6366f1);
   height: 3px;
   border-radius: 2px;
 }
 
 /* Chart Cards */
 .chart-card {
-  background: rgba(15, 23, 42, 0.6);
-  border: 1px solid rgba(148, 163, 184, 0.1);
-  border-radius: 16px;
+  background: #ffffff;
+  border: 1px solid #f1f5f9;
+  border-radius: 18px;
   padding: 24px;
   height: 100%;
   transition: all 0.3s ease;
 }
 
 .chart-card:hover {
-  border-color: rgba(148, 163, 184, 0.2);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
 }
 
 .chart-header {
@@ -1851,11 +1906,11 @@ const generateSparklinePath = (data: number[], width = 80, height = 24) => {
   gap: 10px;
   font-size: 16px;
   font-weight: 600;
-  color: #f8fafc;
+  color: #0f172a;
 }
 
 .chart-title :deep(.anticon) {
-  color: #818cf8;
+  color: #4f46e5;
   font-size: 18px;
 }
 
@@ -1883,75 +1938,78 @@ const generateSparklinePath = (data: number[], width = 80, height = 24) => {
   padding: 24px;
 }
 
-.dark-table :deep(.ant-table) {
+.premium-table :deep(.ant-table) {
   background: transparent;
-  color: #e2e8f0;
+  color: #334155;
 }
 
-.dark-table :deep(.ant-table-thead > tr > th) {
-  background: rgba(30, 41, 59, 0.5);
-  color: #94a3b8;
-  border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+.premium-table :deep(.ant-table-thead > tr > th) {
+  background: #f8fafc;
+  color: #64748b;
+  border-bottom: 1px solid #e2e8f0;
   font-weight: 600;
   text-transform: uppercase;
   font-size: 11px;
   letter-spacing: 0.5px;
 }
 
-.dark-table :deep(.ant-table-tbody > tr > td) {
+.premium-table :deep(.ant-table-tbody > tr > td) {
   background: transparent;
-  border-bottom: 1px solid rgba(148, 163, 184, 0.05);
-  color: #e2e8f0;
+  border-bottom: 1px solid #f1f5f9;
+  color: #334155;
 }
 
-.dark-table :deep(.ant-table-tbody > tr:hover > td) {
-  background: rgba(99, 102, 241, 0.1);
+.premium-table :deep(.ant-table-tbody > tr:hover > td) {
+  background: #f8fafc;
 }
 
 .rank-badge {
-  width: 28px;
-  height: 28px;
-  border-radius: 8px;
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 12px;
   font-weight: 700;
-  background: rgba(148, 163, 184, 0.1);
-  color: #94a3b8;
+  background: #f1f5f9;
+  color: #64748b;
 }
 
 .rank-badge.gold {
-  background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
-  color: #1e293b;
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  color: #b45309;
+  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.3);
 }
 
 .rank-badge.silver {
-  background: linear-gradient(135deg, #e2e8f0 0%, #94a3b8 100%);
-  color: #1e293b;
+  background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+  color: #475569;
+  box-shadow: 0 2px 8px rgba(148, 163, 184, 0.3);
 }
 
 .rank-badge.bronze {
-  background: linear-gradient(135deg, #fb923c 0%, #ea580c 100%);
-  color: white;
+  background: linear-gradient(135deg, #ffedd5 0%, #fed7aa 100%);
+  color: #c2410c;
+  box-shadow: 0 2px 8px rgba(234, 88, 12, 0.3);
 }
 
 .restaurant-name {
-  font-weight: 500;
-  color: #f8fafc;
+  font-weight: 600;
+  color: #0f172a;
 }
 
 .stat-cell {
   font-weight: 600;
-  color: #e2e8f0;
+  color: #334155;
 }
 
 .stat-cell.orders {
-  color: #818cf8;
+  color: #4f46e5;
 }
 
 .stat-cell.revenue {
-  color: #34d399;
+  color: #059669;
 }
 
 /* Growth Card */
@@ -1982,40 +2040,40 @@ const generateSparklinePath = (data: number[], width = 80, height = 24) => {
   align-items: center;
   gap: 16px;
   padding: 20px;
-  background: rgba(30, 41, 59, 0.5);
-  border-radius: 12px;
-  border: 1px solid rgba(148, 163, 184, 0.1);
+  background: #f8fafc;
+  border-radius: 16px;
+  border: 1px solid #f1f5f9;
 }
 
 .growth-icon {
-  width: 48px;
-  height: 48px;
-  border-radius: 12px;
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 22px;
+  font-size: 24px;
   flex-shrink: 0;
 }
 
 .growth-icon.orders-bg {
-  background: rgba(99, 102, 241, 0.15);
-  color: #818cf8;
+  background: linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%);
+  color: #4f46e5;
 }
 
 .growth-icon.revenue-bg {
-  background: rgba(16, 185, 129, 0.15);
-  color: #34d399;
+  background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+  color: #059669;
 }
 
 .growth-icon.restaurants-bg {
-  background: rgba(59, 130, 246, 0.15);
-  color: #60a5fa;
+  background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+  color: #2563eb;
 }
 
 .growth-icon.customers-bg {
-  background: rgba(245, 158, 11, 0.15);
-  color: #fbbf24;
+  background: linear-gradient(135deg, #ffedd5 0%, #fed7aa 100%);
+  color: #ea580c;
 }
 
 .growth-data {
@@ -2025,34 +2083,35 @@ const generateSparklinePath = (data: number[], width = 80, height = 24) => {
 }
 
 .growth-value {
-  font-size: 24px;
+  font-size: 26px;
   font-weight: 700;
-  color: #f8fafc;
+  color: #0f172a;
 }
 
 .growth-label {
   font-size: 13px;
   color: #64748b;
+  font-weight: 500;
 }
 
 .growth-badge {
   display: flex;
   align-items: center;
   gap: 4px;
-  padding: 6px 12px;
+  padding: 6px 14px;
   border-radius: 20px;
   font-size: 13px;
   font-weight: 600;
 }
 
 .growth-badge.positive {
-  background: rgba(16, 185, 129, 0.15);
-  color: #34d399;
+  background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+  color: #059669;
 }
 
 .growth-badge.negative {
-  background: rgba(239, 68, 68, 0.15);
-  color: #f87171;
+  background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+  color: #dc2626;
 }
 
 /* Empty State */
