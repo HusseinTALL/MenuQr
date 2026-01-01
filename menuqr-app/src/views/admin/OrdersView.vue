@@ -192,14 +192,20 @@ const stats = computed(() => {
   const completedToday = todayOrders.filter(o => o.status === 'completed');
   const pendingOrders = orders.value.filter(o => o.status === 'pending');
 
-  // Calculate average wait time for active orders
-  const activeOrders = orders.value.filter(o => ['pending', 'confirmed', 'preparing'].includes(o.status));
+  // Calculate average wait time for active orders (realistic calculation)
+  // Only consider orders from last 2 hours, cap individual wait to 60 min max
+  const now = new Date();
+  const twoHoursAgo = new Date(now.getTime() - 2 * 60 * 60 * 1000);
+  const activeOrders = orders.value.filter(o =>
+    ['pending', 'confirmed', 'preparing'].includes(o.status) &&
+    new Date(o.createdAt) >= twoHoursAgo
+  );
   let avgWaitTime = 0;
   if (activeOrders.length > 0) {
     const totalWait = activeOrders.reduce((sum, o) => {
       const created = new Date(o.createdAt);
-      const now = new Date();
-      return sum + Math.floor((now.getTime() - created.getTime()) / 1000 / 60);
+      const waitMinutes = Math.floor((now.getTime() - created.getTime()) / 1000 / 60);
+      return sum + Math.min(waitMinutes, 60); // Cap at 60 min per order
     }, 0);
     avgWaitTime = Math.round(totalWait / activeOrders.length);
   }
