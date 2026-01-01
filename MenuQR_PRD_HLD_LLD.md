@@ -1,1264 +1,1234 @@
-# 🍽️ MenuQR
+# MenuQR
 
-**Menu Virtuel Simple pour Restaurant — Commande via WhatsApp**
+**Plateforme SaaS de Gestion pour Restaurants & Hotels**
 
 > Documentation Technique Complète: PRD • HLD • LLD
 
-**Version 2.0** • Décembre 2024  
-Développé pour le marché Burkinabè 🇧🇫
+**Version 3.0** • Janvier 2025
 
------
+---
 
 ## Table des Matières
 
 1. [Product Requirements Document (PRD)](#1-product-requirements-document-prd)
-1. [High-Level Design (HLD)](#2-high-level-design-hld)
-1. [Low-Level Design (LLD)](#3-low-level-design-lld)
-1. [Annexes](#4-annexes)
+2. [High-Level Design (HLD)](#2-high-level-design-hld)
+3. [Low-Level Design (LLD)](#3-low-level-design-lld)
+4. [Annexes](#4-annexes)
 
------
+---
 
 ## 1. Product Requirements Document (PRD)
 
-### 1.1 Vision & Objectifs
+### 1.1 Executive Summary
+
+MenuQR est une plateforme SaaS complète de gestion pour restaurants et hôtels. Initialement conçue comme un simple système de menu digital avec commande WhatsApp, la plateforme a évolué en un écosystème complet offrant:
+
+- **Gestion de restaurant** (menus, commandes, cuisine KDS, tables)
+- **Système de livraison** avec application livreur dédiée
+- **Module hôtelier** pour le room service
+- **Programme de fidélité** et campagnes marketing
+- **Système de réservation** en ligne
+- **Panel SuperAdmin** multi-tenant
+- **Sécurité enterprise** (RBAC, audit, GDPR)
+
+### 1.2 Vision & Objectifs
 
 #### Vision Produit
 
-Offrir aux restaurants burkinabè un outil digital **ultra-simple** permettant de présenter leur menu via QR code et de recevoir les commandes directement sur WhatsApp, **sans infrastructure complexe ni investissement technologique important**.
+Devenir la plateforme de référence pour la digitalisation des restaurants et hôtels, en offrant une solution tout-en-un qui couvre l'ensemble du parcours client, de la découverte à la fidélisation.
 
-#### Objectifs SMART
+#### Objectifs Stratégiques
 
-|Objectif        |Spécifique                         |Mesurable               |Atteignable                      |Pertinent              |Temporel             |
-|----------------|-----------------------------------|------------------------|---------------------------------|-----------------------|---------------------|
-|**Adoption**    |50 restaurants utilisent MenuQR    |Nombre de comptes actifs|Stratégie de go-to-market définie|Marché BF sous-équipé  |6 mois post-lancement|
-|**Performance** |Temps de chargement < 3s sur 3G    |Lighthouse score ≥ 90   |PWA + cache agressif             |Connexions lentes au BF|Dès le MVP           |
-|**Conversion**  |60% des scans mènent à une commande|Analytics événements    |UX optimisée mobile              |Objectif business clé  |3 mois post-lancement|
-|**Satisfaction**|NPS restaurateurs > 40             |Enquêtes mensuelles     |Support et formations            |Fidélisation clients   |6 mois post-lancement|
-
-#### Principes Directeurs
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                     PRINCIPES MENUQR                            │
-├─────────────────────────────────────────────────────────────────┤
-│  🔌 Offline-First     → L'app fonctionne sans connexion        │
-│  📱 Mobile-First      → 95% des utilisateurs sont sur mobile   │
-│  🪶 Lightweight       → Bundle < 100KB, images optimisées      │
-│  🚀 Zero-Friction     → Aucune installation, aucun compte      │
-│  💬 WhatsApp-Native   → Canal de communication préféré au BF   │
-└─────────────────────────────────────────────────────────────────┘
-```
-
------
-
-### 1.2 Problèmes à Résoudre
-
-|Problème Actuel                                      |Impact                              |Solution MenuQR                               |Bénéfice                         |
-|-----------------------------------------------------|------------------------------------|----------------------------------------------|---------------------------------|
-|Menus papier coûteux (50,000+ FCFA/mois)             |Coût récurrent élevé                |Menu digital modifiable instantanément        |Économie 90% sur impression      |
-|Mise à jour difficile (rupture stock, nouveaux plats)|Frustration client, ventes perdues  |Modification en temps réel depuis téléphone   |Réactivité immédiate             |
-|Erreurs de commande (communication orale)            |Retours cuisine, mécontentement     |Client sélectionne lui-même, commande écrite  |Réduction erreurs de 50%         |
-|Serveurs surchargés aux heures de pointe             |Service dégradé, attente longue     |Commande autonome via QR                      |Serveurs focalisés sur le service|
-|Solutions POS complexes et coûteuses                 |Barrière technologique et financière|Zéro infrastructure, utilise WhatsApp existant|Adoption immédiate               |
-|Pas de photos des plats                              |Client hésite, commande moins       |Galerie photos avec descriptions              |Augmentation panier moyen 15%    |
-
------
+| Objectif | Description | Métrique |
+|----------|-------------|----------|
+| **Multi-tenant** | Servir plusieurs restaurants depuis une seule instance | 500+ restaurants actifs |
+| **Omnichannel** | Support sur place, livraison, et room service | 3 canaux intégrés |
+| **Monétisation** | Modèle SaaS avec 5 niveaux d'abonnement | MRR croissant |
+| **Enterprise-Ready** | Sécurité, audit, conformité GDPR | Certifications |
 
 ### 1.3 User Personas
 
-#### 👨🏾‍🍳 Persona 1: Mamadou — Propriétaire de Garbadrome
+#### Persona 1: Restaurant Owner (Admin)
 
 ```yaml
 Profil:
-  Âge: 42 ans
-  Localisation: Ouagadougou, quartier Patte d'Oie
-  Restaurant: Garbadrome populaire, 15 tables, 3 serveurs
-  Chiffre d'affaires: ~800,000 FCFA/jour (heures de pointe)
-  
-Comportement Digital:
-  - Smartphone Android entrée de gamme (Tecno/Infinix)
-  - Utilise WhatsApp quotidiennement (business et personnel)
-  - Confortable avec Facebook mais pas avec les apps complexes
-  - Connexion 3G souvent instable
+  Rôle: Propriétaire/Gérant de restaurant
+  Besoins:
+    - Gérer menu et disponibilités en temps réel
+    - Suivre les commandes (sur place + livraison)
+    - Analyser les performances via dashboard
+    - Gérer le personnel avec permissions
+    - Lancer des campagnes marketing
 
-Frustrations:
-  - "J'imprime 50 menus par mois, c'est du gaspillage"
-  - "Les clients demandent toujours à voir les plats"
-  - "Mes serveurs perdent du temps à expliquer le menu"
-  - "Les solutions digitales sont trop compliquées"
-
-Objectifs:
-  - Moderniser son image sans investissement lourd
-  - Réduire les erreurs de commande
-  - Attirer une clientèle plus jeune et connectée
-
-Citation: "Je veux quelque chose de simple qui marche avec WhatsApp"
+Fonctionnalités utilisées:
+  - Dashboard avec KPIs temps réel
+  - KDS (Kitchen Display System) Kanban
+  - Gestion des plats et catégories
+  - Système de réservation
+  - Programme de fidélité
+  - Gestion du personnel (RBAC)
 ```
 
-#### 👩🏾 Persona 2: Aïcha — Cliente Régulière
+#### Persona 2: Customer (Client)
 
 ```yaml
 Profil:
-  Âge: 28 ans
-  Profession: Comptable dans une entreprise privée
-  Localisation: Ouagadougou, quartier Zone du Bois
-  Habitudes: Déjeune au restaurant 3-4x par semaine
+  Rôle: Client du restaurant
+  Besoins:
+    - Consulter le menu digital (QR code)
+    - Commander sur place ou en livraison
+    - Suivre sa livraison en temps réel
+    - Réserver une table
+    - Accumuler des points de fidélité
+    - Laisser des avis
 
-Comportement Digital:
-  - Smartphone Android milieu de gamme (Samsung A series)
-  - Très active sur WhatsApp et Instagram
-  - Fait des achats en ligne occasionnellement
-  - Forfait data limité (2GB/mois)
-
-Frustrations:
-  - "L'attente pour avoir le menu est trop longue"
-  - "Je ne sais jamais à quoi ressemblent les plats"
-  - "Parfois ma commande n'est pas exactement ce que j'ai demandé"
-  - "Les menus papier sont souvent abîmés ou incomplets"
-
-Objectifs:
-  - Commander rapidement pendant la pause déjeuner
-  - Voir les photos avant de choisir
-  - Éviter les mauvaises surprises
-
-Citation: "Je veux voir ce que je commande et aller vite"
+Fonctionnalités utilisées:
+  - Menu digital responsive
+  - Panier et checkout
+  - Suivi de livraison (carte)
+  - Historique de commandes
+  - Espace fidélité
+  - Système d'avis
 ```
 
------
+#### Persona 3: Delivery Driver (Livreur)
 
-### 1.4 User Stories & Critères d’Acceptation
+```yaml
+Profil:
+  Rôle: Livreur partenaire
+  Besoins:
+    - Recevoir les livraisons assignées
+    - Naviguer vers les destinations
+    - Mettre à jour le statut en temps réel
+    - Suivre ses gains quotidiens
+    - Gérer son profil et véhicule
 
-#### Epic 1: Consultation du Menu (Client)
-
-|ID   |User Story                                                                         |Critères d’Acceptation                                                                                            |Priorité|
-|-----|-----------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------|--------|
-|US-01|En tant que **client**, je veux scanner un QR code pour voir le menu instantanément|• Menu s’affiche en < 3s sur 3G<br>• Aucune installation requise<br>• Fonctionne sur Android 5+ et iOS 12+        |P0      |
-|US-02|En tant que **client**, je veux voir les photos et descriptions des plats          |• Image HD optimisée pour chaque plat<br>• Description, prix, temps estimé affichés<br>• Badge “Populaire” visible|P0      |
-|US-03|En tant que **client**, je veux filtrer par catégorie                              |• Navigation par catégories cliquables<br>• Scroll fluide entre sections<br>• Compteur de plats par catégorie     |P1      |
-|US-04|En tant que **client**, je veux rechercher un plat spécifique                      |• Barre de recherche accessible<br>• Résultats en temps réel (debounce 300ms)<br>• Message si aucun résultat      |P2      |
-|US-05|En tant que **client**, je veux voir le menu dans ma langue                        |• Switch FR/EN visible<br>• Préférence sauvegardée localement<br>• Fallback sur FR si traduction manquante        |P1      |
-
-#### Epic 2: Commande (Client)
-
-|ID   |User Story                                                       |Critères d’Acceptation                                                                                        |Priorité|
-|-----|-----------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------|--------|
-|US-06|En tant que **client**, je veux ajouter des plats à ma commande  |• Bouton “+” visible sur chaque plat<br>• Animation feedback ajout<br>• Compteur panier mis à jour            |P0      |
-|US-07|En tant que **client**, je veux personnaliser mes plats (options)|• Modal options s’ouvre au clic<br>• Options obligatoires marquées<br>• Prix mis à jour en temps réel         |P1      |
-|US-08|En tant que **client**, je veux modifier les quantités           |• Boutons +/- dans le panier<br>• Suppression si quantité = 0<br>• Total recalculé instantanément             |P0      |
-|US-09|En tant que **client**, je veux envoyer ma commande via WhatsApp |• WhatsApp s’ouvre avec message pré-formaté<br>• Numéro de table inclus<br>• Liste des plats claire et lisible|P0      |
-|US-10|En tant que **client**, je veux ajouter des notes à ma commande  |• Champ texte libre par plat<br>• Champ global pour la commande<br>• Notes incluses dans message WhatsApp     |P2      |
-
-#### Epic 3: Gestion du Menu (Admin/Restaurateur)
-
-|ID   |User Story                                                        |Critères d’Acceptation                                                                                                        |Priorité|
-|-----|------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------|--------|
-|US-13|En tant que **restaurateur**, je veux ajouter/modifier des plats  |• Formulaire simple (nom, prix, photo, description)<br>• Upload photo depuis téléphone<br>• Changements visibles immédiatement|P0      |
-|US-14|En tant que **restaurateur**, je veux marquer un plat indisponible|• Toggle ON/OFF rapide<br>• Plat grisé côté client<br>• Pas de suppression, juste masquage                                    |P0      |
-|US-15|En tant que **restaurateur**, je veux organiser mes catégories    |• Drag & drop pour réordonner<br>• Création/suppression catégories<br>• Icône/emoji personnalisable                           |P1      |
-|US-19|En tant que **restaurateur**, je veux générer mes QR codes        |• QR code unique par table (optionnel)<br>• QR code général restaurant<br>• Export PNG/PDF pour impression                    |P0      |
-
------
-
-### 1.5 Fonctionnalités MVP
-
-#### ✅ Inclus dans MVP (Phase 1)
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                        MVP SCOPE                                │
-├─────────────────────────────────────────────────────────────────┤
-│  CLIENT                                                         │
-│  ├── QR code → Menu instantané (< 3s)                          │
-│  ├── Catégories + Plats (photo, prix, description, temps)      │
-│  ├── Panier avec quantités modifiables                         │
-│  ├── Commande WhatsApp pré-formatée                            │
-│  ├── Bouton "Appeler serveur"                                  │
-│  └── Bilingue FR/EN                                            │
-│                                                                 │
-│  ADMIN                                                          │
-│  ├── CRUD Plats (création, édition, suppression)               │
-│  ├── CRUD Catégories                                           │
-│  ├── Toggle disponibilité plats                                │
-│  ├── Upload photos (compression automatique)                   │
-│  └── Génération QR codes (restaurant + tables)                 │
-│                                                                 │
-│  TECHNIQUE                                                      │
-│  ├── PWA installable                                           │
-│  ├── Offline-first (Service Worker)                            │
-│  ├── Bundle < 100KB gzipped                                    │
-│  └── Responsive mobile-first                                   │
-└─────────────────────────────────────────────────────────────────┘
+Fonctionnalités utilisées:
+  - App livreur dédiée
+  - Navigation GPS intégrée
+  - Mise à jour statut one-tap
+  - Dashboard gains
+  - Gestion des shifts
 ```
 
-#### ❌ Exclus du MVP (Phases ultérieures)
+#### Persona 4: Hotel Staff (Personnel Hôtelier)
 
-|Fonctionnalité                              |Raison d’exclusion                    |Phase prévue|
-|--------------------------------------------|--------------------------------------|------------|
-|Paiement en ligne (Orange Money, Moov Money)|Complexité intégration, réglementation|Phase 2     |
-|Compte client / Authentification            |Friction inutile pour MVP             |Phase 2     |
-|Système de réservation                      |Feature séparée                       |Phase 3     |
-|Intégration POS existants                   |Dépend du POS, non standardisé        |Phase 3     |
-|Analytics avancés                           |Nice-to-have, pas critique            |Phase 2     |
+```yaml
+Profil:
+  Rôle: Réceptionniste / Room Service
+  Besoins:
+    - Gérer les chambres et guests
+    - Traiter les commandes room service
+    - Consulter le menu hôtelier
+    - Suivre les commandes en cuisine
 
------
-
-### 1.6 Roadmap Produit
-
-```
-═══════════════════════════════════════════════════════════════════════════
-                              ROADMAP MENUQR
-═══════════════════════════════════════════════════════════════════════════
-
-Q1 2025                          Q2 2025                          Q3 2025
-────────────────────────────────────────────────────────────────────────────
-     │                              │                              │
-     ▼                              ▼                              ▼
-┌─────────────┐             ┌─────────────┐             ┌─────────────┐
-│   PHASE 1   │             │   PHASE 2   │             │   PHASE 3   │
-│     MVP     │             │   GROWTH    │             │   SCALE     │
-└─────────────┘             └─────────────┘             └─────────────┘
-                                    
-• Menu digital QR             • Analytics dashboard          • Multi-tenant
-• Commande WhatsApp           • Mobile Money (Orange/Moov)   • API publique
-• Admin basique               • Comptes clients optionnels   • Intégration POS
-• PWA offline                 • Notifications push           • Programme fidélité
-• QR code generator           • Multi-menus (horaires)       • Marketplace plats
-
-Objectif: 50 restaurants      Objectif: 200 restaurants      Objectif: 500+ restaurants
-───────────────────────────────────────────────────────────────────────────────────
+Fonctionnalités utilisées:
+  - Panel admin hôtel
+  - Gestion des guests
+  - KDS hôtelier
+  - Menu room service
 ```
 
------
+#### Persona 5: Super Admin
 
-### 1.7 Métriques de Succès (KPIs)
+```yaml
+Profil:
+  Rôle: Administrateur plateforme
+  Besoins:
+    - Gérer tous les restaurants/hôtels
+    - Surveiller le système
+    - Gérer les abonnements et factures
+    - Accéder aux logs d'audit
+    - Configurer les plans tarifaires
 
-#### Métriques Produit
+Fonctionnalités utilisées:
+  - Dashboard global
+  - Gestion multi-tenant
+  - Monitoring système
+  - Audit logs
+  - Gestion abonnements
+  - Analytics avancés
+```
 
-|Métrique               |Définition                  |Objectif MVP|Objectif 6 mois|Outil de mesure|
-|-----------------------|----------------------------|------------|---------------|---------------|
-|**MAU**                |Utilisateurs actifs mensuels|1,000       |10,000         |Analytics      |
-|**Taux de conversion** |Scans → Commandes WhatsApp  |> 50%       |> 65%          |Events tracking|
-|**Temps de chargement**|First Contentful Paint      |< 2s        |< 1.5s         |Lighthouse     |
-|**Taux de rebond**     |Quitte sans interaction     |< 30%       |< 20%          |Analytics      |
+---
 
-#### Métriques Business
+### 1.4 Modules Fonctionnels
 
-|Métrique              |Définition                     |Objectif MVP|Objectif 6 mois|
-|----------------------|-------------------------------|------------|---------------|
-|**Restaurants actifs**|Utilisent MenuQR ≥ 1x/semaine  |20          |100            |
-|**NPS Restaurateurs** |Net Promoter Score             |> 30        |> 50           |
-|**Rétention M1**      |Restaurants actifs après 1 mois|> 70%       |> 85%          |
+#### Module 1: Gestion Restaurant (Core)
 
------
+| Fonctionnalité | Description | Status |
+|----------------|-------------|--------|
+| **Gestion Menu** | CRUD catégories et plats avec images | Implementé |
+| **Options Plats** | Variantes, suppléments, allergènes | Implementé |
+| **Gestion Tables** | Configuration tables et zones | Implementé |
+| **Gestion Stock** | Suivi stock, alertes bas stock | Implementé |
+| **Commandes** | Traitement complet du cycle commande | Implementé |
+| **KDS** | Affichage cuisine style Kanban | Implementé |
+| **Dashboard** | Analytics temps réel (ventes, revenus) | Implementé |
 
-### 1.8 Contraintes & Hypothèses
+#### Module 2: Experience Client
 
-#### Contraintes Techniques
+| Fonctionnalité | Description | Status |
+|----------------|-------------|--------|
+| **Menu Digital** | Accès via QR code, responsive | Implementé |
+| **Panier** | Gestion quantités, options, notes | Implementé |
+| **Checkout** | Modes: sur place, emporter, livraison | Implementé |
+| **Réservations** | Booking en ligne avec créneaux | Implementé |
+| **Fidélité** | Points, récompenses, niveaux | Implementé |
+| **Avis** | Notes et commentaires | Implementé |
+| **Historique** | Commandes passées, favoris | Implementé |
 
-|Contrainte                     |Impact                          |Mitigation                             |
-|-------------------------------|--------------------------------|---------------------------------------|
-|Connexion 3G instable au BF    |Chargement lent, timeouts       |Offline-first, Service Worker agressif |
-|Data mobile coûteuse           |Utilisateurs limitent leur conso|Bundle < 100KB, images WebP lazy-loaded|
-|Téléphones entrée de gamme     |RAM/CPU limités                 |Code optimisé, pas d’animations lourdes|
-|Pas de Play Store pour certains|Impossible d’installer des apps |PWA installable depuis navigateur      |
-|WhatsApp dominant (>90% au BF) |Dépendance à un canal externe   |Intégration wa.me (pas d’API requise)  |
+#### Module 3: Livraison
 
-#### Hypothèses à Valider
+| Fonctionnalité | Description | Status |
+|----------------|-------------|--------|
+| **Gestion Livraisons** | Dashboard admin des livraisons | Implementé |
+| **Batching** | Regroupement intelligent livraisons | Implementé |
+| **App Livreur** | Interface mobile livreurs | Implementé |
+| **Tracking Temps Réel** | Position GPS via Socket.IO | Implementé |
+| **ETA Google Maps** | Calcul trajet avec trafic | Implementé |
+| **Gestion Livreurs** | Profils, véhicules, documents | Implementé |
+| **Shifts** | Planification des créneaux | Implementé |
+| **Paiements** | Stripe Connect pour payouts | Implementé |
+| **Gains** | Suivi revenus livreurs | Implementé |
 
-|Hypothèse                                |Méthode de validation         |Seuil de succès                 |
-|-----------------------------------------|------------------------------|--------------------------------|
-|Les clients scanneront le QR code        |Test pilote 5 restaurants     |> 50% des tables utilisent le QR|
-|Les restaurateurs peuvent gérer l’admin  |Tests utilisateurs            |Tâche complète en < 5 min       |
-|WhatsApp est suffisant pour les commandes|Interviews restaurateurs      |> 80% satisfaits du workflow    |
-|Le menu digital augmente les ventes      |A/B test (tables avec/sans QR)|+10% panier moyen               |
+#### Module 4: Hôtellerie (Room Service)
 
------
+| Fonctionnalité | Description | Status |
+|----------------|-------------|--------|
+| **Gestion Hôtels** | Configuration établissements | Implementé |
+| **Gestion Chambres** | Rooms, types, tarifs | Implementé |
+| **Guests** | Check-in/out, profils clients | Implementé |
+| **Menu Room Service** | Menus dédiés par hôtel | Implementé |
+| **Commandes Hôtel** | Workflow room service | Implementé |
+| **Facturation Chambre** | Ajout à la note | Implementé |
+
+#### Module 5: Marketing & Engagement
+
+| Fonctionnalité | Description | Status |
+|----------------|-------------|--------|
+| **Campagnes Email** | Templates, scheduling, analytics | Implementé |
+| **SMS Marketing** | Notifications via Twilio | Implementé |
+| **Programme Fidélité** | Points, tiers, récompenses | Implementé |
+| **Annonces** | Bannières et notifications | Implementé |
+
+#### Module 6: SuperAdmin
+
+| Fonctionnalité | Description | Status |
+|----------------|-------------|--------|
+| **Dashboard Global** | Vue d'ensemble plateforme | Implementé |
+| **Gestion Restaurants** | CRUD restaurants clients | Implementé |
+| **Gestion Utilisateurs** | Tous les utilisateurs système | Implementé |
+| **Abonnements** | Plans et souscriptions | Implementé |
+| **Facturation** | Invoices et paiements | Implementé |
+| **Analytics** | Rapports avancés | Implementé |
+| **Monitoring** | Health système | Implementé |
+| **Alertes Système** | Notifications critiques | Implementé |
+| **Outils Avancés** | Backups, migrations | Implementé |
+
+#### Module 7: Sécurité & Conformité
+
+| Fonctionnalité | Description | Status |
+|----------------|-------------|--------|
+| **RBAC** | Permissions granulaires | Implementé |
+| **Audit Logs** | Traçabilité actions | Implementé |
+| **Détection Anomalies** | Brute force, patterns suspects | Implementé |
+| **GDPR** | Export/suppression données | Implementé |
+| **Sessions** | Gestion sessions actives | Implementé |
+| **Login History** | Historique connexions | Implementé |
+| **Blacklist Tokens** | Révocation JWT | Implementé |
+| **Backups** | Sauvegardes automatiques | Implementé |
+
+#### Module 8: Abonnements & Billing
+
+| Fonctionnalité | Description | Status |
+|----------------|-------------|--------|
+| **Plans Tarifaires** | 5 niveaux (Free → Enterprise) | Implementé |
+| **Feature Gating** | Restrictions par plan | Implementé |
+| **Downgrade Handling** | Gestion rétrogradation | Implementé |
+| **Stripe Integration** | Paiements récurrents | Implementé |
+
+---
+
+### 1.5 Matrice des Plans d'Abonnement
+
+| Fonctionnalité | Free | Starter | Professional | Business | Enterprise |
+|----------------|:----:|:-------:|:------------:|:--------:|:----------:|
+| **Plats max** | 20 | 50 | 200 | 500 | Illimité |
+| **Commandes/mois** | 100 | 500 | 2000 | 10000 | Illimité |
+| **Utilisateurs** | 1 | 3 | 10 | 25 | Illimité |
+| **Menu Digital** | ✓ | ✓ | ✓ | ✓ | ✓ |
+| **KDS** | - | ✓ | ✓ | ✓ | ✓ |
+| **Réservations** | - | ✓ | ✓ | ✓ | ✓ |
+| **Livraison** | - | - | ✓ | ✓ | ✓ |
+| **Fidélité** | - | - | ✓ | ✓ | ✓ |
+| **Campagnes** | - | - | - | ✓ | ✓ |
+| **Multi-sites** | - | - | - | ✓ | ✓ |
+| **API Access** | - | - | - | - | ✓ |
+| **Support Dédié** | - | - | - | - | ✓ |
+| **Prix/mois** | 0€ | 29€ | 79€ | 199€ | Sur devis |
+
+---
 
 ## 2. High-Level Design (HLD)
 
 ### 2.1 Architecture Overview
 
-L’architecture suit les principes **“Offline-First”** et **“API-Optional”** pour s’adapter aux contraintes réseau du Burkina Faso.
-
-#### Architecture Diagram
-
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                              CLIENT LAYER                                   │
-│  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────────────────┐  │
-│  │   Client PWA    │  │  Admin PWA      │  │     Service Worker          │  │
-│  │   (Vue.js 3)    │  │  (Vue.js 3)     │  │  ┌─────────────────────┐    │  │
-│  │                 │  │                 │  │  │  Workbox Runtime    │    │  │
-│  │  • Menu View    │  │  • Dashboard    │  │  │  • Cache-first      │    │  │
-│  │  • Cart         │  │  • Menu Editor  │  │  │  • Background sync  │    │  │
-│  │  • Checkout     │  │  • QR Generator │  │  │  • Offline fallback │    │  │
-│  └────────┬────────┘  └────────┬────────┘  │  └─────────────────────┘    │  │
-│           │                    │           └─────────────────────────────┘  │
-└───────────┼────────────────────┼────────────────────────────────────────────┘
-            │                    │
-            ▼                    ▼
+│                              CLIENT LAYER                                    │
+│  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐              │
+│  │  Customer App   │  │   Admin Panel   │  │   Driver App    │              │
+│  │   (Vue.js 3)    │  │   (Vue.js 3)    │  │   (Vue.js 3)    │              │
+│  │                 │  │                 │  │                 │              │
+│  │  • Menu View    │  │  • Dashboard    │  │  • Deliveries   │              │
+│  │  • Cart/Order   │  │  • KDS Kanban   │  │  • Navigation   │              │
+│  │  • Tracking     │  │  • Management   │  │  • Earnings     │              │
+│  └────────┬────────┘  └────────┬────────┘  └────────┬────────┘              │
+│           │                    │                    │                        │
+│  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐              │
+│  │  Hotel Guest    │  │  Hotel Admin    │  │   SuperAdmin    │              │
+│  │   (Vue.js 3)    │  │   (Vue.js 3)    │  │   (Vue.js 3)    │              │
+│  └────────┬────────┘  └────────┬────────┘  └────────┬────────┘              │
+└───────────┼────────────────────┼────────────────────┼────────────────────────┘
+            │                    │                    │
+            ▼                    ▼                    ▼
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                              DATA LAYER                                     │
-│  ┌────────────────────────────────────────────────────────────────────┐    │
-│  │                    LOCAL STORAGE                                    │    │
-│  │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐             │    │
-│  │  │  IndexedDB   │  │ LocalStorage │  │ Cache API    │             │    │
-│  │  │  (Menu data) │  │ (Cart, prefs)│  │ (Assets)     │             │    │
-│  │  └──────────────┘  └──────────────┘  └──────────────┘             │    │
-│  └────────────────────────────────────────────────────────────────────┘    │
-│                                    │                                        │
-│                                    ▼ (Optional - Online mode)               │
-│  ┌────────────────────────────────────────────────────────────────────┐    │
-│  │                    BACKEND API (Spring Boot 3)                      │    │
-│  │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐             │    │
-│  │  │ REST API     │  │ Auth Service │  │ Analytics    │             │    │
-│  │  │ /api/v1/*    │  │ (JWT)        │  │ Service      │             │    │
-│  │  └──────────────┘  └──────────────┘  └──────────────┘             │    │
-│  │                           │                                         │    │
-│  │                           ▼                                         │    │
-│  │  ┌────────────────────────────────────────────────────────────┐   │    │
-│  │  │                    PostgreSQL                               │   │    │
-│  │  │   restaurants │ categories │ dishes │ orders │ analytics   │   │    │
-│  │  └────────────────────────────────────────────────────────────┘   │    │
-│  └────────────────────────────────────────────────────────────────────┘    │
+│                              API LAYER                                       │
+│  ┌────────────────────────────────────────────────────────────────────┐     │
+│  │                    Express.js + TypeScript                          │     │
+│  │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐              │     │
+│  │  │ REST API     │  │ Socket.IO    │  │ Middleware   │              │     │
+│  │  │ /api/v1/*    │  │ (Real-time)  │  │ (Auth/RBAC)  │              │     │
+│  │  └──────────────┘  └──────────────┘  └──────────────┘              │     │
+│  │                                                                     │     │
+│  │  ┌──────────────────────────────────────────────────────────────┐  │     │
+│  │  │                    Services Layer                             │  │     │
+│  │  │  • orderService      • deliveryService    • hotelService     │  │     │
+│  │  │  • loyaltyService    • campaignService    • auditService     │  │     │
+│  │  │  • stripeService     • emailService       • smsService       │  │     │
+│  │  └──────────────────────────────────────────────────────────────┘  │     │
+│  └────────────────────────────────────────────────────────────────────┘     │
+│                                    │                                         │
+│                                    ▼                                         │
+│  ┌────────────────────────────────────────────────────────────────────┐     │
+│  │                         MongoDB (Mongoose)                          │     │
+│  │   Restaurant │ Order │ Delivery │ Hotel │ User │ Subscription      │     │
+│  │   Category   │ Dish  │ Driver   │ Room  │ Audit│ Campaign          │     │
+│  └────────────────────────────────────────────────────────────────────┘     │
 └─────────────────────────────────────────────────────────────────────────────┘
             │
             ▼
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                           EXTERNAL SERVICES                                 │
+│                           EXTERNAL SERVICES                                  │
 │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐        │
-│  │  WhatsApp   │  │   Vercel    │  │ Cloudinary  │  │   Sentry    │        │
-│  │  (wa.me)    │  │  (Hosting)  │  │  (Images)   │  │  (Errors)   │        │
+│  │   Stripe    │  │   Twilio    │  │ Google Maps │  │   Sentry    │        │
+│  │  (Payments) │  │    (SMS)    │  │  (Routing)  │  │  (Errors)   │        │
 │  └─────────────┘  └─────────────┘  └─────────────┘  └─────────────┘        │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐                          │
+│  │   Redis     │  │  Nodemailer │  │ Cloudinary  │                          │
+│  │   (Cache)   │  │   (Email)   │  │  (Images)   │                          │
+│  └─────────────┘  └─────────────┘  └─────────────┘                          │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
-
-#### Deployment Modes
-
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                          DEPLOYMENT MODES                                   │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                             │
-│  MODE 1: STATIC (MVP - Recommended for start)                              │
-│  ─────────────────────────────────────────────                             │
-│  • Menu data stored in JSON files                                          │
-│  • Admin generates new JSON and redeploys                                  │
-│  • Zero backend infrastructure                                             │
-│  • Hosting: Vercel/Netlify (free tier)                                     │
-│  • Best for: Single restaurant, simple needs                               │
-│                                                                             │
-│  MODE 2: HYBRID (Phase 2)                                                  │
-│  ─────────────────────────────────────────────                             │
-│  • Client works offline with cached data                                   │
-│  • Syncs with backend when online                                          │
-│  • Backend handles admin, analytics, multi-tenant                          │
-│  • Best for: Multiple restaurants, need analytics                          │
-│                                                                             │
-│  MODE 3: FULL BACKEND (Phase 3)                                            │
-│  ─────────────────────────────────────────────                             │
-│  • Real-time updates via WebSocket                                         │
-│  • Order management system                                                 │
-│  • Payment integration                                                     │
-│  • Best for: High-volume restaurants, franchises                           │
-│                                                                             │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
-
------
 
 ### 2.2 Stack Technologique
 
+#### Backend Stack
+
+| Layer | Technology | Version | Justification |
+|-------|------------|---------|---------------|
+| **Runtime** | Node.js | 20.x LTS | Performance, écosystème npm |
+| **Framework** | Express.js | 4.x | Flexibilité, middleware ecosystem |
+| **Language** | TypeScript | 5.x | Type safety, DX |
+| **Database** | MongoDB | 7.x | Flexibilité schéma, scalabilité |
+| **ODM** | Mongoose | 8.x | Validation, middleware |
+| **Auth** | JWT + bcrypt | - | Stateless, sécurisé |
+| **Real-time** | Socket.IO | 4.x | WebSocket bidirectionnel |
+| **Payments** | Stripe | - | Paiements + Connect |
+| **SMS** | Twilio | - | Notifications OTP |
+| **Email** | Nodemailer | - | Templates transactionnels |
+| **Cache** | Redis | - | Sessions, cache |
+
 #### Frontend Stack
 
-|Layer         |Technology     |Version|Justification                              |
-|--------------|---------------|-------|-------------------------------------------|
-|**Framework** |Vue.js         |3.4+   |Composition API, excellent DX, bundle léger|
-|**Build Tool**|Vite           |5.x    |HMR instantané, build optimisé             |
-|**Language**  |TypeScript     |5.x    |Type safety, meilleure maintenabilité      |
-|**Styling**   |Tailwind CSS   |3.x    |Utility-first, pas de CSS superflu         |
-|**State**     |Pinia          |2.x    |Officiel Vue 3, TypeScript natif           |
-|**Router**    |Vue Router     |4.x    |Navigation SPA, lazy loading               |
-|**PWA**       |vite-plugin-pwa|0.17+  |Service Worker Workbox                     |
-|**i18n**      |vue-i18n       |9.x    |Internationalisation FR/EN                 |
+| Layer | Technology | Version | Justification |
+|-------|------------|---------|---------------|
+| **Framework** | Vue.js | 3.4+ | Composition API, réactivité |
+| **Build Tool** | Vite | 5.x | HMR rapide, bundle optimisé |
+| **Language** | TypeScript | 5.x | Type safety |
+| **UI Library** | Ant Design Vue | 4.x | Composants enterprise |
+| **State** | Pinia | 2.x | Store officiel Vue 3 |
+| **Router** | Vue Router | 4.x | Navigation SPA |
+| **Charts** | ECharts | 5.x | Visualisations données |
+| **Maps** | Google Maps API | - | Tracking livraison |
+| **PWA** | vite-plugin-pwa | - | Installation mobile |
 
-#### Backend Stack (Optional)
+### 2.3 Flux de Données Principaux
 
-|Layer        |Technology           |Version|Justification                           |
-|-------------|---------------------|-------|----------------------------------------|
-|**Framework**|Spring Boot          |3.2+   |Robuste, expertise existante            |
-|**Language** |Java                 |21 LTS |Virtual threads, pattern matching       |
-|**Database** |PostgreSQL           |16.x   |JSONB pour flexibilité, full-text search|
-|**Auth**     |Spring Security + JWT|-      |Stateless, scalable                     |
-
-#### Infrastructure
-
-|Service             |Provider        |Tier            |Purpose                |
-|--------------------|----------------|----------------|-----------------------|
-|**Frontend Hosting**|Vercel          |Free            |CDN global, auto-deploy|
-|**Backend Hosting** |Railway / Render|Starter         |Java hosting           |
-|**Database**        |Supabase / Neon |Free            |PostgreSQL managed     |
-|**Images**          |Cloudinary      |Free (25GB)     |Optimization, WebP     |
-|**Monitoring**      |Sentry          |Free (5k events)|Error tracking         |
-
------
-
-### 2.3 Flux de Données
-
-#### Flow 1: Client Scan → Order
+#### Flow 1: Commande Restaurant
 
 ```
-┌──────────────────────────────────────────────────────────────────────────────┐
-│                    CUSTOMER JOURNEY: SCAN TO ORDER                           │
-└──────────────────────────────────────────────────────────────────────────────┘
-
-    ┌─────────┐     ┌─────────┐     ┌─────────┐     ┌─────────┐     ┌─────────┐
-    │  SCAN   │────▶│  LOAD   │────▶│ BROWSE  │────▶│  CART   │────▶│ ORDER   │
-    │ QR Code │     │  Menu   │     │  Menu   │     │ Review  │     │WhatsApp │
-    └─────────┘     └─────────┘     └─────────┘     └─────────┘     └─────────┘
-         │               │               │               │               │
-         ▼               ▼               ▼               ▼               ▼
-    ┌─────────┐     ┌─────────┐     ┌─────────┐     ┌─────────┐     ┌─────────┐
-    │ Camera  │     │ SW Check│     │ Pinia   │     │ Pinia   │     │ wa.me   │
-    │  App    │     │ Cache   │     │ Store   │     │ Cart    │     │ Link    │
-    └─────────┘     └─────────┘     └─────────┘     └─────────┘     └─────────┘
-         │               │               │               │               │
-         │               │               │               │               │
-    URL contains    If cached:      User taps      User can:        Message
-    restaurant_id   serve local     categories,    - Edit qty       includes:
-    + table_num     Else: fetch     views dishes   - Add notes      - Table #
-                    from CDN        adds to cart   - Clear cart     - Items
-                                                                    - Total
-                                                                    
-    ⏱️ < 1s          ⏱️ < 2s         ⏱️ User pace    ⏱️ User pace     ⏱️ Instant
+Customer App                API Server                  Admin Panel
+     │                           │                           │
+     │  1. Browse Menu           │                           │
+     │──────────────────────────▶│                           │
+     │                           │                           │
+     │  2. Add to Cart           │                           │
+     │  (localStorage)           │                           │
+     │                           │                           │
+     │  3. Checkout              │                           │
+     │──────────────────────────▶│                           │
+     │                           │  4. Create Order          │
+     │                           │──────────────────────────▶│
+     │                           │  (Socket.IO)              │
+     │                           │                           │
+     │  5. Order Confirmation    │                           │
+     │◀──────────────────────────│                           │
+     │                           │                           │
+     │                           │  6. Status Updates        │
+     │◀──────────────────────────│◀──────────────────────────│
+     │  (Socket.IO)              │  (Socket.IO)              │
 ```
 
------
-
-### 2.4 Considérations Burkina Faso 🇧🇫
-
-#### Network & Device Constraints
-
-|Constraint         |Reality                                     |Solution                              |
-|-------------------|--------------------------------------------|--------------------------------------|
-|**3G dominant**    |4G limited to cities, often falls back to 3G|Target < 3s load on 3G (1.6 Mbps)     |
-|**Expensive data** |1GB ≈ 1000-2000 FCFA                        |Bundle < 100KB, aggressive caching    |
-|**Low-end devices**|Tecno, Infinix, old Samsungs                |No heavy JS, simple animations        |
-|**Power outages**  |Frequent, phones often at low battery       |Efficient code, no background drains  |
-|**Shared phones**  |Multiple users per device                   |No persistent login, localStorage only|
-
-#### Optimization Strategies
+#### Flow 2: Livraison
 
 ```
-┌──────────────────────────────────────────────────────────────────────────────┐
-│                    BURKINA FASO OPTIMIZATIONS                                │
-└──────────────────────────────────────────────────────────────────────────────┘
-
-BUNDLE OPTIMIZATION
-───────────────────
-├── Tree shaking (remove unused code)
-├── Code splitting (lazy load routes)
-├── Minification (Terser)
-├── Compression (Brotli > gzip)
-└── Target: < 100KB gzipped total
-
-IMAGE OPTIMIZATION
-──────────────────
-├── WebP format (30% smaller than JPEG)
-├── Responsive images (srcset)
-├── Lazy loading (Intersection Observer)
-├── Placeholder blur (LQIP)
-├── Max dimensions: 800x600 for dishes
-└── Cloudinary auto-optimization
-
-CACHING STRATEGY
-────────────────
-├── Service Worker: Cache-first for menu
-├── IndexedDB: Offline menu storage
-├── HTTP Cache: Long TTL for static assets
-├── Stale-while-revalidate for API calls
-└── Background sync for analytics
+Order Created      Assignment        Driver App         Customer
+     │                 │                  │                 │
+     │  1. New delivery│                  │                 │
+     │────────────────▶│                  │                 │
+     │                 │  2. Assign       │                 │
+     │                 │─────────────────▶│                 │
+     │                 │                  │                 │
+     │                 │  3. Accept       │                 │
+     │                 │◀─────────────────│                 │
+     │                 │                  │                 │
+     │                 │                  │  4. Live GPS    │
+     │                 │                  │────────────────▶│
+     │                 │                  │  (Socket.IO)    │
+     │                 │                  │                 │
+     │                 │  5. Status       │                 │
+     │                 │◀─────────────────│                 │
+     │                 │                  │                 │
+     │                 │                  │  6. Delivered   │
+     │                 │                  │────────────────▶│
 ```
 
-#### Localization
+### 2.4 Modèle de Données (Vue d'Ensemble)
 
-|Aspect           |Implementation                          |
-|-----------------|----------------------------------------|
-|**Languages**    |French (default), English (optional)    |
-|**Currency**     |FCFA (Franc CFA), no decimals           |
-|**Phone format** |+226 XX XX XX XX                        |
-|**Date format**  |DD/MM/YYYY                              |
-|**Number format**|Space as thousand separator (1 000 FCFA)|
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                           CORE ENTITIES                                      │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│  ┌──────────────┐    ┌──────────────┐    ┌──────────────┐                   │
+│  │  Restaurant  │───▶│   Category   │───▶│    Dish      │                   │
+│  └──────────────┘    └──────────────┘    └──────────────┘                   │
+│         │                                       │                            │
+│         │                                       ▼                            │
+│         │            ┌──────────────┐    ┌──────────────┐                   │
+│         └───────────▶│    Table     │    │    Order     │                   │
+│                      └──────────────┘    └──────────────┘                   │
+│                                                 │                            │
+│                                                 ▼                            │
+│  ┌──────────────┐    ┌──────────────┐    ┌──────────────┐                   │
+│  │   Customer   │◀───│  Reservation │    │   Delivery   │                   │
+│  └──────────────┘    └──────────────┘    └──────────────┘                   │
+│         │                                       │                            │
+│         ▼                                       ▼                            │
+│  ┌──────────────┐                        ┌──────────────┐                   │
+│  │   Loyalty    │                        │    Driver    │                   │
+│  │ Transaction  │                        └──────────────┘                   │
+│  └──────────────┘                               │                            │
+│                                                 ▼                            │
+│                      ┌──────────────┐    ┌──────────────┐                   │
+│                      │ DriverShift  │    │ DriverPayout │                   │
+│                      └──────────────┘    └──────────────┘                   │
+│                                                                              │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                           HOTEL ENTITIES                                     │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│  ┌──────────────┐    ┌──────────────┐    ┌──────────────┐                   │
+│  │    Hotel     │───▶│     Room     │───▶│  HotelGuest  │                   │
+│  └──────────────┘    └──────────────┘    └──────────────┘                   │
+│         │                                       │                            │
+│         ▼                                       ▼                            │
+│  ┌──────────────┐    ┌──────────────┐    ┌──────────────┐                   │
+│  │  HotelMenu   │───▶│ HotelCategory│───▶│  HotelDish   │                   │
+│  └──────────────┘    └──────────────┘    └──────────────┘                   │
+│                                                 │                            │
+│                                                 ▼                            │
+│                                          ┌──────────────┐                   │
+│                                          │  HotelOrder  │                   │
+│                                          └──────────────┘                   │
+│                                                                              │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                        ADMIN & SECURITY ENTITIES                             │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│  ┌──────────────┐    ┌──────────────┐    ┌──────────────┐                   │
+│  │     User     │───▶│   AuditLog   │    │   Session    │                   │
+│  └──────────────┘    └──────────────┘    └──────────────┘                   │
+│         │                                                                    │
+│         ▼                                                                    │
+│  ┌──────────────┐    ┌──────────────┐    ┌──────────────┐                   │
+│  │ Subscription │───▶│Subscript.Plan│    │   Invoice    │                   │
+│  └──────────────┘    └──────────────┘    └──────────────┘                   │
+│                                                                              │
+│  ┌──────────────┐    ┌──────────────┐    ┌──────────────┐                   │
+│  │  AlertRule   │    │ SystemAlert  │    │   Backup     │                   │
+│  └──────────────┘    └──────────────┘    └──────────────┘                   │
+│                                                                              │
+│  ┌──────────────┐    ┌──────────────┐    ┌──────────────┐                   │
+│  │ LoginHistory │    │TokenBlacklist│    │ SystemConfig │                   │
+│  └──────────────┘    └──────────────┘    └──────────────┘                   │
+│                                                                              │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                          MARKETING ENTITIES                                  │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│  ┌──────────────┐    ┌──────────────┐    ┌──────────────┐                   │
+│  │   Campaign   │    │EmailTemplate │    │ Announcement │                   │
+│  └──────────────┘    └──────────────┘    └──────────────┘                   │
+│                                                                              │
+│  ┌──────────────┐    ┌──────────────┐                                       │
+│  │    Review    │    │ Notification │                                       │
+│  └──────────────┘    └──────────────┘                                       │
+│                                                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
 
------
+---
 
 ## 3. Low-Level Design (LLD)
 
 ### 3.1 Structure du Projet
 
 ```
-menuqr-app/
-├── public/
-│   ├── favicon.ico
-│   ├── manifest.json
-│   └── images/icons/          # PWA icons
+MenuQR/
+├── menuqr-api/                    # Backend Express.js
+│   ├── src/
+│   │   ├── config/
+│   │   │   ├── env.ts             # Variables environnement
+│   │   │   ├── permissions.ts     # Configuration RBAC
+│   │   │   ├── featureFlags.ts    # Feature gating
+│   │   │   └── redis.ts           # Config Redis
+│   │   │
+│   │   ├── controllers/
+│   │   │   ├── authController.ts
+│   │   │   ├── orderController.ts
+│   │   │   ├── deliveryController.ts
+│   │   │   ├── deliveryDriverController.ts
+│   │   │   ├── hotelController.ts
+│   │   │   ├── hotelOrderController.ts
+│   │   │   ├── reservationController.ts
+│   │   │   ├── loyaltyController.ts
+│   │   │   ├── campaignController.ts
+│   │   │   ├── staffController.ts
+│   │   │   ├── subscriptionController.ts
+│   │   │   └── superAdmin/
+│   │   │       ├── auditController.ts
+│   │   │       ├── gdprController.ts
+│   │   │       └── index.ts
+│   │   │
+│   │   ├── middleware/
+│   │   │   ├── auth.ts            # JWT verification
+│   │   │   ├── permission.ts      # RBAC middleware
+│   │   │   └── rateLimiter.ts
+│   │   │
+│   │   ├── models/                # 40+ Mongoose schemas
+│   │   │   ├── Restaurant.ts
+│   │   │   ├── Category.ts
+│   │   │   ├── Dish.ts
+│   │   │   ├── Order.ts
+│   │   │   ├── Delivery.ts
+│   │   │   ├── DeliveryDriver.ts
+│   │   │   ├── Hotel.ts
+│   │   │   ├── Room.ts
+│   │   │   ├── HotelGuest.ts
+│   │   │   ├── HotelOrder.ts
+│   │   │   ├── User.ts
+│   │   │   ├── Subscription.ts
+│   │   │   ├── SubscriptionPlan.ts
+│   │   │   ├── AuditLog.ts
+│   │   │   └── ...
+│   │   │
+│   │   ├── routes/                # API routes
+│   │   │   ├── index.ts
+│   │   │   ├── authRoutes.ts
+│   │   │   ├── orderRoutes.ts
+│   │   │   ├── deliveryRoutes.ts
+│   │   │   ├── hotelRoutes.ts
+│   │   │   ├── subscriptionRoutes.ts
+│   │   │   ├── superAdminRoutes.ts
+│   │   │   └── ...
+│   │   │
+│   │   ├── services/              # Business logic
+│   │   │   ├── orderService.ts
+│   │   │   ├── deliveryAssignmentService.ts
+│   │   │   ├── deliveryTrackingService.ts
+│   │   │   ├── driverEarningsService.ts
+│   │   │   ├── hotelService.ts
+│   │   │   ├── hotelOrderService.ts
+│   │   │   ├── loyaltyService.ts
+│   │   │   ├── campaignService.ts
+│   │   │   ├── emailService.ts
+│   │   │   ├── smsService.ts
+│   │   │   ├── stripeConnectService.ts
+│   │   │   ├── auditService.ts
+│   │   │   ├── gdprService.ts
+│   │   │   ├── anomalyDetectionService.ts
+│   │   │   ├── downgradeService.ts
+│   │   │   ├── subscriptionService.ts
+│   │   │   ├── routingService.ts
+│   │   │   ├── socketService.ts
+│   │   │   └── scheduler.ts
+│   │   │
+│   │   ├── tests/
+│   │   │   ├── auth/
+│   │   │   ├── delivery/
+│   │   │   ├── hotel/
+│   │   │   └── ...
+│   │   │
+│   │   └── index.ts               # Entry point
+│   │
+│   ├── scripts/
+│   │   ├── seedTestData.ts
+│   │   ├── seedHotel.ts
+│   │   └── migrations/
+│   │
+│   └── package.json
 │
-├── src/
-│   ├── assets/
-│   │   ├── images/
-│   │   └── styles/main.css
-│   │
-│   ├── components/
-│   │   ├── common/
-│   │   │   ├── AppHeader.vue
-│   │   │   ├── BaseButton.vue
-│   │   │   ├── BaseModal.vue
-│   │   │   ├── LoadingSpinner.vue
-│   │   │   └── LanguageSelector.vue
+├── menuqr-app/                    # Frontend Vue.js
+│   ├── src/
+│   │   ├── components/
+│   │   │   ├── common/
+│   │   │   ├── menu/
+│   │   │   ├── cart/
+│   │   │   ├── order/
+│   │   │   ├── chat/
+│   │   │   └── subscription/
 │   │   │
-│   │   ├── menu/
-│   │   │   ├── CategoryTabs.vue
-│   │   │   ├── DishCard.vue
-│   │   │   ├── DishModal.vue
-│   │   │   └── SearchBar.vue
+│   │   ├── composables/
+│   │   │   ├── useSocket.ts
+│   │   │   ├── useChat.ts
+│   │   │   ├── useGoogleMaps.ts
+│   │   │   ├── useSubscription.ts
+│   │   │   └── ...
 │   │   │
-│   │   ├── cart/
-│   │   │   ├── CartDrawer.vue
-│   │   │   ├── CartItem.vue
-│   │   │   └── CartSummary.vue
+│   │   ├── layouts/
+│   │   │   ├── AdminLayout.vue
+│   │   │   ├── DriverLayout.vue
+│   │   │   ├── HotelAdminLayout.vue
+│   │   │   └── CustomerLayout.vue
 │   │   │
-│   │   └── order/
-│   │       ├── WhatsAppButton.vue
-│   │       └── CallServerButton.vue
+│   │   ├── router/
+│   │   │   └── index.ts
+│   │   │
+│   │   ├── services/
+│   │   │   └── api.ts             # API client
+│   │   │
+│   │   ├── stores/
+│   │   │   ├── auth.ts
+│   │   │   ├── cart.ts
+│   │   │   ├── driverAuth.ts
+│   │   │   ├── hotelGuestStore.ts
+│   │   │   └── subscriptionStore.ts
+│   │   │
+│   │   ├── views/
+│   │   │   ├── admin/             # Restaurant admin
+│   │   │   │   ├── DashboardView.vue
+│   │   │   │   ├── OrdersView.vue
+│   │   │   │   ├── KDSView.vue
+│   │   │   │   ├── DeliveryManagementView.vue
+│   │   │   │   ├── ReservationsView.vue
+│   │   │   │   ├── LoyaltyView.vue
+│   │   │   │   ├── CampaignsView.vue
+│   │   │   │   ├── StaffView.vue
+│   │   │   │   ├── BillingView.vue
+│   │   │   │   └── ...
+│   │   │   │
+│   │   │   ├── customer/          # Customer views
+│   │   │   │   ├── MenuView.vue
+│   │   │   │   ├── CartView.vue
+│   │   │   │   ├── DeliveryTrackingView.vue
+│   │   │   │   ├── ReservationView.vue
+│   │   │   │   ├── LoyaltyView.vue
+│   │   │   │   └── ...
+│   │   │   │
+│   │   │   ├── driver/            # Driver app
+│   │   │   │   ├── DriverDashboardView.vue
+│   │   │   │   ├── DriverDeliveriesView.vue
+│   │   │   │   ├── DriverEarningsView.vue
+│   │   │   │   ├── DriverProfileView.vue
+│   │   │   │   └── DriverLoginView.vue
+│   │   │   │
+│   │   │   ├── hotel/             # Hotel guest views
+│   │   │   │   ├── HotelMenuView.vue
+│   │   │   │   ├── HotelCheckoutView.vue
+│   │   │   │   └── HotelOrderTrackingView.vue
+│   │   │   │
+│   │   │   ├── hotel-admin/       # Hotel admin
+│   │   │   │   ├── HotelDashboardView.vue
+│   │   │   │   ├── RoomsView.vue
+│   │   │   │   ├── GuestsView.vue
+│   │   │   │   └── HotelOrdersView.vue
+│   │   │   │
+│   │   │   └── superadmin/        # SuperAdmin panel
+│   │   │       ├── DashboardView.vue
+│   │   │       ├── RestaurantsView.vue
+│   │   │       ├── UsersView.vue
+│   │   │       ├── SubscriptionsView.vue
+│   │   │       ├── AuditLogsView.vue
+│   │   │       ├── SystemMonitoringView.vue
+│   │   │       └── ...
+│   │   │
+│   │   └── main.ts
 │   │
-│   ├── composables/
-│   │   ├── useMenu.ts
-│   │   ├── useCart.ts
-│   │   ├── useWhatsApp.ts
-│   │   ├── useI18n.ts
-│   │   └── useOffline.ts
-│   │
-│   ├── stores/
-│   │   ├── menuStore.ts
-│   │   ├── cartStore.ts
-│   │   └── configStore.ts
-│   │
-│   ├── types/
-│   │   ├── menu.ts
-│   │   ├── cart.ts
-│   │   └── config.ts
-│   │
-│   ├── utils/
-│   │   ├── formatters.ts
-│   │   └── validators.ts
-│   │
-│   ├── views/
-│   │   ├── MenuView.vue
-│   │   ├── CartView.vue
-│   │   └── AdminView.vue
-│   │
-│   ├── router/index.ts
-│   ├── i18n/
-│   │   ├── fr.json
-│   │   └── en.json
-│   │
-│   ├── data/menu.json
-│   ├── App.vue
-│   └── main.ts
+│   ├── e2e/                       # Playwright tests
+│   └── package.json
 │
-├── package.json
-├── vite.config.ts
-├── tailwind.config.js
-└── tsconfig.json
+├── docs/                          # Documentation
+│   ├── api/
+│   ├── guides/
+│   └── deployment/
+│
+└── docker-compose.yml
 ```
 
------
+### 3.2 Modèles de Données Principaux
 
-### 3.2 Modèles de Données (TypeScript)
+#### Restaurant
 
 ```typescript
-// types/menu.ts
-
-export interface Restaurant {
-  id: string;
+interface Restaurant {
+  _id: ObjectId;
   name: string;
   slug: string;
-  logo: string;
-  whatsappNumber: string;
-  address: string;
-  tables: number;
-  openingHours: OpeningHours;
-  currency: 'XOF';
-  defaultLocale: 'fr' | 'en';
-}
-
-export interface Category {
-  id: string;
-  name: LocalizedString;
-  description?: LocalizedString;
-  icon?: string;
-  order: number;
+  description?: string;
+  logo?: string;
+  coverImage?: string;
+  address: {
+    street: string;
+    city: string;
+    postalCode: string;
+    country: string;
+    coordinates?: { lat: number; lng: number };
+  };
+  phone: string;
+  email: string;
+  whatsappNumber?: string;
+  openingHours: {
+    [day: string]: { open: string; close: string; closed: boolean };
+  };
+  settings: {
+    currency: string;
+    timezone: string;
+    orderModes: ('dine_in' | 'takeaway' | 'delivery')[];
+    autoAcceptOrders: boolean;
+    preparationTime: number;
+    deliveryRadius: number;
+    minimumOrder: number;
+  };
+  subscription: ObjectId; // ref: Subscription
+  ownerId: ObjectId; // ref: User
   isActive: boolean;
-  dishes: Dish[];
+  isApproved: boolean;
+  createdAt: Date;
+  updatedAt: Date;
 }
+```
 
-export interface Dish {
-  id: string;
-  categoryId: string;
-  name: LocalizedString;
-  description?: LocalizedString;
-  price: number;
-  image: string;
-  estimatedTime?: number;
-  isAvailable: boolean;
-  isPopular: boolean;
-  isNew: boolean;
-  isVegetarian: boolean;
-  isSpicy: boolean;
-  spicyLevel?: 1 | 2 | 3;
-  options?: DishOption[];
-}
+#### Order
 
-export interface DishOption {
-  id: string;
-  name: LocalizedString;
-  type: 'single' | 'multiple';
-  required: boolean;
-  choices: OptionChoice[];
-}
-
-export interface OptionChoice {
-  id: string;
-  name: LocalizedString;
-  priceModifier: number;
-  isAvailable: boolean;
-}
-
-export interface LocalizedString {
-  fr: string;
-  en?: string;
-}
-
-// types/cart.ts
-
-export interface CartItem {
-  id: string;
-  dishId: string;
-  dish: Dish;
-  quantity: number;
-  selectedOptions: SelectedOption[];
+```typescript
+interface Order {
+  _id: ObjectId;
+  orderNumber: string; // Auto-generated
+  restaurantId: ObjectId;
+  customerId?: ObjectId;
+  tableId?: ObjectId;
+  items: {
+    dishId: ObjectId;
+    name: string;
+    quantity: number;
+    price: number;
+    options?: { name: string; value: string; price: number }[];
+    notes?: string;
+  }[];
+  orderMode: 'dine_in' | 'takeaway' | 'delivery';
+  status: 'pending' | 'confirmed' | 'preparing' | 'ready' | 'delivered' | 'cancelled';
+  subtotal: number;
+  tax: number;
+  deliveryFee?: number;
+  discount?: number;
+  total: number;
+  payment: {
+    method: 'cash' | 'card' | 'mobile_money';
+    status: 'pending' | 'paid' | 'failed' | 'refunded';
+    transactionId?: string;
+  };
+  deliveryAddress?: {
+    street: string;
+    city: string;
+    instructions?: string;
+    coordinates?: { lat: number; lng: number };
+  };
+  scheduledFor?: Date;
+  estimatedReadyTime?: Date;
   notes?: string;
-  unitPrice: number;
-  totalPrice: number;
-}
-
-export interface SelectedOption {
-  optionId: string;
-  choiceIds: string[];
-  choices: OptionChoice[];
-  priceModifier: number;
+  createdAt: Date;
+  updatedAt: Date;
 }
 ```
 
------
-
-### 3.3 Pinia Stores
-
-#### Cart Store
+#### Delivery
 
 ```typescript
-// stores/cartStore.ts
-import { defineStore } from 'pinia';
-import type { CartItem, Dish, SelectedOption } from '@/types';
-import { v4 as uuidv4 } from 'uuid';
-
-export const useCartStore = defineStore('cart', {
-  state: () => ({
-    items: [] as CartItem[],
-    tableNumber: null as number | null,
-    notes: '',
-  }),
-
-  getters: {
-    itemCount: (state) => 
-      state.items.reduce((sum, item) => sum + item.quantity, 0),
-    
-    subtotal: (state) => 
-      state.items.reduce((sum, item) => sum + item.totalPrice, 0),
-    
-    isEmpty: (state) => state.items.length === 0,
-    
-    hasDish: (state) => (dishId: string) =>
-      state.items.some((item) => item.dishId === dishId),
-  },
-
-  actions: {
-    addItem(dish: Dish, quantity = 1, options: SelectedOption[] = [], notes?: string) {
-      const optionsPrice = options.reduce((sum, opt) => sum + opt.priceModifier, 0);
-      const unitPrice = dish.price + optionsPrice;
-
-      const existingIndex = this.items.findIndex(
-        (item) => item.dishId === dish.id &&
-          JSON.stringify(item.selectedOptions) === JSON.stringify(options)
-      );
-
-      if (existingIndex > -1) {
-        this.items[existingIndex].quantity += quantity;
-        this.items[existingIndex].totalPrice = 
-          this.items[existingIndex].unitPrice * this.items[existingIndex].quantity;
-      } else {
-        this.items.push({
-          id: uuidv4(),
-          dishId: dish.id,
-          dish,
-          quantity,
-          selectedOptions: options,
-          notes,
-          unitPrice,
-          totalPrice: unitPrice * quantity,
-        });
-      }
-    },
-
-    removeItem(itemId: string) {
-      const index = this.items.findIndex((item) => item.id === itemId);
-      if (index > -1) this.items.splice(index, 1);
-    },
-
-    updateQuantity(itemId: string, quantity: number) {
-      const item = this.items.find((item) => item.id === itemId);
-      if (!item) return;
-      
-      if (quantity <= 0) {
-        this.removeItem(itemId);
-      } else {
-        item.quantity = quantity;
-        item.totalPrice = item.unitPrice * quantity;
-      }
-    },
-
-    setTableNumber(num: number | null) {
-      this.tableNumber = num;
-    },
-
-    clearCart() {
-      this.items = [];
-      this.notes = '';
-    },
-  },
-
-  persist: {
-    key: 'menuqr-cart',
-    storage: localStorage,
-  },
-});
-```
-
------
-
-### 3.4 Composables
-
-#### useWhatsApp Composable
-
-```typescript
-// composables/useWhatsApp.ts
-import { computed } from 'vue';
-import { useCartStore } from '@/stores/cartStore';
-import { useMenuStore } from '@/stores/menuStore';
-import { formatPrice } from '@/utils/formatters';
-
-export function useWhatsApp() {
-  const cartStore = useCartStore();
-  const menuStore = useMenuStore();
-
-  const formatOrderMessage = computed(() => {
-    const lines: string[] = [];
-    const restaurantName = menuStore.restaurant?.name || 'Restaurant';
-
-    lines.push(`🍽️ *Nouvelle commande*`);
-    lines.push(`📍 ${restaurantName}`);
-    
-    if (cartStore.tableNumber) {
-      lines.push(`🪑 Table ${cartStore.tableNumber}`);
-    }
-
-    lines.push('');
-    lines.push('━━━━━━━━━━━━━━━━');
-    lines.push('');
-
-    cartStore.items.forEach((item) => {
-      const name = item.dish.name.fr;
-      lines.push(`• ${item.quantity}x ${name} — ${formatPrice(item.totalPrice)}`);
-      
-      if (item.selectedOptions.length > 0) {
-        item.selectedOptions.forEach((opt) => {
-          const choiceNames = opt.choices.map((c) => c.name.fr);
-          lines.push(`  ↳ ${choiceNames.join(', ')}`);
-        });
-      }
-      
-      if (item.notes) {
-        lines.push(`  📝 ${item.notes}`);
-      }
-    });
-
-    lines.push('');
-    lines.push('━━━━━━━━━━━━━━━━');
-    lines.push('');
-    lines.push(`*Total:* ${formatPrice(cartStore.subtotal)}`);
-    
-    if (cartStore.notes) {
-      lines.push('');
-      lines.push(`📝 *Notes:* ${cartStore.notes}`);
-    }
-
-    lines.push('');
-    lines.push('Merci pour votre commande ! 🙏');
-
-    return lines.join('\n');
-  });
-
-  const whatsappUrl = computed(() => {
-    const phone = menuStore.restaurant?.whatsappNumber || '';
-    const message = encodeURIComponent(formatOrderMessage.value);
-    return `https://wa.me/${phone}?text=${message}`;
-  });
-
-  const sendOrder = () => {
-    if (cartStore.isEmpty) return;
-    window.open(whatsappUrl.value, '_blank');
+interface Delivery {
+  _id: ObjectId;
+  deliveryNumber: string;
+  orderId: ObjectId;
+  restaurantId: ObjectId;
+  customerId: ObjectId;
+  driverId?: ObjectId;
+  status:
+    | 'pending'           // Awaiting assignment
+    | 'assigned'          // Driver assigned
+    | 'accepted'          // Driver accepted
+    | 'arriving_restaurant' // On way to pickup
+    | 'at_restaurant'     // At restaurant
+    | 'picked_up'         // Order collected
+    | 'in_transit'        // En route to customer
+    | 'arrived'           // At destination
+    | 'delivered'         // Completed
+    | 'cancelled';
+  pickupAddress: Address;
+  deliveryAddress: Address;
+  estimatedDistance: number; // km
+  estimatedDuration: number; // minutes
+  actualDuration?: number;
+  deliveryFee: number;
+  driverEarnings?: number;
+  tip?: number;
+  isPriority: boolean;
+  proofOfDelivery?: {
+    photo?: string;
+    signature?: string;
+    notes?: string;
+    timestamp: Date;
   };
-
-  const callServer = () => {
-    const phone = menuStore.restaurant?.whatsappNumber || '';
-    const message = encodeURIComponent(
-      `🔔 *Appel serveur*\n\n` +
-      `📍 ${menuStore.restaurant?.name}\n` +
-      (cartStore.tableNumber ? `🪑 Table ${cartStore.tableNumber}\n\n` : '\n') +
-      `Un serveur est demandé à cette table.`
-    );
-    window.open(`https://wa.me/${phone}?text=${message}`, '_blank');
+  tracking: {
+    currentLocation?: { lat: number; lng: number };
+    lastUpdated?: Date;
+    route?: string; // Encoded polyline
   };
-
-  return { formatOrderMessage, whatsappUrl, sendOrder, callServer };
+  timeline: {
+    status: string;
+    timestamp: Date;
+    location?: { lat: number; lng: number };
+  }[];
+  createdAt: Date;
+  updatedAt: Date;
 }
 ```
 
------
+#### DeliveryDriver
 
-### 3.5 Composants Vue
+```typescript
+interface DeliveryDriver {
+  _id: ObjectId;
+  email: string;
+  phone: string;
+  firstName: string;
+  lastName: string;
+  profilePhoto?: string;
+  dateOfBirth?: Date;
+  vehicleType: 'bicycle' | 'motorcycle' | 'car' | 'van';
+  vehicleDetails?: {
+    make: string;
+    model: string;
+    year: number;
+    plateNumber: string;
+    color: string;
+  };
+  documents: {
+    type: 'id_card' | 'drivers_license' | 'vehicle_registration' | 'insurance';
+    url: string;
+    verified: boolean;
+    expiryDate?: Date;
+  }[];
+  status: 'pending' | 'active' | 'inactive' | 'suspended';
+  isVerified: boolean;
+  isOnline: boolean;
+  currentLocation?: { lat: number; lng: number };
+  workingZones?: string[];
+  rating: number;
+  totalDeliveries: number;
+  earnings: {
+    today: number;
+    week: number;
+    month: number;
+    total: number;
+  };
+  stripeConnectAccountId?: string;
+  bankDetails?: {
+    bankName: string;
+    accountNumber: string;
+    accountHolderName: string;
+  };
+  createdAt: Date;
+  updatedAt: Date;
+}
+```
 
-#### DishCard.vue
+#### Hotel & Room
 
-```vue
-<template>
-  <article
-    class="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-100 
-           transition-all duration-200 active:scale-[0.98] cursor-pointer"
-    :class="{ 'opacity-60 grayscale': !dish.isAvailable }"
-    @click="$emit('select', dish)"
-  >
-    <!-- Image -->
-    <div class="relative aspect-[4/3] overflow-hidden bg-gray-100">
-      <img
-        :src="dish.image"
-        :alt="dish.name.fr"
-        class="w-full h-full object-cover"
-        loading="lazy"
-      />
-      
-      <!-- Badges -->
-      <span
-        v-if="dish.isPopular"
-        class="absolute top-2 left-2 bg-orange-500 text-white text-xs px-2 py-1 rounded-full"
-      >
-        🔥 Populaire
-      </span>
-      
-      <span
-        v-if="dish.estimatedTime"
-        class="absolute bottom-2 right-2 bg-black/60 text-white text-xs px-2 py-1 rounded-full"
-      >
-        ⏱️ {{ dish.estimatedTime }} min
-      </span>
+```typescript
+interface Hotel {
+  _id: ObjectId;
+  name: string;
+  slug: string;
+  description?: string;
+  logo?: string;
+  address: Address;
+  phone: string;
+  email: string;
+  amenities: string[];
+  settings: {
+    currency: string;
+    timezone: string;
+    checkInTime: string;
+    checkOutTime: string;
+    roomServiceHours: { start: string; end: string };
+  };
+  subscription: ObjectId;
+  ownerId: ObjectId;
+  isActive: boolean;
+  createdAt: Date;
+}
 
-      <!-- Unavailable Overlay -->
-      <div
-        v-if="!dish.isAvailable"
-        class="absolute inset-0 bg-white/50 flex items-center justify-center"
-      >
-        <span class="bg-red-500 text-white text-xs font-semibold px-3 py-1 rounded-full">
-          Indisponible
-        </span>
-      </div>
-    </div>
+interface Room {
+  _id: ObjectId;
+  hotelId: ObjectId;
+  roomNumber: string;
+  floor: number;
+  type: 'standard' | 'deluxe' | 'suite' | 'presidential';
+  capacity: number;
+  amenities: string[];
+  pricePerNight: number;
+  status: 'available' | 'occupied' | 'maintenance' | 'cleaning';
+  currentGuest?: ObjectId;
+  qrCode: string;
+  isActive: boolean;
+}
 
-    <!-- Content -->
-    <div class="p-3">
-      <h3 class="font-semibold text-gray-900 line-clamp-1">
-        {{ dish.name.fr }}
-      </h3>
-      
-      <p v-if="dish.description" class="text-sm text-gray-500 mt-1 line-clamp-2">
-        {{ dish.description.fr }}
-      </p>
+interface HotelGuest {
+  _id: ObjectId;
+  hotelId: ObjectId;
+  roomId: ObjectId;
+  firstName: string;
+  lastName: string;
+  email?: string;
+  phone?: string;
+  idDocument?: { type: string; number: string };
+  checkInDate: Date;
+  checkOutDate: Date;
+  status: 'reserved' | 'checked_in' | 'checked_out';
+  preferences?: string[];
+  notes?: string;
+}
+```
 
-      <!-- Price & Add Button -->
-      <div class="flex items-center justify-between mt-3">
-        <span class="text-lg font-bold text-green-600">
-          {{ formatPrice(dish.price) }}
-        </span>
-        
-        <button
-          v-if="dish.isAvailable"
-          class="bg-green-500 text-white w-9 h-9 rounded-full flex items-center 
-                 justify-center text-xl font-bold hover:bg-green-600 transition-colors"
-          @click.stop="addToCart"
-        >
-          +
-        </button>
-      </div>
-    </div>
-  </article>
-</template>
+#### Subscription & Plan
 
-<script setup lang="ts">
-import type { Dish } from '@/types';
-import { useCartStore } from '@/stores/cartStore';
-import { formatPrice } from '@/utils/formatters';
+```typescript
+interface SubscriptionPlan {
+  _id: ObjectId;
+  name: string;
+  slug: 'free' | 'starter' | 'professional' | 'business' | 'enterprise';
+  description: string;
+  prices: {
+    monthly: number;
+    yearly: number;
+    currency: string;
+  };
+  limits: {
+    dishes: number;
+    orders: number;
+    users: number;
+    campaigns: number;
+  };
+  features: {
+    kds: boolean;
+    reservations: boolean;
+    delivery: boolean;
+    loyalty: boolean;
+    campaigns: boolean;
+    multiSite: boolean;
+    apiAccess: boolean;
+    prioritySupport: boolean;
+    customBranding: boolean;
+  };
+  isActive: boolean;
+}
 
-const props = defineProps<{ dish: Dish }>();
-const emit = defineEmits<{ select: [dish: Dish] }>();
+interface Subscription {
+  _id: ObjectId;
+  restaurantId: ObjectId;
+  planId: ObjectId;
+  status: 'active' | 'past_due' | 'cancelled' | 'trialing';
+  currentPeriodStart: Date;
+  currentPeriodEnd: Date;
+  stripeSubscriptionId?: string;
+  stripeCustomerId?: string;
+  usage: {
+    dishes: number;
+    orders: number;
+    users: number;
+  };
+  pendingChange?: {
+    planId: ObjectId;
+    effectiveDate: Date;
+    reason: string;
+  };
+  gracePeriod?: {
+    startDate: Date;
+    endDate: Date;
+    reason: string;
+  };
+}
+```
 
-const cartStore = useCartStore();
+### 3.3 API Endpoints
 
-const addToCart = () => {
-  if (props.dish.options?.length) {
-    emit('select', props.dish);
-  } else {
-    cartStore.addItem(props.dish);
-  }
+#### Authentication
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/v1/auth/register` | Register restaurant owner |
+| POST | `/api/v1/auth/login` | Login |
+| POST | `/api/v1/auth/logout` | Logout |
+| POST | `/api/v1/auth/refresh` | Refresh token |
+| POST | `/api/v1/auth/forgot-password` | Request password reset |
+| POST | `/api/v1/auth/reset-password` | Reset password |
+
+#### Orders
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/v1/orders` | List orders |
+| GET | `/api/v1/orders/:id` | Get order |
+| POST | `/api/v1/orders` | Create order |
+| PUT | `/api/v1/orders/:id/status` | Update status |
+| GET | `/api/v1/orders/stats/daily` | Daily stats |
+| GET | `/api/v1/orders/kitchen` | Kitchen orders |
+
+#### Deliveries
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/v1/deliveries` | List deliveries |
+| GET | `/api/v1/deliveries/:id` | Get delivery |
+| POST | `/api/v1/deliveries/:id/assign` | Assign driver |
+| PUT | `/api/v1/deliveries/:id/status` | Update status |
+| GET | `/api/v1/deliveries/:id/eta` | Get ETA |
+| GET | `/api/v1/deliveries/:id/route` | Get route |
+
+#### Driver (Self-Service)
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/v1/driver/register` | Register driver |
+| POST | `/api/v1/driver/login` | Driver login |
+| GET | `/api/v1/driver/profile` | Get profile |
+| PUT | `/api/v1/driver/profile` | Update profile |
+| GET | `/api/v1/driver/deliveries/active` | Active delivery |
+| GET | `/api/v1/driver/deliveries` | Delivery history |
+| PUT | `/api/v1/driver/status` | Toggle online |
+| PUT | `/api/v1/driver/location` | Update location |
+| GET | `/api/v1/driver/earnings` | Get earnings |
+
+#### Hotels
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/v1/hotels/:id` | Get hotel |
+| GET | `/api/v1/hotels/:id/rooms` | List rooms |
+| GET | `/api/v1/hotels/:id/menu` | Get menu |
+| POST | `/api/v1/hotels/:hotelId/orders` | Create room service order |
+| GET | `/api/v1/hotels/:hotelId/orders` | List hotel orders |
+| PUT | `/api/v1/hotels/:hotelId/orders/:id/status` | Update order status |
+| POST | `/api/v1/hotels/:hotelId/guests` | Check-in guest |
+
+#### Subscriptions
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/v1/subscriptions/plans` | List plans |
+| GET | `/api/v1/subscriptions/current` | Current subscription |
+| POST | `/api/v1/subscriptions/upgrade` | Upgrade plan |
+| POST | `/api/v1/subscriptions/downgrade` | Downgrade plan |
+| GET | `/api/v1/subscriptions/usage` | Usage stats |
+
+#### SuperAdmin
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/v1/superadmin/restaurants` | All restaurants |
+| GET | `/api/v1/superadmin/users` | All users |
+| GET | `/api/v1/superadmin/subscriptions` | All subscriptions |
+| GET | `/api/v1/superadmin/audit-logs` | Audit logs |
+| GET | `/api/v1/superadmin/system/health` | System health |
+| GET | `/api/v1/superadmin/analytics` | Platform analytics |
+
+### 3.4 Sécurité
+
+#### RBAC Permissions
+
+```typescript
+const PERMISSIONS = {
+  // Dishes
+  DISHES_VIEW: 'dishes:view',
+  DISHES_CREATE: 'dishes:create',
+  DISHES_UPDATE: 'dishes:update',
+  DISHES_DELETE: 'dishes:delete',
+
+  // Orders
+  ORDERS_VIEW: 'orders:view',
+  ORDERS_UPDATE: 'orders:update',
+  ORDERS_CANCEL: 'orders:cancel',
+
+  // Deliveries
+  DELIVERIES_VIEW: 'deliveries:view',
+  DELIVERIES_ASSIGN: 'deliveries:assign',
+  DELIVERIES_MANAGE: 'deliveries:manage',
+
+  // Staff
+  STAFF_VIEW: 'staff:view',
+  STAFF_MANAGE: 'staff:manage',
+
+  // Settings
+  SETTINGS_VIEW: 'settings:view',
+  SETTINGS_UPDATE: 'settings:update',
+
+  // Analytics
+  ANALYTICS_VIEW: 'analytics:view',
+  REPORTS_EXPORT: 'reports:export',
 };
-</script>
+
+const ROLE_PERMISSIONS = {
+  owner: Object.values(PERMISSIONS), // All permissions
+  manager: [/* Subset */],
+  staff: [PERMISSIONS.ORDERS_VIEW, PERMISSIONS.ORDERS_UPDATE],
+  kitchen: [PERMISSIONS.ORDERS_VIEW],
+  delivery_manager: [PERMISSIONS.DELIVERIES_VIEW, PERMISSIONS.DELIVERIES_ASSIGN],
+};
 ```
 
-#### WhatsAppButton.vue
+#### Audit Logging
 
-```vue
-<template>
-  <button
-    :disabled="isEmpty"
-    class="w-full py-4 px-6 rounded-xl font-bold text-lg flex items-center 
-           justify-center gap-3 transition-all duration-200 shadow-lg"
-    :class="{
-      'bg-green-500 text-white hover:bg-green-600': !isEmpty,
-      'bg-gray-200 text-gray-400 cursor-not-allowed': isEmpty,
-    }"
-    @click="sendOrder"
-  >
-    <svg class="w-6 h-6" viewBox="0 0 24 24" fill="currentColor">
-      <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967..." />
-    </svg>
-    <span>{{ buttonText }}</span>
-  </button>
-</template>
+All sensitive actions are logged:
+- Authentication events
+- Data modifications (CRUD)
+- Permission changes
+- Settings updates
+- Subscription changes
 
-<script setup lang="ts">
-import { computed } from 'vue';
-import { useCartStore } from '@/stores/cartStore';
-import { useWhatsApp } from '@/composables/useWhatsApp';
-import { formatPrice } from '@/utils/formatters';
-
-const cartStore = useCartStore();
-const { sendOrder } = useWhatsApp();
-
-const isEmpty = computed(() => cartStore.isEmpty);
-
-const buttonText = computed(() =>
-  isEmpty.value
-    ? 'Ajoutez des plats'
-    : `Commander sur WhatsApp • ${formatPrice(cartStore.subtotal)}`
-);
-</script>
-```
-
------
-
-### 3.6 Configuration PWA (vite.config.ts)
-
-```typescript
-import { defineConfig } from 'vite';
-import vue from '@vitejs/plugin-vue';
-import { VitePWA } from 'vite-plugin-pwa';
-import path from 'path';
-
-export default defineConfig({
-  plugins: [
-    vue(),
-    VitePWA({
-      registerType: 'autoUpdate',
-      includeAssets: ['favicon.ico', 'robots.txt', 'apple-touch-icon.png'],
-      
-      manifest: {
-        name: 'MenuQR - Menu Digital',
-        short_name: 'MenuQR',
-        description: 'Menu digital pour restaurant avec commande WhatsApp',
-        theme_color: '#22c55e',
-        background_color: '#ffffff',
-        display: 'standalone',
-        orientation: 'portrait',
-        icons: [
-          { src: 'pwa-192x192.png', sizes: '192x192', type: 'image/png' },
-          { src: 'pwa-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'any maskable' },
-        ],
-      },
-
-      workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,png,jpg,webp,svg,woff2}'],
-        runtimeCaching: [
-          {
-            urlPattern: /^https:\/\/res\.cloudinary\.com\/.*/,
-            handler: 'CacheFirst',
-            options: {
-              cacheName: 'cloudinary-images',
-              expiration: { maxEntries: 100, maxAgeSeconds: 60 * 60 * 24 * 30 },
-            },
-          },
-        ],
-      },
-    }),
-  ],
-
-  resolve: {
-    alias: { '@': path.resolve(__dirname, './src') },
-  },
-
-  build: {
-    target: 'es2015',
-    minify: 'terser',
-    rollupOptions: {
-      output: {
-        manualChunks: { vendor: ['vue', 'vue-router', 'pinia'] },
-      },
-    },
-  },
-});
-```
-
------
-
-### 3.7 Router Configuration
-
-```typescript
-// router/index.ts
-import { createRouter, createWebHistory } from 'vue-router';
-
-const routes = [
-  { path: '/', redirect: '/menu' },
-  {
-    path: '/menu',
-    name: 'Menu',
-    component: () => import('@/views/MenuView.vue'),
-  },
-  {
-    path: '/r/:slug',
-    name: 'RestaurantMenu',
-    component: () => import('@/views/MenuView.vue'),
-    props: true,
-  },
-  {
-    path: '/r/:slug/table/:tableNumber',
-    name: 'TableMenu',
-    component: () => import('@/views/MenuView.vue'),
-    props: (route) => ({
-      slug: route.params.slug,
-      tableNumber: parseInt(route.params.tableNumber as string, 10),
-    }),
-  },
-  {
-    path: '/cart',
-    name: 'Cart',
-    component: () => import('@/views/CartView.vue'),
-  },
-  {
-    path: '/admin',
-    name: 'Admin',
-    component: () => import('@/views/AdminView.vue'),
-    meta: { requiresAuth: true },
-  },
-  {
-    path: '/:pathMatch(.*)*',
-    redirect: '/menu',
-  },
-];
-
-const router = createRouter({
-  history: createWebHistory(),
-  routes,
-  scrollBehavior() {
-    return { top: 0 };
-  },
-});
-
-export default router;
-```
-
------
-
-### 3.8 Internationalisation (i18n/fr.json)
-
-```json
-{
-  "app": {
-    "title": "MenuQR",
-    "loading": "Chargement...",
-    "offline": "Vous êtes hors ligne"
-  },
-  "menu": {
-    "title": "Menu",
-    "popular": "Populaires",
-    "unavailable": "Indisponible",
-    "search": "Rechercher un plat..."
-  },
-  "cart": {
-    "title": "Votre commande",
-    "empty": "Votre panier est vide",
-    "addItems": "Ajoutez des plats",
-    "total": "Total",
-    "orderWhatsApp": "Commander sur WhatsApp",
-    "clear": "Vider le panier"
-  },
-  "order": {
-    "table": "Table",
-    "notes": "Notes",
-    "thankYou": "Merci pour votre commande ! 🙏"
-  },
-  "service": {
-    "callServer": "Appeler le serveur",
-    "requestBill": "Demander l'addition"
-  }
-}
-```
-
------
+---
 
 ## 4. Annexes
 
-### A. Checklist de Déploiement
-
-```markdown
-## Pre-Deployment Checklist
-
-### Code Quality
-- [ ] All tests passing
-- [ ] No TypeScript errors
-- [ ] ESLint clean
-- [ ] Environment variables documented
-
-### Performance
-- [ ] Lighthouse Performance ≥ 90
-- [ ] Bundle size < 100KB gzipped
-- [ ] Images optimized (WebP)
-- [ ] Service Worker verified
-
-### PWA
-- [ ] Manifest.json valid
-- [ ] All icons present
-- [ ] Offline mode working
-- [ ] Install prompt works
-
-### Testing
-- [ ] Tested on Android Chrome
-- [ ] Tested on iOS Safari
-- [ ] Tested on 3G connection
-- [ ] Tested offline mode
-
-### Deployment
-- [ ] Vercel configured
-- [ ] Custom domain set up
-- [ ] SSL certificate valid
-- [ ] Error monitoring (Sentry) active
-```
-
------
-
-### B. Variables d’Environnement
+### A. Variables d'Environnement
 
 ```bash
-# .env.example
+# Server
+NODE_ENV=production
+PORT=3001
+API_URL=https://api.menuqr.fr
 
-# App
-VITE_APP_NAME=MenuQR
-VITE_APP_URL=https://app.menuqr.bf
+# Database
+MONGODB_URI=mongodb://...
 
-# Restaurant (for static mode)
-VITE_RESTAURANT_SLUG=garbadrome-ouaga
-VITE_WHATSAPP_NUMBER=22670123456
+# Auth
+JWT_SECRET=your-secret
+JWT_EXPIRES_IN=7d
 
-# Analytics
-VITE_SENTRY_DSN=https://xxx@sentry.io/xxx
+# Redis
+REDIS_URL=redis://...
 
-# Images
-VITE_CLOUDINARY_CLOUD_NAME=menuqr
+# Stripe
+STRIPE_SECRET_KEY=sk_...
+STRIPE_WEBHOOK_SECRET=whsec_...
+
+# Twilio
+TWILIO_ACCOUNT_SID=AC...
+TWILIO_AUTH_TOKEN=...
+TWILIO_PHONE_NUMBER=+...
+
+# Google Maps
+GOOGLE_MAPS_API_KEY=...
+
+# Email
+SMTP_HOST=smtp.sendgrid.net
+SMTP_USER=apikey
+SMTP_PASS=SG...
+EMAIL_FROM=noreply@menuqr.fr
+
+# Sentry
+SENTRY_DSN=https://...
 ```
 
------
-
-### C. Commandes NPM
+### B. Commandes de Développement
 
 ```bash
-# Create project
-npm create vite@latest menuqr-app -- --template vue-ts
+# Backend
+cd menuqr-api
+npm run dev          # Development server
+npm run build        # Build TypeScript
+npm run test         # Run tests
+npm run lint         # ESLint
 
-# Install dependencies
-npm install vue-router@4 pinia pinia-plugin-persistedstate
-npm install -D tailwindcss postcss autoprefixer vite-plugin-pwa
+# Frontend
+cd menuqr-app
+npm run dev          # Vite dev server
+npm run build        # Production build
+npm run type-check   # Vue-tsc
+npm run test:run     # Vitest
+npm run test:e2e     # Playwright
 
-# Initialize Tailwind
-npx tailwindcss init -p
-
-# Development
-npm run dev
-
-# Build
-npm run build
-
-# Preview
-npm run preview
-
-# Deploy to Vercel
-npx vercel --prod
+# Docker
+docker-compose up -d              # Start all services
+docker-compose logs -f api        # View API logs
 ```
 
------
+### C. Roadmap
 
-### D. Performance Budget
+#### Completed (v3.0)
 
-```yaml
-# Performance targets
+- [x] Core restaurant management (Menu, Orders, KDS)
+- [x] Customer experience (Cart, Checkout, Reservations)
+- [x] Delivery management with driver app
+- [x] Hotel room service module
+- [x] Marketing & campaigns
+- [x] SuperAdmin panel
+- [x] Security & compliance (RBAC, Audit, GDPR)
+- [x] Subscription & billing
 
-bundles:
-  total_gzipped: 100KB max
+#### Future (v4.0+)
 
-timing:
-  first_contentful_paint: 2s max
-  time_to_interactive: 3s max (3G)
-  
-lighthouse:
-  performance: 90 min
-  accessibility: 90 min
-  best_practices: 90 min
-  pwa: 90 min
+- [ ] Mobile apps (React Native)
+- [ ] Multi-language menus
+- [ ] AI-powered recommendations
+- [ ] Advanced analytics & BI
+- [ ] Franchise management
+- [ ] Marketplace integration
+- [ ] Voice ordering (Alexa/Google)
 
-caching:
-  static_assets: 1 year
-  api_responses: 1 hour
-  images: 30 days
-```
-
------
+---
 
 *— Fin du Document —*
 
-**MenuQR v2.0** • Documentation 19 Décembre 2025  
-Développé pour le marché Burkinabè 🇧🇫
+**MenuQR v3.0** • Documentation Janvier 2025
