@@ -84,15 +84,17 @@ const suggestedFeature = computed(() => route.query.feature as string | undefine
 const suggestedTier = computed(() => route.query.suggestedTier as string | undefined);
 
 // Tier-specific theming - refined luxury palette
-const tierTheme = computed(() => {
-  const themes: Record<string, {
-    gradient: string;
-    accent: string;
-    glow: string;
-    icon: typeof CrownOutlined;
-    label: string;
-    badgeGradient: string;
-  }> = {
+interface TierTheme {
+  gradient: string;
+  accent: string;
+  glow: string;
+  icon: typeof CrownOutlined;
+  label: string;
+  badgeGradient: string;
+}
+
+const tierTheme = computed((): TierTheme => {
+  const themes: Record<string, TierTheme> = {
     enterprise: {
       gradient: 'linear-gradient(135deg, #D4AF37 0%, #F4E4BA 50%, #D4AF37 100%)',
       accent: '#D4AF37',
@@ -134,7 +136,7 @@ const tierTheme = computed(() => {
       badgeGradient: 'linear-gradient(135deg, #6B7280, #9CA3AF)',
     },
   };
-  return themes[currentTier.value || 'free'] || themes.free;
+  return themes[currentTier.value || 'free'] ?? themes.free!;
 });
 
 const defaultStatusConfig = {
@@ -203,10 +205,11 @@ const tabs = [
 
 // Calculate trial countdown
 function updateTrialCountdown() {
-  if (!trialStatus.value?.isInTrial || !trialStatus.value?.trialEndDate) {return;}
+  const status = trialStatus.value as { isInTrial: boolean; daysLeft: number; isExpiringSoon: boolean; message: string; trialEndDate?: string } | undefined;
+  if (!status?.isInTrial || !status?.trialEndDate) {return;}
 
   const now = new Date().getTime();
-  const end = new Date(trialStatus.value.trialEndDate).getTime();
+  const end = new Date(status.trialEndDate).getTime();
   const diff = end - now;
 
   if (diff <= 0) {

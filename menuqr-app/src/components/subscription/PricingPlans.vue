@@ -109,7 +109,7 @@ async function handleSelectPlan(plan: SubscriptionPlan) {
 }
 
 // Tier-specific styling with VIBRANT colors
-const tierConfig: Record<string, {
+interface TierStyle {
   icon: typeof GiftOutlined;
   gradient: string;
   solidBg: string;
@@ -120,7 +120,9 @@ const tierConfig: Record<string, {
   buttonHover: string;
   checkColor: string;
   glowColor: string;
-}> = {
+}
+
+const tierConfig: Record<string, TierStyle> = {
   free: {
     icon: GiftOutlined,
     gradient: 'linear-gradient(135deg, #64748B 0%, #94A3B8 100%)',
@@ -183,8 +185,8 @@ const tierConfig: Record<string, {
   },
 };
 
-function getConfig(tier: string) {
-  return tierConfig[tier] || tierConfig.starter;
+function getConfig(tier: string): TierStyle {
+  return tierConfig[tier] ?? tierConfig.starter!;
 }
 </script>
 
