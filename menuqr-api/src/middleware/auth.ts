@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
-import { User, IUser, DeliveryDriver } from '../models/index.js';
+import { User, IUser, DeliveryDriver, HotelGuest } from '../models/index.js';
 import { TokenBlacklist } from '../models/TokenBlacklist.js';
 import config from '../config/env.js';
 import logger from '../utils/logger.js';
@@ -22,6 +22,15 @@ interface DriverJwtPayload {
   driverId: string;
   email: string;
   role: 'delivery_driver';
+  exp?: number;
+}
+
+interface GuestJwtPayload {
+  guestId: string;
+  hotelId: string;
+  roomId: string;
+  roomNumber: string;
+  type: 'hotel_guest';
   exp?: number;
 }
 
@@ -455,6 +464,207 @@ export const authenticateUserOrDriver = async (
         restaurantId: user.restaurantId?.toString(),
       };
       next();
+    }
+  } catch (error) {
+    if (error instanceof jwt.TokenExpiredError) {
+      res.status(401).json({ success: false, message: 'Token expired.', code: 'TOKEN_EXPIRED' });
+      return;
+    }
+    res.status(401).json({ success: false, message: 'Invalid token.' });
+  }
+};
+
+/**
+ * Authenticate hotel guest
+ */
+export const authenticateGuest = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const authHeader = req.headers.authorization;
+
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      res.status(401).json({
+        success: false,
+        message: 'Access denied. No token provided.',
+      });
+      return;
+    }
+
+    const token = authHeader.split(' ')[1];
+
+    // Check if token is blacklisted
+    if (await isTokenBlacklisted(token)) {
+      res.status(401).json({
+        success: false,
+        message: 'Token has been revoked.',
+      });
+      return;
+    }
+
+    const decoded = jwt.verify(token, config.jwtSecret) as GuestJwtPayload;
+
+    // Verify it's a guest token
+    if (decoded.type !== 'hotel_guest' || !decoded.guestId) {
+      res.status(401).json({
+        success: false,
+        message: 'Invalid guest token.',
+      });
+      return;
+    }
+
+    const guest = await HotelGuest.findById(decoded.guestId);
+
+    if (!guest) {
+      res.status(401).json({
+        success: false,
+        message: 'Guest not found.',
+      });
+      return;
+    }
+
+    if (!guest.isActive) {
+      res.status(403).json({
+        success: false,
+        message: 'Guest session has expired.',
+      });
+      return;
+    }
+
+    // Check if stay is still active
+    const now = new Date();
+    if (guest.checkOutDate < now) {
+      res.status(403).json({
+        success: false,
+        message: 'Your stay has ended.',
+      });
+      return;
+    }
+
+    req.hotelGuest = guest;
+    req.hotelId = guest.hotelId.toString();
+
+    next();
+  } catch (error) {
+    if (error instanceof jwt.TokenExpiredError) {
+      res.status(401).json({
+        success: false,
+        message: 'Token expired.',
+        code: 'TOKEN_EXPIRED',
+      });
+      return;
+    }
+
+    if (error instanceof jwt.JsonWebTokenError) {
+      res.status(401).json({
+        success: false,
+        message: 'Invalid token.',
+        code: 'INVALID_TOKEN',
+      });
+      return;
+    }
+
+    logger.error('Guest authentication error', error);
+    res.status(500).json({
+      success: false,
+      message: 'Authentication error.',
+    });
+  }
+};
+
+/**
+ * Optional guest authentication - doesn't fail if no token
+ */
+export const optionalGuestAuth = async (
+  req: Request,
+  _res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const authHeader = req.headers.authorization;
+
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return next();
+    }
+
+    const token = authHeader.split(' ')[1];
+
+    // Check if token is blacklisted
+    if (await isTokenBlacklisted(token)) {
+      return next();
+    }
+
+    const decoded = jwt.verify(token, config.jwtSecret) as GuestJwtPayload;
+
+    // Verify it's a guest token
+    if (decoded.type !== 'hotel_guest' || !decoded.guestId) {
+      return next();
+    }
+
+    const guest = await HotelGuest.findById(decoded.guestId);
+
+    if (guest && guest.isActive && guest.checkOutDate >= new Date()) {
+      req.hotelGuest = guest;
+      req.hotelId = guest.hotelId.toString();
+    }
+
+    next();
+  } catch {
+    next();
+  }
+};
+
+/**
+ * Authenticate either staff user or hotel guest
+ */
+export const authenticateUserOrGuest = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  const authHeader = req.headers.authorization;
+
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    res.status(401).json({
+      success: false,
+      message: 'Access denied. No token provided.',
+    });
+    return;
+  }
+
+  const token = authHeader.split(' ')[1];
+
+  try {
+    // Decode to check token type
+    const decoded = jwt.verify(token, config.jwtSecret) as { type?: string; guestId?: string; userId?: string };
+
+    if (decoded.type === 'hotel_guest' && decoded.guestId) {
+      // It's a guest token
+      const guest = await HotelGuest.findById(decoded.guestId);
+      if (!guest) {
+        res.status(401).json({ success: false, message: 'Guest not found.' });
+        return;
+      }
+      if (!guest.isActive || guest.checkOutDate < new Date()) {
+        res.status(403).json({ success: false, message: 'Guest session expired.' });
+        return;
+      }
+      req.hotelGuest = guest;
+      req.hotelId = guest.hotelId.toString();
+      next();
+    } else if (decoded.userId) {
+      // It's a user token
+      const user = await User.findById(decoded.userId);
+      if (!user || !user.isActive) {
+        res.status(401).json({ success: false, message: 'User not found.' });
+        return;
+      }
+      req.user = user;
+      next();
+    } else {
+      res.status(401).json({ success: false, message: 'Invalid token.' });
     }
   } catch (error) {
     if (error instanceof jwt.TokenExpiredError) {

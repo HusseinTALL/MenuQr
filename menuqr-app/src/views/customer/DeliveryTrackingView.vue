@@ -4,7 +4,9 @@ import { useRoute, useRouter } from 'vue-router';
 import api from '@/services/api';
 import { useDeliveryTracking } from '@/composables/useSocket';
 import { useGoogleMaps } from '@/composables/useGoogleMaps';
+import { useCall } from '@/composables/useCall';
 import ChatBox from '@/components/chat/ChatBox.vue';
+import { message } from 'ant-design-vue';
 import {
   CarOutlined,
   EnvironmentOutlined,
@@ -16,6 +18,8 @@ import {
   MessageOutlined,
   WifiOutlined,
   ReloadOutlined,
+  GiftOutlined,
+  HeartOutlined,
 } from '@ant-design/icons-vue';
 
 interface TrackingData {
@@ -65,6 +69,18 @@ const isLiveTracking = ref(false);
 const showChat = ref(false);
 const unreadMessages = ref(0);
 
+// Tip and rating state
+const showTipModal = ref(false);
+const tipAmount = ref<number | null>(null);
+const tipMessage = ref('');
+const rating = ref(0);
+const ratingComment = ref('');
+const tipLoading = ref(false);
+const ratingLoading = ref(false);
+const tipSent = ref(false);
+const ratingSent = ref(false);
+const tipPresets = [2, 3, 5, 10];
+
 // ETA data from API
 const etaData = ref<{
   eta: string;
@@ -83,10 +99,10 @@ const {
   hasApiKey,
   setMarker,
   setPolyline,
-  fitBounds,
+  fitBounds: _fitBounds,
   panTo,
   createDriverIcon,
-  createLocationIcon,
+  createLocationIcon: _createLocationIcon,
 } = useGoogleMaps(mapContainer, {
   zoom: 14,
   disableDefaultUI: true,
@@ -202,11 +218,11 @@ const fetchTracking = async () => {
 
 // Fetch real-time ETA from API
 const fetchETA = async () => {
-  if (!tracking.value?.deliveryId) return;
+  if (!tracking.value?.deliveryId) {return;}
 
   // Only fetch ETA for active delivery statuses
   const activeStatuses = ['accepted', 'arriving_restaurant', 'at_restaurant', 'picked_up', 'in_transit', 'arrived'];
-  if (!activeStatuses.includes(tracking.value.status)) return;
+  if (!activeStatuses.includes(tracking.value.status)) {return;}
 
   try {
     const response = await api.getDeliveryETA(tracking.value.deliveryId);
@@ -242,7 +258,7 @@ const fetchETA = async () => {
 
 // Update map with current positions
 const updateMapMarkers = () => {
-  if (!mapLoaded.value || !tracking.value) return;
+  if (!mapLoaded.value || !tracking.value) {return;}
 
   // Add restaurant marker
   if (tracking.value.pickupAddress) {
@@ -294,7 +310,7 @@ const stopETAPolling = () => {
 
 // Traffic condition label
 const trafficLabel = computed(() => {
-  if (!etaData.value?.trafficCondition) return null;
+  if (!etaData.value?.trafficCondition) {return null;}
   const labels: Record<string, string> = {
     light: 'Trafic fluide',
     moderate: 'Trafic modéré',
@@ -306,7 +322,7 @@ const trafficLabel = computed(() => {
 
 // Traffic condition color
 const trafficColor = computed(() => {
-  if (!etaData.value?.trafficCondition) return '#8c8c8c';
+  if (!etaData.value?.trafficCondition) {return '#8c8c8c';}
   const colors: Record<string, string> = {
     light: '#52c41a',
     moderate: '#faad14',
@@ -352,9 +368,37 @@ watch(
   }
 );
 
-const callDriver = () => {
-  if (tracking.value?.driverInfo?.phone) {
-    window.location.href = `tel:${tracking.value.driverInfo.phone}`;
+// Masked calling
+const {
+  isCallingEnabled,
+  isLoading: _callLoading,
+  callStatus: _callStatus,
+  isCallActive: _isCallActive,
+  callStatusText: _callStatusText,
+  checkCallingEnabled,
+  callDriver: initiateDriverCall,
+  endCall: _endCall,
+  resetCall: _resetCall,
+} = useCall();
+
+const callDriver = async () => {
+  if (!tracking.value?.deliveryId) {
+    return;
+  }
+
+  // If masked calling is enabled, use it
+  if (isCallingEnabled.value) {
+    const success = await initiateDriverCall(tracking.value.deliveryId);
+    if (success) {
+      message.info('Appel en cours... Vous allez recevoir un appel.');
+    } else {
+      message.error('Impossible d\'initier l\'appel');
+    }
+  } else {
+    // Fallback to direct phone call
+    if (tracking.value?.driverInfo?.phone) {
+      window.location.href = `tel:${tracking.value.driverInfo.phone}`;
+    }
   }
 };
 
@@ -397,6 +441,82 @@ const stopAutoRefresh = () => {
   }
 };
 
+// Tip and rating functions
+const selectTipAmount = (amount: number) => {
+  tipAmount.value = amount;
+};
+
+const submitTip = async () => {
+  if (!tracking.value?.deliveryId || !tipAmount.value) {return;}
+
+  tipLoading.value = true;
+  try {
+    const response = await api.addDeliveryTip(
+      tracking.value.deliveryId,
+      tipAmount.value,
+      tipMessage.value || undefined
+    );
+
+    if (response.success) {
+      tipSent.value = true;
+      message.success('Merci pour votre pourboire ! 🎉');
+    } else {
+      message.error(response.message || 'Erreur lors de l\'envoi du pourboire');
+    }
+  } catch (error) {
+    console.error('Failed to send tip:', error);
+    message.error('Erreur lors de l\'envoi du pourboire');
+  } finally {
+    tipLoading.value = false;
+  }
+};
+
+const submitRating = async () => {
+  if (!tracking.value?.deliveryId || rating.value === 0) {return;}
+
+  ratingLoading.value = true;
+  try {
+    const response = await api.rateDelivery(
+      tracking.value.deliveryId,
+      rating.value,
+      ratingComment.value || undefined
+    );
+
+    if (response.success) {
+      ratingSent.value = true;
+      message.success('Merci pour votre évaluation !');
+      // Close modal after a short delay
+      setTimeout(() => {
+        showTipModal.value = false;
+      }, 1500);
+    } else {
+      message.error(response.message || 'Erreur lors de l\'envoi de l\'évaluation');
+    }
+  } catch (error) {
+    console.error('Failed to send rating:', error);
+    message.error('Erreur lors de l\'envoi de l\'évaluation');
+  } finally {
+    ratingLoading.value = false;
+  }
+};
+
+const closeTipModal = () => {
+  showTipModal.value = false;
+};
+
+// Show tip modal when delivery is completed
+watch(
+  () => tracking.value?.status,
+  (newStatus, oldStatus) => {
+    if (newStatus === 'delivered' && oldStatus !== 'delivered') {
+      // Show tip modal after a short delay
+      setTimeout(() => {
+        showTipModal.value = true;
+      }, 1000);
+    }
+  }
+);
+
 watch(() => route.params.orderId, () => {
   loading.value = true;
   fetchTracking();
@@ -405,6 +525,11 @@ watch(() => route.params.orderId, () => {
 onMounted(() => {
   fetchTracking();
   startAutoRefresh();
+  checkCallingEnabled();
+  // Check if already delivered, show tip modal
+  if (tracking.value?.status === 'delivered') {
+    showTipModal.value = true;
+  }
 });
 
 onUnmounted(() => {
@@ -680,6 +805,133 @@ onUnmounted(() => {
           @unread-change="handleUnreadChange"
         />
       </a-drawer>
+
+      <!-- Tip & Rating Modal (shown after delivery) -->
+      <a-modal
+        v-model:open="showTipModal"
+        :footer="null"
+        :closable="true"
+        :mask-closable="false"
+        centered
+        class="tip-modal"
+        width="360px"
+        @cancel="closeTipModal"
+      >
+        <div class="tip-modal-content">
+          <!-- Success State -->
+          <div v-if="tipSent && ratingSent" class="tip-success">
+            <div class="success-icon">
+              <HeartOutlined />
+            </div>
+            <h2>Merci !</h2>
+            <p>Votre pourboire et votre évaluation ont été envoyés au livreur.</p>
+          </div>
+
+          <!-- Tip & Rating Form -->
+          <template v-else>
+            <!-- Driver Info -->
+            <div v-if="tracking?.driverInfo" class="modal-driver-info">
+              <a-avatar :src="tracking.driverInfo.photo" :size="64">
+                {{ tracking.driverInfo.name.charAt(0) }}
+              </a-avatar>
+              <h3>{{ tracking.driverInfo.name }}</h3>
+              <p>A livré votre commande</p>
+            </div>
+
+            <!-- Rating Section -->
+            <div v-if="!ratingSent" class="rating-section">
+              <h4>Comment était votre livraison ?</h4>
+              <a-rate v-model:value="rating" :count="5" allow-half class="rating-stars" />
+              <a-textarea
+                v-if="rating > 0"
+                v-model:value="ratingComment"
+                placeholder="Ajoutez un commentaire (optionnel)"
+                :rows="2"
+                class="rating-comment"
+              />
+              <a-button
+                v-if="rating > 0"
+                type="primary"
+                block
+                :loading="ratingLoading"
+                class="rating-submit-btn"
+                @click="submitRating"
+              >
+                Envoyer l'évaluation
+              </a-button>
+            </div>
+            <div v-else class="rating-sent">
+              <CheckCircleOutlined />
+              <span>Évaluation envoyée !</span>
+            </div>
+
+            <!-- Tip Section -->
+            <div v-if="!tipSent" class="tip-section">
+              <div class="tip-header">
+                <GiftOutlined />
+                <h4>Laisser un pourboire</h4>
+              </div>
+              <p class="tip-subtitle">100% pour le livreur</p>
+
+              <div class="tip-presets">
+                <div
+                  v-for="preset in tipPresets"
+                  :key="preset"
+                  :class="['tip-preset', { selected: tipAmount === preset }]"
+                  @click="selectTipAmount(preset)"
+                >
+                  {{ preset }}€
+                </div>
+              </div>
+
+              <div class="tip-custom">
+                <a-input-number
+                  v-model:value="tipAmount"
+                  :min="1"
+                  :max="100"
+                  :precision="2"
+                  placeholder="Autre montant"
+                  class="tip-input"
+                  addon-after="€"
+                />
+              </div>
+
+              <a-input
+                v-if="tipAmount"
+                v-model:value="tipMessage"
+                placeholder="Ajouter un message (optionnel)"
+                class="tip-message-input"
+              />
+
+              <a-button
+                v-if="tipAmount"
+                type="primary"
+                block
+                :loading="tipLoading"
+                class="tip-submit-btn"
+                @click="submitTip"
+              >
+                <GiftOutlined /> Envoyer {{ tipAmount }}€
+              </a-button>
+            </div>
+            <div v-else class="tip-sent">
+              <CheckCircleOutlined />
+              <span>Pourboire envoyé !</span>
+            </div>
+
+            <!-- Skip Button -->
+            <a-button
+              v-if="!tipSent || !ratingSent"
+              type="text"
+              block
+              class="skip-btn"
+              @click="closeTipModal"
+            >
+              Passer
+            </a-button>
+          </template>
+        </div>
+      </a-modal>
     </template>
 
     <!-- Not Found -->
@@ -1308,5 +1560,195 @@ onUnmounted(() => {
 /* Chat Drawer */
 .chat-drawer :deep(.ant-drawer-body) {
   padding: 0 !important;
+}
+
+/* Tip Modal Styles */
+.tip-modal :deep(.ant-modal-content) {
+  border-radius: 20px;
+  overflow: hidden;
+}
+
+.tip-modal-content {
+  padding: 8px;
+  text-align: center;
+}
+
+.tip-success {
+  padding: 40px 20px;
+}
+
+.success-icon {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #ff4d4f 0%, #ff7a7a 100%);
+  color: #fff;
+  font-size: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 20px;
+  animation: heart-beat 1.5s ease-in-out infinite;
+}
+
+@keyframes heart-beat {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+}
+
+.tip-success h2 {
+  font-size: 24px;
+  font-weight: 700;
+  margin: 0 0 8px 0;
+  color: #262626;
+}
+
+.tip-success p {
+  color: #8c8c8c;
+  margin: 0;
+}
+
+.modal-driver-info {
+  padding: 20px 0;
+  border-bottom: 1px solid #f0f0f0;
+  margin-bottom: 20px;
+}
+
+.modal-driver-info h3 {
+  font-size: 18px;
+  font-weight: 600;
+  margin: 12px 0 4px 0;
+}
+
+.modal-driver-info p {
+  color: #8c8c8c;
+  font-size: 14px;
+  margin: 0;
+}
+
+.rating-section {
+  padding: 16px 0;
+  border-bottom: 1px solid #f0f0f0;
+  margin-bottom: 16px;
+}
+
+.rating-section h4 {
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0 0 12px 0;
+}
+
+.rating-stars {
+  font-size: 32px !important;
+}
+
+.rating-stars :deep(.ant-rate-star) {
+  margin-right: 8px;
+}
+
+.rating-comment {
+  margin-top: 12px;
+}
+
+.rating-submit-btn {
+  margin-top: 12px;
+}
+
+.rating-sent,
+.tip-sent {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 16px;
+  background: #f6ffed;
+  border-radius: 12px;
+  color: #52c41a;
+  font-weight: 500;
+  margin-bottom: 16px;
+}
+
+.tip-section {
+  padding: 16px 0;
+}
+
+.tip-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.tip-header h4 {
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.tip-header :deep(.anticon) {
+  font-size: 20px;
+  color: #faad14;
+}
+
+.tip-subtitle {
+  color: #8c8c8c;
+  font-size: 13px;
+  margin: 0 0 16px 0;
+}
+
+.tip-presets {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.tip-preset {
+  padding: 12px;
+  border: 2px solid #e8e8e8;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.tip-preset:hover {
+  border-color: #1890ff;
+  color: #1890ff;
+}
+
+.tip-preset.selected {
+  background: #1890ff;
+  border-color: #1890ff;
+  color: #fff;
+}
+
+.tip-custom {
+  margin-bottom: 12px;
+}
+
+.tip-input {
+  width: 100%;
+}
+
+.tip-message-input {
+  margin-bottom: 12px;
+}
+
+.tip-submit-btn {
+  background: linear-gradient(135deg, #faad14 0%, #ffc53d 100%);
+  border: none;
+  font-weight: 600;
+}
+
+.tip-submit-btn:hover {
+  background: linear-gradient(135deg, #d48806 0%, #faad14 100%) !important;
+}
+
+.skip-btn {
+  color: #8c8c8c;
+  margin-top: 8px;
 }
 </style>

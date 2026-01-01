@@ -54,7 +54,7 @@ export const useDriverAuthStore = defineStore('driverAuth', () => {
   }
 
   async function fetchProfile(): Promise<boolean> {
-    if (!token.value) return false;
+    if (!token.value) {return false;}
 
     try {
       isLoading.value = true;

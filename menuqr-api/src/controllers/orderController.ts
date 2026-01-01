@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import mongoose from 'mongoose';
 import { Order, Dish, Restaurant, Customer } from '../models/index.js';
 import { asyncHandler, ApiError } from '../middleware/errorHandler.js';
 import * as loyaltyService from '../services/loyaltyService.js';
@@ -6,6 +7,7 @@ import * as inventoryService from '../services/inventoryService.js';
 import { emitNewOrder, emitOrderUpdate, emitOrderReady } from '../services/socketService.js';
 import logger from '../utils/logger.js';
 import * as auditService from '../services/auditService.js';
+import { subscriptionService } from '../services/subscriptionService.js';
 
 interface OrderItemInput {
   dishId: string;
@@ -222,6 +224,17 @@ export const createOrder = asyncHandler(async (req: Request, res: Response): Pro
     total: order.total,
     createdAt: order.createdAt,
   });
+
+  // Track order usage for subscription (monthly count)
+  try {
+    await subscriptionService.incrementUsage(
+      new mongoose.Types.ObjectId(restaurantId),
+      'orders'
+    );
+  } catch (usageError) {
+    logger.error('Failed to track order usage:', usageError);
+    // Don't fail the request if usage tracking fails
+  }
 
   res.status(201).json({
     success: true,

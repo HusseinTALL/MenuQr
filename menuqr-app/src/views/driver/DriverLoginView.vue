@@ -26,7 +26,7 @@ const isFormValid = computed(() => {
 });
 
 const handleLogin = async () => {
-  if (!isFormValid.value) return;
+  if (!isFormValid.value) {return;}
 
   loading.value = true;
   try {
@@ -38,7 +38,7 @@ const handleLogin = async () => {
     } else {
       message.error(result.message || 'Échec de la connexion');
     }
-  } catch (error) {
+  } catch {
     message.error('Une erreur est survenue');
   } finally {
     loading.value = false;
@@ -119,7 +119,7 @@ const handleLogin = async () => {
       <!-- Register Link -->
       <div class="register-link">
         <p>Pas encore livreur?</p>
-        <a href="#">Devenir livreur partenaire</a>
+        <router-link to="/driver/register">Devenir livreur partenaire</router-link>
       </div>
 
       <!-- Footer -->

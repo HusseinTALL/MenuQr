@@ -44,8 +44,8 @@ export const registerDriver = async (req: Request, res: Response): Promise<void>
       return;
     }
 
-    // Hash password
-    const salt = await bcrypt.genSalt(10);
+    // Hash password (using config for consistent rounds across all models)
+    const salt = await bcrypt.genSalt(config.security.bcryptRounds);
     const passwordHash = await bcrypt.hash(password, salt);
 
     // Create driver
@@ -297,12 +297,19 @@ export const getDriverById = async (req: Request, res: Response): Promise<void> 
 export const updateDriver = async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
-    const updates = req.body;
 
-    // Remove sensitive fields that shouldn't be updated directly
-    delete updates.passwordHash;
-    delete updates.stats;
-    delete updates.earnings;
+    // Extract only allowed fields to prevent field injection
+    const allowedFields = [
+      'firstName', 'lastName', 'phone', 'email', 'address', 'dateOfBirth',
+      'vehicleType', 'vehiclePlate', 'profilePhoto', 'emergencyContact',
+      'status', 'shiftStatus', 'isAvailable', 'preferences', 'bankAccount'
+    ];
+    const updates: Record<string, unknown> = {};
+    for (const field of allowedFields) {
+      if (req.body[field] !== undefined) {
+        updates[field] = req.body[field];
+      }
+    }
 
     const driver = await DeliveryDriver.findByIdAndUpdate(
       id,
@@ -388,7 +395,7 @@ export const verifyDriver = async (req: Request, res: Response): Promise<void> =
 export const suspendDriver = async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
-    const { reason: _reason } = req.body; // eslint-disable-line @typescript-eslint/no-unused-vars
+    const { reason: _reason } = req.body;  
 
     const driver = await DeliveryDriver.findById(id);
     if (!driver) {
@@ -681,6 +688,19 @@ export const uploadDriverDocument = async (req: Request, res: Response): Promise
   try {
     const { id } = req.params;
     const { type, url, expiresAt } = req.body;
+
+    // IDOR Protection: If user is a driver (not admin), they can only upload to their own profile
+    const user = req.user as any;
+    const isAdmin = user?.role === 'admin' || user?.role === 'owner';
+    const driverId = user?.driverId;
+
+    if (!isAdmin && driverId && driverId.toString() !== id) {
+      res.status(403).json({
+        success: false,
+        message: 'Vous ne pouvez modifier que vos propres documents',
+      });
+      return;
+    }
 
     // Valid document types
     const validTypes = ['idCard', 'driverLicense', 'vehicleRegistration', 'insurance', 'proofOfAddress'];

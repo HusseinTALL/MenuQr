@@ -294,7 +294,7 @@ export async function deleteMessage(
  */
 function broadcastMessage(deliveryId: string, message: IChatMessage): void {
   const io = socketService.getIO();
-  if (!io) return;
+  if (!io) {return;}
 
   const messageData: ChatMessageResponse = {
     _id: message._id.toString(),

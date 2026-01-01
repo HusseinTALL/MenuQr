@@ -144,13 +144,13 @@ async function broadcastLocationUpdate(
   currentLocation: Location
 ): Promise<void> {
   const delivery = await Delivery.findById(deliveryId);
-  if (!delivery) return;
+  if (!delivery) {return;}
 
   const driver = await DeliveryDriver.findById(driverId);
-  if (!driver) return;
+  if (!driver) {return;}
 
   const order = await Order.findById(delivery.orderId);
-  if (!order?.customerId) return;
+  if (!order?.customerId) {return;}
 
   // Determine destination based on status
   let destinationLat: number;
@@ -231,10 +231,10 @@ export async function getTrackingData(
   deliveryId: mongoose.Types.ObjectId
 ): Promise<TrackingData | null> {
   const delivery = await Delivery.findById(deliveryId);
-  if (!delivery || !delivery.driverId) return null;
+  if (!delivery || !delivery.driverId) {return null;}
 
   const driver = await DeliveryDriver.findById(delivery.driverId);
-  if (!driver) return null;
+  if (!driver) {return null;}
 
   // Get current location from cache or database
   let currentLocation: Location;
@@ -258,7 +258,7 @@ export async function getTrackingData(
     ? delivery.deliveryAddress
     : delivery.pickupAddress;
 
-  if (!destination?.coordinates) return null;
+  if (!destination?.coordinates) {return null;}
 
   const destLat = destination.coordinates.lat;
   const destLng = destination.coordinates.lng;
@@ -301,7 +301,7 @@ export async function getLocationHistory(
   deliveryId: mongoose.Types.ObjectId
 ): Promise<Array<{ lat: number; lng: number; timestamp: Date }>> {
   const delivery = await Delivery.findById(deliveryId).select('locationHistory');
-  if (!delivery) return [];
+  if (!delivery) {return [];}
 
   return (delivery.locationHistory || []).map((loc) => ({
     lat: loc.lat,
@@ -373,7 +373,7 @@ export async function getNearbyDrivers(
   const nearbyDrivers = [];
 
   for (const driver of drivers) {
-    if (!driver.currentLocation?.coordinates) continue;
+    if (!driver.currentLocation?.coordinates) {continue;}
 
     const [lng, lat] = driver.currentLocation.coordinates;
     const distance = calculateDistance(location.lat, location.lng, lat, lng);
@@ -396,10 +396,10 @@ export async function getNearbyDrivers(
  */
 export async function startTracking(deliveryId: mongoose.Types.ObjectId): Promise<void> {
   const delivery = await Delivery.findById(deliveryId);
-  if (!delivery) return;
+  if (!delivery) {return;}
 
   const order = await Order.findById(delivery.orderId);
-  if (!order?.customerId) return;
+  if (!order?.customerId) {return;}
 
   // Notify customer that tracking is starting
   socketService.emitUserNotification(order.customerId.toString(), {
@@ -417,10 +417,10 @@ export async function startTracking(deliveryId: mongoose.Types.ObjectId): Promis
  */
 export async function stopTracking(deliveryId: mongoose.Types.ObjectId): Promise<void> {
   const delivery = await Delivery.findById(deliveryId);
-  if (!delivery) return;
+  if (!delivery) {return;}
 
   const order = await Order.findById(delivery.orderId);
-  if (!order?.customerId) return;
+  if (!order?.customerId) {return;}
 
   // Notify customer that tracking has ended
   socketService.emitUserNotification(order.customerId.toString(), {
@@ -450,7 +450,7 @@ export async function getDeliveryETA(
   status: string;
 } | null> {
   const tracking = await getTrackingData(deliveryId);
-  if (!tracking) return null;
+  if (!tracking) {return null;}
 
   const minutesRemaining = Math.round(
     (tracking.estimatedArrival.getTime() - Date.now()) / 60000

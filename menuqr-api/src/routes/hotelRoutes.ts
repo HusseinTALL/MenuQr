@@ -6,6 +6,8 @@ import {
   optionalGuestAuth,
   authenticateUserOrGuest,
 } from '../middleware/auth.js';
+import { requireFeature } from '../middleware/feature.js';
+import { FEATURES } from '../config/features.js';
 import * as hotelController from '../controllers/hotelController.js';
 import * as roomController from '../controllers/hotelRoomController.js';
 import * as guestController from '../controllers/hotelGuestController.js';
@@ -13,6 +15,9 @@ import * as menuController from '../controllers/hotelMenuController.js';
 import * as orderController from '../controllers/hotelOrderController.js';
 
 const router = Router();
+
+// Feature middleware for hotel admin routes
+const hotelFeature = requireFeature(FEATURES.HOTEL_MODULE);
 
 // ============================================
 // Public Routes
@@ -146,18 +151,19 @@ router.post('/:hotelId/orders/:orderId/rate', authenticateGuest, orderController
 // ============================================
 
 // Create hotel
-router.post('/', authenticate, authorize('superadmin', 'hotel_owner'), hotelController.createHotel);
+router.post('/', authenticate, hotelFeature, authorize('superadmin', 'hotel_owner'), hotelController.createHotel);
 
 // Get my hotel
-router.get('/me', authenticate, hotelController.getMyHotel);
+router.get('/me', authenticate, hotelFeature, hotelController.getMyHotel);
 
 // Get hotel by ID
-router.get('/:id', authenticate, hotelController.getHotelById);
+router.get('/:id', authenticate, hotelFeature, hotelController.getHotelById);
 
 // Update hotel
 router.put(
   '/:id',
   authenticate,
+  hotelFeature,
   authorize('superadmin', 'hotel_owner', 'hotel_manager'),
   hotelController.updateHotel
 );
@@ -166,6 +172,7 @@ router.put(
 router.patch(
   '/:id/settings',
   authenticate,
+  hotelFeature,
   authorize('superadmin', 'hotel_owner', 'hotel_manager'),
   hotelController.updateHotelSettings
 );
@@ -174,6 +181,7 @@ router.patch(
 router.delete(
   '/:id',
   authenticate,
+  hotelFeature,
   authorize('superadmin', 'hotel_owner'),
   hotelController.deleteHotel
 );
@@ -182,6 +190,7 @@ router.delete(
 router.get(
   '/:id/stats',
   authenticate,
+  hotelFeature,
   authorize('superadmin', 'hotel_owner', 'hotel_manager'),
   hotelController.getHotelStats
 );
@@ -190,12 +199,13 @@ router.get(
 router.get(
   '/:id/analytics/revenue',
   authenticate,
+  hotelFeature,
   authorize('superadmin', 'hotel_owner', 'hotel_manager'),
   hotelController.getRevenueAnalytics
 );
 
 // Get active menus (summary)
-router.get('/:id/menus/active', authenticate, hotelController.getActiveMenus);
+router.get('/:id/menus/active', authenticate, hotelFeature, hotelController.getActiveMenus);
 
 // ============================================
 // Hotel Staff Management
@@ -205,6 +215,7 @@ router.get('/:id/menus/active', authenticate, hotelController.getActiveMenus);
 router.get(
   '/:id/staff',
   authenticate,
+  hotelFeature,
   authorize('superadmin', 'hotel_owner', 'hotel_manager'),
   hotelController.getHotelStaff
 );
@@ -213,6 +224,7 @@ router.get(
 router.post(
   '/:id/staff',
   authenticate,
+  hotelFeature,
   authorize('superadmin', 'hotel_owner', 'hotel_manager'),
   hotelController.assignStaffToHotel
 );
@@ -221,6 +233,7 @@ router.post(
 router.delete(
   '/:id/staff/:userId',
   authenticate,
+  hotelFeature,
   authorize('superadmin', 'hotel_owner'),
   hotelController.removeStaffFromHotel
 );
@@ -233,6 +246,7 @@ router.delete(
 router.get(
   '/:hotelId/rooms/status-summary',
   authenticate,
+  hotelFeature,
   roomController.getRoomStatusSummary
 );
 
@@ -240,6 +254,7 @@ router.get(
 router.get(
   '/:hotelId/rooms/attention',
   authenticate,
+  hotelFeature,
   roomController.getRoomsRequiringAttention
 );
 
@@ -247,6 +262,7 @@ router.get(
 router.post(
   '/:hotelId/rooms',
   authenticate,
+  hotelFeature,
   authorize('superadmin', 'hotel_owner', 'hotel_manager'),
   roomController.createRoom
 );
@@ -255,20 +271,22 @@ router.post(
 router.post(
   '/:hotelId/rooms/bulk',
   authenticate,
+  hotelFeature,
   authorize('superadmin', 'hotel_owner', 'hotel_manager'),
   roomController.bulkCreateRooms
 );
 
 // Get rooms by hotel
-router.get('/:hotelId/rooms', authenticate, roomController.getRoomsByHotel);
+router.get('/:hotelId/rooms', authenticate, hotelFeature, roomController.getRoomsByHotel);
 
 // Get room by ID
-router.get('/:hotelId/rooms/:roomId', authenticate, roomController.getRoomById);
+router.get('/:hotelId/rooms/:roomId', authenticate, hotelFeature, roomController.getRoomById);
 
 // Update room
 router.put(
   '/:hotelId/rooms/:roomId',
   authenticate,
+  hotelFeature,
   authorize('superadmin', 'hotel_owner', 'hotel_manager', 'reception'),
   roomController.updateRoom
 );
@@ -277,6 +295,7 @@ router.put(
 router.delete(
   '/:hotelId/rooms/:roomId',
   authenticate,
+  hotelFeature,
   authorize('superadmin', 'hotel_owner', 'hotel_manager'),
   roomController.deleteRoom
 );
@@ -285,6 +304,7 @@ router.delete(
 router.patch(
   '/:hotelId/rooms/:roomId/status',
   authenticate,
+  hotelFeature,
   roomController.updateRoomStatus
 );
 
@@ -292,6 +312,7 @@ router.patch(
 router.post(
   '/:hotelId/rooms/:roomId/cleaned',
   authenticate,
+  hotelFeature,
   roomController.markRoomCleaned
 );
 
@@ -299,6 +320,7 @@ router.post(
 router.post(
   '/:hotelId/rooms/:roomId/check-in',
   authenticate,
+  hotelFeature,
   authorize('superadmin', 'hotel_owner', 'hotel_manager', 'reception'),
   roomController.checkInGuest
 );
@@ -307,6 +329,7 @@ router.post(
 router.post(
   '/:hotelId/rooms/:roomId/check-out',
   authenticate,
+  hotelFeature,
   authorize('superadmin', 'hotel_owner', 'hotel_manager', 'reception'),
   roomController.checkOutGuest
 );
@@ -315,6 +338,7 @@ router.post(
 router.post(
   '/:hotelId/rooms/:roomId/regenerate-qr',
   authenticate,
+  hotelFeature,
   authorize('superadmin', 'hotel_owner', 'hotel_manager'),
   roomController.regenerateQRCode
 );
@@ -323,6 +347,7 @@ router.post(
 router.get(
   '/:hotelId/rooms/:roomId/orders',
   authenticate,
+  hotelFeature,
   orderController.getOrdersByRoom
 );
 
@@ -330,6 +355,7 @@ router.get(
 router.get(
   '/:hotelId/rooms/:roomId/guest',
   authenticate,
+  hotelFeature,
   guestController.getCurrentGuestForRoom
 );
 
@@ -341,20 +367,22 @@ router.get(
 router.post(
   '/:hotelId/guests',
   authenticate,
+  hotelFeature,
   authorize('superadmin', 'hotel_owner', 'hotel_manager', 'reception'),
   guestController.registerGuest
 );
 
 // Get guests by hotel
-router.get('/:hotelId/guests', authenticate, guestController.getGuestsByHotel);
+router.get('/:hotelId/guests', authenticate, hotelFeature, guestController.getGuestsByHotel);
 
 // Get guest by ID
-router.get('/:hotelId/guests/:guestId', authenticate, guestController.getGuestById);
+router.get('/:hotelId/guests/:guestId', authenticate, hotelFeature, guestController.getGuestById);
 
 // Update guest
 router.put(
   '/:hotelId/guests/:guestId',
   authenticate,
+  hotelFeature,
   authorize('superadmin', 'hotel_owner', 'hotel_manager', 'reception'),
   guestController.updateGuest
 );
@@ -363,6 +391,7 @@ router.put(
 router.post(
   '/:hotelId/guests/:guestId/check-out',
   authenticate,
+  hotelFeature,
   authorize('superadmin', 'hotel_owner', 'hotel_manager', 'reception'),
   guestController.checkOutGuest
 );
@@ -371,6 +400,7 @@ router.post(
 router.post(
   '/:hotelId/guests/:guestId/transfer',
   authenticate,
+  hotelFeature,
   authorize('superadmin', 'hotel_owner', 'hotel_manager', 'reception'),
   guestController.transferGuest
 );
@@ -383,17 +413,19 @@ router.post(
 router.post(
   '/:hotelId/menus',
   authenticate,
+  hotelFeature,
   authorize('superadmin', 'hotel_owner', 'hotel_manager'),
   menuController.createMenu
 );
 
 // Get menu by ID
-router.get('/:hotelId/menus/:menuId', authenticate, menuController.getMenuById);
+router.get('/:hotelId/menus/:menuId', authenticate, hotelFeature, menuController.getMenuById);
 
 // Update menu
 router.put(
   '/:hotelId/menus/:menuId',
   authenticate,
+  hotelFeature,
   authorize('superadmin', 'hotel_owner', 'hotel_manager'),
   menuController.updateMenu
 );
@@ -402,6 +434,7 @@ router.put(
 router.delete(
   '/:hotelId/menus/:menuId',
   authenticate,
+  hotelFeature,
   authorize('superadmin', 'hotel_owner', 'hotel_manager'),
   menuController.deleteMenu
 );
@@ -410,6 +443,7 @@ router.delete(
 router.post(
   '/:hotelId/menus/:menuId/link-restaurant',
   authenticate,
+  hotelFeature,
   authorize('superadmin', 'hotel_owner', 'hotel_manager'),
   menuController.linkMenuToRestaurant
 );
@@ -418,6 +452,7 @@ router.post(
 router.post(
   '/:hotelId/menus/:menuId/sync',
   authenticate,
+  hotelFeature,
   authorize('superadmin', 'hotel_owner', 'hotel_manager'),
   menuController.syncFromRestaurant
 );
@@ -430,6 +465,7 @@ router.post(
 router.post(
   '/:hotelId/menus/:menuId/categories',
   authenticate,
+  hotelFeature,
   authorize('superadmin', 'hotel_owner', 'hotel_manager', 'hotel_kitchen'),
   menuController.createCategory
 );
@@ -438,6 +474,7 @@ router.post(
 router.put(
   '/:hotelId/menus/:menuId/categories/:categoryId',
   authenticate,
+  hotelFeature,
   authorize('superadmin', 'hotel_owner', 'hotel_manager', 'hotel_kitchen'),
   menuController.updateCategory
 );
@@ -446,6 +483,7 @@ router.put(
 router.delete(
   '/:hotelId/menus/:menuId/categories/:categoryId',
   authenticate,
+  hotelFeature,
   authorize('superadmin', 'hotel_owner', 'hotel_manager'),
   menuController.deleteCategory
 );
@@ -454,6 +492,7 @@ router.delete(
 router.post(
   '/:hotelId/menus/:menuId/categories/reorder',
   authenticate,
+  hotelFeature,
   authorize('superadmin', 'hotel_owner', 'hotel_manager', 'hotel_kitchen'),
   menuController.reorderCategories
 );
@@ -466,6 +505,7 @@ router.post(
 router.post(
   '/:hotelId/menus/:menuId/categories/:categoryId/dishes',
   authenticate,
+  hotelFeature,
   authorize('superadmin', 'hotel_owner', 'hotel_manager', 'hotel_kitchen'),
   menuController.createDish
 );
@@ -474,6 +514,7 @@ router.post(
 router.put(
   '/:hotelId/dishes/:dishId',
   authenticate,
+  hotelFeature,
   authorize('superadmin', 'hotel_owner', 'hotel_manager', 'hotel_kitchen'),
   menuController.updateDish
 );
@@ -482,6 +523,7 @@ router.put(
 router.delete(
   '/:hotelId/dishes/:dishId',
   authenticate,
+  hotelFeature,
   authorize('superadmin', 'hotel_owner', 'hotel_manager'),
   menuController.deleteDish
 );
@@ -490,6 +532,7 @@ router.delete(
 router.patch(
   '/:hotelId/dishes/:dishId/availability',
   authenticate,
+  hotelFeature,
   authorize('superadmin', 'hotel_owner', 'hotel_manager', 'hotel_kitchen'),
   menuController.updateDishAvailability
 );
@@ -498,6 +541,7 @@ router.patch(
 router.post(
   '/:hotelId/menus/:menuId/categories/:categoryId/dishes/reorder',
   authenticate,
+  hotelFeature,
   authorize('superadmin', 'hotel_owner', 'hotel_manager', 'hotel_kitchen'),
   menuController.reorderDishes
 );
@@ -507,12 +551,13 @@ router.post(
 // ============================================
 
 // Get hotel orders with filters
-router.get('/:hotelId/orders', authenticate, orderController.getHotelOrders);
+router.get('/:hotelId/orders', authenticate, hotelFeature, orderController.getHotelOrders);
 
 // Update order status
 router.patch(
   '/:hotelId/orders/:orderId/status',
   authenticate,
+  hotelFeature,
   authorize('superadmin', 'hotel_owner', 'hotel_manager', 'hotel_kitchen', 'room_service'),
   orderController.updateOrderStatus
 );
@@ -521,6 +566,7 @@ router.patch(
 router.post(
   '/:hotelId/orders/:orderId/assign',
   authenticate,
+  hotelFeature,
   authorize('superadmin', 'hotel_owner', 'hotel_manager'),
   orderController.assignOrderToStaff
 );
@@ -529,6 +575,7 @@ router.post(
 router.post(
   '/:hotelId/orders/:orderId/pickup',
   authenticate,
+  hotelFeature,
   authorize('superadmin', 'hotel_owner', 'hotel_manager', 'room_service', 'concierge'),
   orderController.markOrderPickedUp
 );
@@ -537,6 +584,7 @@ router.post(
 router.post(
   '/:hotelId/orders/:orderId/deliver',
   authenticate,
+  hotelFeature,
   authorize('superadmin', 'hotel_owner', 'hotel_manager', 'room_service', 'concierge'),
   orderController.markOrderDelivered
 );

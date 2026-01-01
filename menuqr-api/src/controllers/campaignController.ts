@@ -1,7 +1,9 @@
 import { Request, Response } from 'express';
+import mongoose from 'mongoose';
 import { Campaign, Customer, Restaurant } from '../models/index.js';
 import { asyncHandler, ApiError } from '../middleware/errorHandler.js';
 import { sendCampaignMessages } from '../services/campaignService.js';
+import { subscriptionService } from '../services/subscriptionService.js';
 
 /**
  * Create a new campaign (draft)
@@ -41,6 +43,17 @@ export const createCampaign = asyncHandler(async (req: Request, res: Response): 
     },
     createdBy: user._id,
   });
+
+  // Track campaign usage for subscription
+  try {
+    await subscriptionService.incrementUsage(
+      new mongoose.Types.ObjectId(restaurant._id.toString()),
+      'campaigns'
+    );
+  } catch (usageError) {
+    console.error('Failed to track campaign usage:', usageError);
+    // Don't fail the request if usage tracking fails
+  }
 
   res.status(201).json({
     success: true,

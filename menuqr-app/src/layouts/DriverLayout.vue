@@ -98,7 +98,7 @@ const startLocationTracking = () => {
 
   locationWatchId.value = navigator.geolocation.watchPosition(
     async (position) => {
-      if (isUpdatingLocation.value) return;
+      if (isUpdatingLocation.value) {return;}
       isUpdatingLocation.value = true;
 
       const locationData = {

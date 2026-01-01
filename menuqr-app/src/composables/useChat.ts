@@ -130,8 +130,8 @@ export function useChat(deliveryId: string, orderId: string, userType: 'driver' 
     // Listen for message deletions
     chatSocket.on('chat:message:deleted', (data: { messageId: string }) => {
       const index = messages.value.findIndex(m => m._id === data.messageId);
-      if (index !== -1) {
-        messages.value[index].content = 'Ce message a été supprimé';
+      if (index !== -1 && messages.value[index]) {
+        messages.value[index]!.content = 'Ce message a été supprimé';
       }
     });
 
@@ -272,7 +272,7 @@ export function useChat(deliveryId: string, orderId: string, userType: 'driver' 
     if (typing.length === 0) {
       return '';
     }
-    if (typing.length === 1) {
+    if (typing.length === 1 && typing[0]) {
       const typeLabels: Record<string, string> = {
         driver: 'Le livreur',
         customer: 'Le client',

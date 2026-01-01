@@ -232,7 +232,7 @@ export function initializeSocket(httpServer: HttpServer): Server {
 
     // Handle typing indicator
     socket.on('chat:typing', (data: { deliveryId: string; isTyping: boolean }) => {
-      if (!socket.userId) return;
+      if (!socket.userId) {return;}
 
       let senderType = 'customer';
       if (socket.userRole === 'driver') {
@@ -251,7 +251,7 @@ export function initializeSocket(httpServer: HttpServer): Server {
 
     // Handle message read acknowledgment
     socket.on('chat:read', async (data: { deliveryId: string }) => {
-      if (!socket.userId) return;
+      if (!socket.userId) {return;}
 
       try {
         const chatService = await import('./chatService.js');

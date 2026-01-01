@@ -9,7 +9,6 @@ import {
   ClockCircleOutlined,
   EnvironmentOutlined,
   EuroCircleOutlined,
-  FilterOutlined,
 } from '@ant-design/icons-vue';
 
 interface Delivery {

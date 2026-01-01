@@ -2,6 +2,10 @@
 import { ref, computed, onMounted, watch } from 'vue';
 import api, { type Campaign } from '@/services/api';
 import { message } from 'ant-design-vue';
+import { useSubscription, FEATURES } from '@/composables/useSubscription';
+import { FeatureGate } from '@/components/subscription';
+
+const { hasFeature, guardFeature } = useSubscription();
 import {
   SearchOutlined,
   PlusOutlined,
@@ -520,9 +524,10 @@ onMounted(fetchData);
 </script>
 
 <template>
-  <div class="campaigns-view space-y-6">
-    <!-- Hero Header with Animated Mesh Background -->
-    <a-card class="hero-card" :bordered="false">
+  <FeatureGate :feature="FEATURES.SMS_CAMPAIGNS" :show-upgrade="true">
+    <div class="campaigns-view space-y-6">
+      <!-- Hero Header with Animated Mesh Background -->
+      <a-card class="hero-card" :bordered="false">
       <div class="hero-section">
         <!-- Animated Mesh Gradient Background -->
         <div class="mesh-gradient"></div>
@@ -1339,7 +1344,8 @@ onMounted(fetchData);
         </a-row>
       </template>
     </a-modal>
-  </div>
+    </div>
+  </FeatureGate>
 </template>
 
 <style scoped>

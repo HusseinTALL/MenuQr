@@ -1,6 +1,10 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch, h } from 'vue';
 import { message } from 'ant-design-vue';
+import { useSubscription, FEATURES } from '@/composables/useSubscription';
+import { FeatureGate } from '@/components/subscription';
+
+const { hasFeature } = useSubscription();
 import {
   CalendarOutlined,
   TeamOutlined,
@@ -349,9 +353,10 @@ export default {
 </script>
 
 <template>
-  <div class="reservations-view space-y-6">
-    <!-- Header Card with Stats -->
-    <a-card class="header-card" :bordered="false">
+  <FeatureGate :feature="FEATURES.RESERVATIONS" :show-upgrade="true">
+    <div class="reservations-view space-y-6">
+      <!-- Header Card with Stats -->
+      <a-card class="header-card" :bordered="false">
       <div class="header-gradient">
         <div class="header-content">
           <div class="header-title-row">
@@ -795,7 +800,8 @@ export default {
         </a-form-item>
       </a-form>
     </a-modal>
-  </div>
+    </div>
+  </FeatureGate>
 </template>
 
 <style scoped>

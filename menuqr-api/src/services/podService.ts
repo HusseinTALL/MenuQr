@@ -461,7 +461,7 @@ export async function getPODDetails(
   deliveryNotes?: string;
 } | null> {
   const delivery = await Delivery.findById(deliveryId);
-  if (!delivery) return null;
+  if (!delivery) {return null;}
 
   const requirements = await getPODRequirements(deliveryId);
 

@@ -45,7 +45,7 @@ export const getDashboardStats = asyncHandler(async (_req: Request, res: Respons
     {
       $group: {
         _id: null,
-        total: { $sum: '$totalAmount' },
+        total: { $sum: '$total' },
       },
     },
   ]);
@@ -60,7 +60,7 @@ export const getDashboardStats = asyncHandler(async (_req: Request, res: Respons
     {
       $group: {
         _id: null,
-        total: { $sum: '$totalAmount' },
+        total: { $sum: '$total' },
       },
     },
   ]);
@@ -116,7 +116,7 @@ export const getRecentActivity = asyncHandler(async (req: Request, res: Response
 
   // Get recent orders across all restaurants
   const recentOrders = await Order.find()
-    .select('orderNumber status totalAmount restaurantId createdAt')
+    .select('orderNumber status total restaurantId createdAt')
     .populate('restaurantId', 'name slug')
     .sort({ createdAt: -1 })
     .limit(Number(limit));
@@ -165,7 +165,7 @@ export const getChartData = asyncHandler(async (req: Request, res: Response): Pr
         orders: { $sum: 1 },
         revenue: {
           $sum: {
-            $cond: [{ $in: ['$status', ['completed', 'paid']] }, '$totalAmount', 0],
+            $cond: [{ $in: ['$status', ['completed', 'paid']] }, '$total', 0],
           },
         },
       },
@@ -219,7 +219,7 @@ export const getChartData = asyncHandler(async (req: Request, res: Response): Pr
       $group: {
         _id: '$restaurantId',
         orders: { $sum: 1 },
-        revenue: { $sum: '$totalAmount' },
+        revenue: { $sum: '$total' },
       },
     },
     { $sort: { orders: -1 } },

@@ -2,8 +2,10 @@ import mongoose, { Document, Schema } from 'mongoose';
 import bcrypt from 'bcryptjs';
 import type { Permission } from '../config/permissions.js';
 
-// Available roles for staff/admin users
-export type UserRole = 'superadmin' | 'owner' | 'admin' | 'manager' | 'kitchen' | 'cashier' | 'staff';
+// Available roles for staff/admin users (restaurant + hotel)
+export type RestaurantRole = 'owner' | 'admin' | 'manager' | 'kitchen' | 'cashier' | 'staff';
+export type HotelRole = 'hotel_owner' | 'hotel_manager' | 'reception' | 'room_service' | 'hotel_kitchen' | 'concierge';
+export type UserRole = 'superadmin' | RestaurantRole | HotelRole | 'delivery_driver';
 
 export interface IUser extends Document {
   _id: mongoose.Types.ObjectId;
@@ -11,7 +13,9 @@ export interface IUser extends Document {
   password: string;
   name: string;
   role: UserRole;
+  // Entity association - user belongs to either a restaurant OR a hotel (mutually exclusive)
   restaurantId?: mongoose.Types.ObjectId;
+  hotelId?: mongoose.Types.ObjectId;
   isActive: boolean;
   refreshToken?: string;
   lastLogin?: Date;
@@ -70,12 +74,24 @@ const userSchema = new Schema<IUser>(
     },
     role: {
       type: String,
-      enum: ['superadmin', 'owner', 'admin', 'manager', 'kitchen', 'cashier', 'staff'],
+      enum: [
+        // Platform
+        'superadmin',
+        // Restaurant roles
+        'owner', 'admin', 'manager', 'kitchen', 'cashier', 'staff', 'delivery_driver',
+        // Hotel roles
+        'hotel_owner', 'hotel_manager', 'reception', 'room_service', 'hotel_kitchen', 'concierge',
+      ],
       default: 'owner',
     },
+    // Entity association - user belongs to either a restaurant OR a hotel (mutually exclusive)
     restaurantId: {
       type: Schema.Types.ObjectId,
       ref: 'Restaurant',
+    },
+    hotelId: {
+      type: Schema.Types.ObjectId,
+      ref: 'Hotel',
     },
     // Custom permissions - allows overriding default role permissions
     customPermissions: {
@@ -154,8 +170,10 @@ userSchema.methods.comparePassword = async function (
 
 // Indexes for faster queries (email index created by unique: true)
 userSchema.index({ restaurantId: 1 });
+userSchema.index({ hotelId: 1 });
 userSchema.index({ createdBy: 1 });
 userSchema.index({ restaurantId: 1, role: 1 });
+userSchema.index({ hotelId: 1, role: 1 });
 
 // Virtual for account lock status
 userSchema.virtual('isLocked').get(function () {

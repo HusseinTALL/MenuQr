@@ -1,23 +1,27 @@
 <script setup lang="ts">
 /**
- * PricingPlans Component
+ * PricingPlans Component - Premium Redesign
  *
- * Displays available subscription plans with pricing and features.
- * Supports monthly/yearly toggle and highlights current/recommended plan.
+ * Bold, vibrant pricing cards with wider layouts and stronger colors.
  */
 import { computed, onMounted, ref } from 'vue';
 import { useSubscription } from '@/composables/useSubscription';
 import type { SubscriptionPlan } from '@/services/api';
+import {
+  GiftOutlined,
+  ThunderboltOutlined,
+  SafetyCertificateOutlined,
+  BankOutlined,
+  CrownOutlined,
+  CheckOutlined,
+  StarFilled,
+} from '@ant-design/icons-vue';
 
 const props = withDefaults(
   defineProps<{
-    /** Show only specific tiers */
     showTiers?: string[];
-    /** Highlight a specific tier as recommended */
     recommendedTier?: string;
-    /** Show feature comparison table */
     showFeatures?: boolean;
-    /** Compact mode for embedding */
     compact?: boolean;
   }>(),
   {
@@ -78,11 +82,10 @@ function isDowngrade(plan: SubscriptionPlan): boolean {
   return planLevel < currentLevel;
 }
 
-function getPrice(plan: SubscriptionPlan): string {
-  const price = billingPeriod.value === 'monthly'
+function getPrice(plan: SubscriptionPlan): number {
+  return billingPeriod.value === 'monthly'
     ? plan.pricing.monthly
-    : plan.pricing.yearly / 12;
-  return formatPrice(price);
+    : Math.round(plan.pricing.yearly / 12);
 }
 
 function getAnnualPrice(plan: SubscriptionPlan): string {
@@ -94,9 +97,7 @@ function getSavings(plan: SubscriptionPlan): number {
 }
 
 async function handleSelectPlan(plan: SubscriptionPlan) {
-  if (isCurrentPlan(plan)) {
-    return;
-  }
+  if (isCurrentPlan(plan)) return;
 
   selectedPlan.value = plan.id;
   emit('select-plan', plan);
@@ -108,266 +109,230 @@ async function handleSelectPlan(plan: SubscriptionPlan) {
   }
 }
 
-async function handleConfirmChange(plan: SubscriptionPlan) {
-  isChangingPlan.value = true;
-  try {
-    const success = await changePlan(plan.id, false);
-    if (success) {
-      selectedPlan.value = null;
-    }
-  } finally {
-    isChangingPlan.value = false;
-  }
-}
-
-function getTierIcon(tier: string): string {
-  const icons: Record<string, string> = {
-    free: 'M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z',
-    starter: 'M13 10V3L4 14h7v7l9-11h-7z',
-    professional: 'M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z',
-    business: 'M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4',
-    enterprise: 'M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z',
-  };
-  return icons[tier] ?? icons.starter;
-}
-
-const tierColors: Record<string, { bg: string; text: string; border: string; button: string }> = {
+// Tier-specific styling with VIBRANT colors
+const tierConfig: Record<string, {
+  icon: typeof GiftOutlined;
+  gradient: string;
+  solidBg: string;
+  lightBg: string;
+  textColor: string;
+  borderColor: string;
+  buttonBg: string;
+  buttonHover: string;
+  checkColor: string;
+  glowColor: string;
+}> = {
   free: {
-    bg: 'bg-gray-50',
-    text: 'text-gray-600',
-    border: 'border-gray-200',
-    button: 'bg-gray-600 hover:bg-gray-700',
+    icon: GiftOutlined,
+    gradient: 'linear-gradient(135deg, #64748B 0%, #94A3B8 100%)',
+    solidBg: '#64748B',
+    lightBg: 'rgba(100, 116, 139, 0.08)',
+    textColor: '#475569',
+    borderColor: '#CBD5E1',
+    buttonBg: '#64748B',
+    buttonHover: '#475569',
+    checkColor: '#64748B',
+    glowColor: 'rgba(100, 116, 139, 0.3)',
   },
   starter: {
-    bg: 'bg-blue-50',
-    text: 'text-blue-600',
-    border: 'border-blue-200',
-    button: 'bg-blue-600 hover:bg-blue-700',
+    icon: ThunderboltOutlined,
+    gradient: 'linear-gradient(135deg, #10B981 0%, #34D399 100%)',
+    solidBg: '#10B981',
+    lightBg: 'rgba(16, 185, 129, 0.08)',
+    textColor: '#059669',
+    borderColor: '#6EE7B7',
+    buttonBg: '#10B981',
+    buttonHover: '#059669',
+    checkColor: '#10B981',
+    glowColor: 'rgba(16, 185, 129, 0.4)',
   },
   professional: {
-    bg: 'bg-primary-50',
-    text: 'text-primary-600',
-    border: 'border-primary-200',
-    button: 'bg-primary-600 hover:bg-primary-700',
+    icon: SafetyCertificateOutlined,
+    gradient: 'linear-gradient(135deg, #3B82F6 0%, #60A5FA 100%)',
+    solidBg: '#3B82F6',
+    lightBg: 'rgba(59, 130, 246, 0.08)',
+    textColor: '#2563EB',
+    borderColor: '#93C5FD',
+    buttonBg: '#3B82F6',
+    buttonHover: '#2563EB',
+    checkColor: '#3B82F6',
+    glowColor: 'rgba(59, 130, 246, 0.4)',
   },
   business: {
-    bg: 'bg-purple-50',
-    text: 'text-purple-600',
-    border: 'border-purple-200',
-    button: 'bg-purple-600 hover:bg-purple-700',
+    icon: BankOutlined,
+    gradient: 'linear-gradient(135deg, #8B5CF6 0%, #A78BFA 100%)',
+    solidBg: '#8B5CF6',
+    lightBg: 'rgba(139, 92, 246, 0.08)',
+    textColor: '#7C3AED',
+    borderColor: '#C4B5FD',
+    buttonBg: '#8B5CF6',
+    buttonHover: '#7C3AED',
+    checkColor: '#8B5CF6',
+    glowColor: 'rgba(139, 92, 246, 0.4)',
   },
   enterprise: {
-    bg: 'bg-amber-50',
-    text: 'text-amber-600',
-    border: 'border-amber-200',
-    button: 'bg-amber-600 hover:bg-amber-700',
+    icon: CrownOutlined,
+    gradient: 'linear-gradient(135deg, #F59E0B 0%, #FBBF24 100%)',
+    solidBg: '#F59E0B',
+    lightBg: 'rgba(245, 158, 11, 0.08)',
+    textColor: '#D97706',
+    borderColor: '#FCD34D',
+    buttonBg: '#F59E0B',
+    buttonHover: '#D97706',
+    checkColor: '#F59E0B',
+    glowColor: 'rgba(245, 158, 11, 0.4)',
   },
 };
+
+function getConfig(tier: string) {
+  return tierConfig[tier] || tierConfig.starter;
+}
 </script>
 
 <template>
   <div class="pricing-plans">
-    <!-- Loading state -->
-    <div v-if="isLoading" class="flex justify-center py-12">
-      <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-primary-600" />
+    <!-- Loading -->
+    <div v-if="isLoading" class="loading-container">
+      <div class="loading-spinner" />
     </div>
 
     <template v-else>
-      <!-- Billing toggle -->
-      <div class="flex justify-center mb-8">
-        <div class="inline-flex items-center p-1 bg-gray-100 rounded-lg">
+      <!-- Billing Toggle -->
+      <div class="billing-toggle-wrapper">
+        <div class="billing-toggle">
           <button
             type="button"
-            class="px-4 py-2 text-sm font-medium rounded-md transition-colors"
-            :class="billingPeriod === 'monthly'
-              ? 'bg-white text-gray-900 shadow-sm'
-              : 'text-gray-600 hover:text-gray-900'"
+            class="toggle-btn"
+            :class="{ active: billingPeriod === 'monthly' }"
             @click="billingPeriod = 'monthly'"
           >
             Mensuel
           </button>
           <button
             type="button"
-            class="px-4 py-2 text-sm font-medium rounded-md transition-colors flex items-center gap-2"
-            :class="billingPeriod === 'yearly'
-              ? 'bg-white text-gray-900 shadow-sm'
-              : 'text-gray-600 hover:text-gray-900'"
+            class="toggle-btn"
+            :class="{ active: billingPeriod === 'yearly' }"
             @click="billingPeriod = 'yearly'"
           >
             Annuel
-            <span class="px-1.5 py-0.5 text-xs font-medium text-green-700 bg-green-100 rounded">
-              -20%
-            </span>
+            <span class="savings-badge">-20%</span>
           </button>
         </div>
       </div>
 
-      <!-- Plans grid -->
-      <div
-        class="grid gap-6"
-        :class="{
-          'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5': !compact,
-          'grid-cols-1 sm:grid-cols-2': compact,
-        }"
-      >
-        <div
-          v-for="plan in displayPlans"
+      <!-- Plans Grid -->
+      <div class="plans-grid" :class="{ compact: compact }">
+        <article
+          v-for="(plan, index) in displayPlans"
           :key="plan.id"
-          class="relative flex flex-col bg-white rounded-xl border-2 transition-all duration-200"
-          :class="[
-            isCurrentPlan(plan)
-              ? 'border-primary-500 ring-2 ring-primary-200'
-              : 'border-gray-200 hover:border-gray-300',
-            (plan.isPopular || plan.tier === recommendedTier) && !isCurrentPlan(plan)
-              ? 'border-primary-300 shadow-lg'
-              : 'shadow-sm',
-          ]"
+          class="plan-card"
+          :class="{
+            'plan-current': isCurrentPlan(plan),
+            'plan-popular': (plan.isPopular || plan.tier === recommendedTier) && !isCurrentPlan(plan),
+          }"
+          :style="{
+            '--card-gradient': getConfig(plan.tier).gradient,
+            '--card-solid': getConfig(plan.tier).solidBg,
+            '--card-light-bg': getConfig(plan.tier).lightBg,
+            '--card-text': getConfig(plan.tier).textColor,
+            '--card-border': getConfig(plan.tier).borderColor,
+            '--card-button': getConfig(plan.tier).buttonBg,
+            '--card-button-hover': getConfig(plan.tier).buttonHover,
+            '--card-check': getConfig(plan.tier).checkColor,
+            '--card-glow': getConfig(plan.tier).glowColor,
+            '--card-index': index,
+          }"
         >
-          <!-- Popular badge -->
-          <div
-            v-if="(plan.isPopular || plan.tier === recommendedTier) && !isCurrentPlan(plan)"
-            class="absolute -top-3 left-1/2 -translate-x-1/2"
-          >
-            <span class="px-3 py-1 text-xs font-semibold text-white bg-primary-600 rounded-full">
-              Populaire
-            </span>
+          <!-- Badges -->
+          <div v-if="isCurrentPlan(plan)" class="plan-badge badge-current">
+            <StarFilled />
+            Plan actuel
+          </div>
+          <div v-else-if="plan.isPopular || plan.tier === recommendedTier" class="plan-badge badge-popular">
+            <StarFilled />
+            Populaire
           </div>
 
-          <!-- Current plan badge -->
-          <div
-            v-if="isCurrentPlan(plan)"
-            class="absolute -top-3 left-1/2 -translate-x-1/2"
-          >
-            <span class="px-3 py-1 text-xs font-semibold text-white bg-green-600 rounded-full">
-              Plan actuel
-            </span>
-          </div>
-
-          <!-- Plan header -->
-          <div class="p-6 text-center border-b border-gray-100">
-            <div
-              class="inline-flex items-center justify-center w-12 h-12 rounded-xl mb-4"
-              :class="tierColors[plan.tier]?.bg || 'bg-gray-100'"
-            >
-              <svg
-                class="w-6 h-6"
-                :class="tierColors[plan.tier]?.text || 'text-gray-600'"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  :d="getTierIcon(plan.tier)"
-                />
-              </svg>
+          <!-- Header -->
+          <div class="plan-header">
+            <div class="plan-icon-wrapper">
+              <component :is="getConfig(plan.tier).icon" class="plan-icon" />
             </div>
-            <h3 class="text-xl font-bold text-gray-900">{{ plan.name }}</h3>
-            <p v-if="plan.description" class="mt-1 text-sm text-gray-500">
-              {{ plan.description }}
-            </p>
+            <h3 class="plan-name">{{ plan.name }}</h3>
+            <p v-if="plan.description" class="plan-description">{{ plan.description }}</p>
           </div>
 
           <!-- Pricing -->
-          <div class="p-6 text-center">
-            <div class="flex items-baseline justify-center gap-1">
-              <span class="text-4xl font-bold text-gray-900">
-                {{ getPrice(plan) }}
-              </span>
-              <span class="text-gray-500">/ mois</span>
+          <div class="plan-pricing">
+            <div class="price-main">
+              <span class="price-amount">{{ getPrice(plan).toLocaleString('fr-FR') }}</span>
+              <div class="price-meta">
+                <span class="price-currency">XOF</span>
+                <span class="price-period">/ mois</span>
+              </div>
             </div>
-            <p v-if="billingPeriod === 'yearly'" class="mt-1 text-sm text-gray-500">
-              {{ getAnnualPrice(plan) }} facturé annuellement
+            <p v-if="billingPeriod === 'yearly'" class="price-annual">
+              {{ getAnnualPrice(plan) }} / an
             </p>
-            <p
-              v-if="billingPeriod === 'yearly' && getSavings(plan) > 0"
-              class="mt-1 text-sm font-medium text-green-600"
-            >
-              Économisez {{ getSavings(plan) }}%
-            </p>
-            <p v-if="plan.trialDays > 0" class="mt-2 text-sm text-primary-600">
+            <p v-if="plan.trialDays > 0" class="price-trial">
               {{ plan.trialDays }} jours d'essai gratuit
             </p>
           </div>
 
           <!-- Features -->
-          <div v-if="showFeatures" class="flex-1 p-6 pt-0">
-            <ul class="space-y-3">
-              <li
-                v-for="feature in plan.displayFeatures"
-                :key="feature"
-                class="flex items-start gap-2"
-              >
-                <svg
-                  class="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M5 13l4 4L19 7"
-                  />
-                </svg>
-                <span class="text-sm text-gray-600">{{ feature }}</span>
-              </li>
-            </ul>
-          </div>
+          <ul v-if="showFeatures" class="plan-features">
+            <li
+              v-for="(feature, fIndex) in plan.displayFeatures"
+              :key="feature"
+              class="feature-item"
+              :style="{ '--feature-index': fIndex }"
+            >
+              <span class="feature-check">
+                <CheckOutlined />
+              </span>
+              <span class="feature-text">{{ feature }}</span>
+            </li>
+          </ul>
 
           <!-- CTA -->
-          <div class="p-6 pt-0 mt-auto">
+          <div class="plan-cta">
             <button
               v-if="isCurrentPlan(plan)"
               type="button"
               disabled
-              class="w-full px-4 py-2.5 text-sm font-medium text-gray-500 bg-gray-100 rounded-lg cursor-not-allowed"
+              class="cta-btn cta-current"
             >
               Plan actuel
             </button>
             <button
               v-else-if="isUpgrade(plan)"
               type="button"
-              class="w-full px-4 py-2.5 text-sm font-medium text-white rounded-lg transition-colors"
-              :class="tierColors[plan.tier]?.button || 'bg-primary-600 hover:bg-primary-700'"
+              class="cta-btn cta-upgrade"
               :disabled="isChangingPlan"
               @click="handleSelectPlan(plan)"
             >
-              <span v-if="isChangingPlan && selectedPlan === plan.id">
-                Mise à niveau...
-              </span>
-              <span v-else>
-                Passer à {{ plan.name }}
-              </span>
+              <span v-if="isChangingPlan && selectedPlan === plan.id">Mise à niveau...</span>
+              <span v-else>Passer à {{ plan.name }}</span>
             </button>
             <button
               v-else
               type="button"
-              class="w-full px-4 py-2.5 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+              class="cta-btn cta-downgrade"
               :disabled="isChangingPlan"
               @click="handleSelectPlan(plan)"
             >
-              <span v-if="isChangingPlan && selectedPlan === plan.id">
-                Changement...
-              </span>
-              <span v-else>
-                Rétrograder
-              </span>
+              <span v-if="isChangingPlan && selectedPlan === plan.id">Changement...</span>
+              <span v-else>Rétrograder</span>
             </button>
           </div>
-        </div>
+        </article>
       </div>
 
       <!-- Enterprise CTA -->
-      <div v-if="!compact" class="mt-12 text-center">
-        <p class="text-gray-600">
+      <div v-if="!compact" class="enterprise-cta">
+        <p>
           Besoin d'une solution sur mesure ?
-          <a href="mailto:entreprise@menuqr.fr" class="text-primary-600 font-medium hover:underline">
-            Contactez notre équipe commerciale
-          </a>
+          <a href="mailto:entreprise@menuqr.fr">Contactez notre équipe commerciale</a>
         </p>
       </div>
     </template>
@@ -377,5 +342,393 @@ const tierColors: Record<string, { bg: string; text: string; border: string; but
 <style scoped>
 .pricing-plans {
   width: 100%;
+  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+/* Loading */
+.loading-container {
+  display: flex;
+  justify-content: center;
+  padding: 4rem 0;
+}
+
+.loading-spinner {
+  width: 48px;
+  height: 48px;
+  border: 3px solid #E5E7EB;
+  border-top-color: #3B82F6;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Billing Toggle */
+.billing-toggle-wrapper {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 3rem;
+}
+
+.billing-toggle {
+  display: inline-flex;
+  padding: 6px;
+  background: #F3F4F6;
+  border-radius: 16px;
+  gap: 4px;
+}
+
+.toggle-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 24px;
+  background: transparent;
+  border: none;
+  border-radius: 12px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #6B7280;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.toggle-btn:hover {
+  color: #374151;
+}
+
+.toggle-btn.active {
+  background: white;
+  color: #111827;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.savings-badge {
+  padding: 4px 10px;
+  background: linear-gradient(135deg, #10B981 0%, #34D399 100%);
+  color: white;
+  font-size: 0.75rem;
+  font-weight: 700;
+  border-radius: 20px;
+}
+
+/* Plans Grid */
+.plans-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 24px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.plans-grid.compact {
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 16px;
+}
+
+/* Plan Card */
+.plan-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  background: white;
+  border: 2px solid #E5E7EB;
+  border-radius: 24px;
+  padding: 32px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  animation: cardIn 0.5s ease-out forwards;
+  animation-delay: calc(var(--card-index) * 80ms);
+  opacity: 0;
+  transform: translateY(20px);
+}
+
+@keyframes cardIn {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.plan-card:hover {
+  border-color: var(--card-border);
+  transform: translateY(-4px);
+  box-shadow: 0 20px 40px -12px var(--card-glow);
+}
+
+.plan-card.plan-current {
+  border-color: var(--card-solid);
+  background: var(--card-light-bg);
+}
+
+.plan-card.plan-popular {
+  border-color: var(--card-solid);
+  box-shadow: 0 8px 30px -8px var(--card-glow);
+}
+
+/* Badges */
+.plan-badge {
+  position: absolute;
+  top: -14px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  border-radius: 20px;
+  white-space: nowrap;
+}
+
+.badge-current {
+  background: linear-gradient(135deg, #10B981 0%, #34D399 100%);
+  color: white;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+}
+
+.badge-popular {
+  background: var(--card-gradient);
+  color: white;
+  box-shadow: 0 4px 12px var(--card-glow);
+}
+
+/* Plan Header */
+.plan-header {
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.plan-icon-wrapper {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+  background: var(--card-gradient);
+  border-radius: 20px;
+  margin-bottom: 16px;
+  box-shadow: 0 8px 20px -4px var(--card-glow);
+}
+
+.plan-icon {
+  font-size: 28px;
+  color: white;
+}
+
+.plan-name {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #111827;
+  margin: 0 0 8px 0;
+}
+
+.plan-description {
+  font-size: 0.9rem;
+  color: #6B7280;
+  margin: 0;
+  line-height: 1.5;
+}
+
+/* Pricing */
+.plan-pricing {
+  text-align: center;
+  padding: 24px 0;
+  border-top: 1px solid #F3F4F6;
+  border-bottom: 1px solid #F3F4F6;
+  margin-bottom: 24px;
+}
+
+.price-main {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 8px;
+}
+
+.price-amount {
+  font-size: 3rem;
+  font-weight: 800;
+  color: #111827;
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+
+.price-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding-top: 8px;
+}
+
+.price-currency {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #9CA3AF;
+}
+
+.price-period {
+  font-size: 0.9rem;
+  color: #6B7280;
+}
+
+.price-annual {
+  font-size: 0.85rem;
+  color: #6B7280;
+  margin: 8px 0 0 0;
+}
+
+.price-trial {
+  display: inline-block;
+  margin-top: 12px;
+  padding: 6px 14px;
+  background: var(--card-light-bg);
+  color: var(--card-text);
+  font-size: 0.85rem;
+  font-weight: 600;
+  border-radius: 20px;
+}
+
+/* Features */
+.plan-features {
+  flex: 1;
+  list-style: none;
+  padding: 0;
+  margin: 0 0 24px 0;
+}
+
+.feature-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 10px 0;
+  animation: featureIn 0.3s ease-out forwards;
+  animation-delay: calc(var(--feature-index) * 50ms + 0.3s);
+  opacity: 0;
+}
+
+@keyframes featureIn {
+  to { opacity: 1; }
+}
+
+.feature-check {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  background: var(--card-light-bg);
+  color: var(--card-check);
+  border-radius: 6px;
+  flex-shrink: 0;
+  font-size: 12px;
+}
+
+.feature-text {
+  font-size: 0.9rem;
+  color: #4B5563;
+  line-height: 1.4;
+}
+
+/* CTA Buttons */
+.plan-cta {
+  margin-top: auto;
+}
+
+.cta-btn {
+  width: 100%;
+  padding: 14px 24px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  border: none;
+  border-radius: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.cta-current {
+  background: #F3F4F6;
+  color: #9CA3AF;
+  cursor: not-allowed;
+}
+
+.cta-upgrade {
+  background: var(--card-gradient);
+  color: white;
+  box-shadow: 0 4px 14px -2px var(--card-glow);
+}
+
+.cta-upgrade:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px -4px var(--card-glow);
+}
+
+.cta-upgrade:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.cta-downgrade {
+  background: #F3F4F6;
+  color: #6B7280;
+}
+
+.cta-downgrade:hover:not(:disabled) {
+  background: #E5E7EB;
+  color: #374151;
+}
+
+.cta-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Enterprise CTA */
+.enterprise-cta {
+  text-align: center;
+  margin-top: 3rem;
+  padding-top: 2rem;
+  border-top: 1px solid #E5E7EB;
+}
+
+.enterprise-cta p {
+  font-size: 1rem;
+  color: #6B7280;
+  margin: 0;
+}
+
+.enterprise-cta a {
+  color: #3B82F6;
+  font-weight: 600;
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.enterprise-cta a:hover {
+  color: #2563EB;
+  text-decoration: underline;
+}
+
+/* Responsive */
+@media (max-width: 1200px) {
+  .plans-grid {
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  }
+}
+
+@media (max-width: 768px) {
+  .plans-grid {
+    grid-template-columns: 1fr;
+    max-width: 400px;
+  }
+
+  .plan-card {
+    padding: 24px;
+  }
+
+  .price-amount {
+    font-size: 2.5rem;
+  }
 }
 </style>

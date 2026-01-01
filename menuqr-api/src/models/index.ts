@@ -182,3 +182,49 @@ export {
   type PayoutMethod,
   type PayoutType,
 } from './DriverPayout.js';
+
+// Hotel System Models
+export {
+  Hotel,
+  type IHotel,
+  type IHotelSettings,
+  type IRoomServiceSettings,
+  type IGuestAuthSettings,
+} from './Hotel.js';
+export {
+  Room,
+  type IRoom,
+  type RoomStatus,
+  type IDeliveryPreferences,
+} from './Room.js';
+export {
+  HotelGuest,
+  type IHotelGuest,
+} from './HotelGuest.js';
+export {
+  HotelMenu,
+  type IHotelMenu,
+  type HotelMenuType,
+  type MenuSourceType,
+  type IPricingRules,
+} from './HotelMenu.js';
+export {
+  HotelCategory,
+  type IHotelCategory,
+} from './HotelCategory.js';
+export {
+  HotelDish,
+  type IHotelDish,
+  type IHotelDishOption,
+  type IHotelDishVariant,
+} from './HotelDish.js';
+export {
+  HotelOrder,
+  type IHotelOrder,
+  type IHotelOrderItem,
+  type IStaffAssignment,
+  type IDeliveryInfo,
+  type HotelOrderStatus,
+  type PaymentStatus as HotelPaymentStatus,
+  type PaymentMethod as HotelPaymentMethod,
+} from './HotelOrder.js';

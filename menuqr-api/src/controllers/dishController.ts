@@ -1,7 +1,9 @@
 import { Request, Response } from 'express';
+import mongoose from 'mongoose';
 import { Dish, Category, Restaurant } from '../models/index.js';
 import { asyncHandler, ApiError } from '../middleware/errorHandler.js';
 import * as auditService from '../services/auditService.js';
+import { subscriptionService } from '../services/subscriptionService.js';
 
 export const createDish = asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const user = req.user!;
@@ -27,12 +29,25 @@ export const createDish = asyncHandler(async (req: Request, res: Response): Prom
     .select('order');
   const order = lastDish ? lastDish.order + 1 : 0;
 
-  // Create dish
-  const dish = await Dish.create({
-    ...req.body,
+  // Extract only allowed fields to prevent field injection
+  const allowedFields = [
+    'name', 'description', 'price', 'image', 'images', 'categoryId',
+    'allergens', 'tags', 'preparationTime', 'isAvailable', 'isVegetarian',
+    'isVegan', 'isGlutenFree', 'isSpicy', 'spicyLevel', 'calories',
+    'nutritionInfo', 'options', 'variants', 'trackStock', 'stock', 'lowStockThreshold'
+  ];
+  const dishData: Record<string, unknown> = {
     restaurantId: restaurant._id,
     order,
-  });
+  };
+  for (const field of allowedFields) {
+    if (req.body[field] !== undefined) {
+      dishData[field] = req.body[field];
+    }
+  }
+
+  // Create dish with sanitized data
+  const dish = await Dish.create(dishData);
 
   // Audit log
   const auditUser = auditService.getUserFromRequest(req);
@@ -47,6 +62,17 @@ export const createDish = asyncHandler(async (req: Request, res: Response): Prom
       auditService.getRequestInfo(req),
       { categoryId: dishDoc.categoryId, price: dishDoc.price }
     );
+  }
+
+  // Track dish usage for subscription
+  try {
+    await subscriptionService.incrementUsage(
+      new mongoose.Types.ObjectId(restaurant._id.toString()),
+      'dishes'
+    );
+  } catch (usageError) {
+    console.error('Failed to track dish usage:', usageError);
+    // Don't fail the request if usage tracking fails
   }
 
   res.status(201).json({
@@ -173,8 +199,22 @@ export const updateDish = asyncHandler(async (req: Request, res: Response): Prom
   const oldPrice = dish.price;
   const oldAvailable = dish.isAvailable;
 
-  // Update dish
-  const updatedDish = await Dish.findByIdAndUpdate(id, req.body, {
+  // Extract only allowed fields to prevent field injection
+  const allowedFields = [
+    'name', 'description', 'price', 'image', 'images', 'categoryId',
+    'allergens', 'tags', 'preparationTime', 'isAvailable', 'isVegetarian',
+    'isVegan', 'isGlutenFree', 'isSpicy', 'spicyLevel', 'calories',
+    'nutritionInfo', 'options', 'variants', 'trackStock', 'stock', 'lowStockThreshold'
+  ];
+  const updateData: Record<string, unknown> = {};
+  for (const field of allowedFields) {
+    if (req.body[field] !== undefined) {
+      updateData[field] = req.body[field];
+    }
+  }
+
+  // Update dish with sanitized data
+  const updatedDish = await Dish.findByIdAndUpdate(id, updateData, {
     new: true,
     runValidators: true,
   }).populate('categoryId', 'name slug');
@@ -236,6 +276,17 @@ export const deleteDish = asyncHandler(async (req: Request, res: Response): Prom
       `Dish "${dishName}" deleted`,
       auditService.getRequestInfo(req)
     );
+  }
+
+  // Track dish usage for subscription (decrement)
+  try {
+    await subscriptionService.decrementUsage(
+      new mongoose.Types.ObjectId(restaurant._id.toString()),
+      'dishes'
+    );
+  } catch (usageError) {
+    console.error('Failed to track dish deletion:', usageError);
+    // Don't fail the request if usage tracking fails
   }
 
   res.json({

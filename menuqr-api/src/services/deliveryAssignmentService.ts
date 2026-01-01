@@ -115,7 +115,7 @@ export async function findAvailableDrivers(
   const scoredDrivers: DriverScore[] = [];
 
   for (const driver of drivers) {
-    if (!driver.currentLocation?.coordinates) continue;
+    if (!driver.currentLocation?.coordinates) {continue;}
 
     const [lng, lat] = driver.currentLocation.coordinates;
     const distance = calculateDistance(
@@ -125,7 +125,7 @@ export async function findAvailableDrivers(
       lng
     );
 
-    if (distance > radiusKm) continue;
+    if (distance > radiusKm) {continue;}
 
     const eta = estimateETA(distance);
     const score = calculateDriverScore(driver, distance, radiusKm);
@@ -473,8 +473,8 @@ export async function getAssignmentStats(
 
   if (startDate || endDate) {
     query.createdAt = {};
-    if (startDate) (query.createdAt as Record<string, Date>).$gte = startDate;
-    if (endDate) (query.createdAt as Record<string, Date>).$lte = endDate;
+    if (startDate) {(query.createdAt as Record<string, Date>).$gte = startDate;}
+    if (endDate) {(query.createdAt as Record<string, Date>).$lte = endDate;}
   }
 
   const deliveries = await Delivery.find(query);

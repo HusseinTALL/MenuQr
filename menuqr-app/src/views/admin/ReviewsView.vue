@@ -250,7 +250,7 @@ onMounted(() => {
           <a-statistic
             :value="stats.pending"
             title="En attente"
-            value-style="color: #d97706"
+            :value-style="{ color: '#d97706' }"
           >
             <template #prefix>
               <ClockCircleOutlined class="stat-icon pending" />
@@ -263,7 +263,7 @@ onMounted(() => {
           <a-statistic
             :value="stats.approved"
             title="Approuves"
-            value-style="color: #059669"
+            :value-style="{ color: '#059669' }"
           >
             <template #prefix>
               <CheckCircleOutlined class="stat-icon success" />
@@ -276,7 +276,7 @@ onMounted(() => {
           <a-statistic
             :value="stats.rejected"
             title="Rejetes"
-            value-style="color: #dc2626"
+            :value-style="{ color: '#dc2626' }"
           >
             <template #prefix>
               <CloseCircleOutlined class="stat-icon danger" />
@@ -299,7 +299,7 @@ onMounted(() => {
             :value="stats.responseRate"
             title="Taux de reponse"
             suffix="%"
-            value-style="color: #0d9488"
+            :value-style="{ color: '#0d9488' }"
           >
             <template #prefix>
               <PercentageOutlined class="stat-icon teal" />

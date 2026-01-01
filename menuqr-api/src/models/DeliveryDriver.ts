@@ -112,6 +112,11 @@ export interface IDeliveryDriver extends Document {
   currentBalance: number; // Pending payout amount
   lifetimeEarnings: number;
 
+  // Stripe Connect (for payouts)
+  stripeAccountId?: string;
+  stripeOnboardingComplete: boolean;
+  stripePayoutsEnabled: boolean;
+
   // Settings & Preferences
   preferredZones: string[]; // Postal code prefixes
   maxDeliveryRadius: number; // km
@@ -318,6 +323,11 @@ const deliveryDriverSchema = new Schema<IDeliveryDriver>(
       type: Number,
       default: 0,
     },
+
+    // Stripe Connect
+    stripeAccountId: { type: String },
+    stripeOnboardingComplete: { type: Boolean, default: false },
+    stripePayoutsEnabled: { type: Boolean, default: false },
 
     // Preferences
     preferredZones: [{ type: String }],

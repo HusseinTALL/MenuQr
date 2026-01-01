@@ -3,7 +3,16 @@
  * Handles map initialization, markers, and polyline rendering
  */
 
-import { ref, onMounted, onUnmounted, watch, type Ref } from 'vue';
+/// <reference types="@types/google.maps" />
+
+import { ref, onUnmounted, watch, type Ref } from 'vue';
+
+// Extend Window interface for Google Maps
+declare global {
+  interface Window {
+    google?: typeof google;
+  }
+}
 
 // Types
 interface LatLng {
@@ -164,14 +173,14 @@ export function useGoogleMaps(
     id: string,
     options: MarkerOptions
   ): google.maps.Marker | null => {
-    if (!map.value || !isLoaded.value) return null;
+    if (!map.value || !isLoaded.value) {return null;}
 
     // Update existing marker
     if (markers.value.has(id)) {
       const marker = markers.value.get(id)!;
       marker.setPosition(options.position);
-      if (options.title) marker.setTitle(options.title);
-      if (options.icon) marker.setIcon(options.icon);
+      if (options.title) {marker.setTitle(options.title);}
+      if (options.icon) {marker.setIcon(options.icon);}
       return marker;
     }
 
@@ -208,7 +217,7 @@ export function useGoogleMaps(
       strokeOpacity?: number;
     } = {}
   ): google.maps.Polyline | null => {
-    if (!map.value || !isLoaded.value) return null;
+    if (!map.value || !isLoaded.value) {return null;}
 
     const path = decodePolyline(encodedPath);
 
@@ -251,12 +260,12 @@ export function useGoogleMaps(
 
   // Fit map bounds to show all markers
   const fitBounds = (padding = 50) => {
-    if (!map.value || markers.value.size === 0) return;
+    if (!map.value || markers.value.size === 0) {return;}
 
     const bounds = new google.maps.LatLngBounds();
     markers.value.forEach((marker) => {
       const pos = marker.getPosition();
-      if (pos) bounds.extend(pos);
+      if (pos) {bounds.extend(pos);}
     });
 
     map.value.fitBounds(bounds, padding);

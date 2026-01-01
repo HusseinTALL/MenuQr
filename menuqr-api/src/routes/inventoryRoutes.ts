@@ -6,12 +6,15 @@
 import { Router } from 'express';
 import { authenticate } from '../middleware/auth.js';
 import { hasPermission, PERMISSIONS } from '../middleware/permission.js';
+import { requireFeature } from '../middleware/feature.js';
+import { FEATURES } from '../config/features.js';
 import * as inventoryController from '../controllers/inventoryController.js';
 
 const router = Router();
 
-// All routes require authentication
+// All routes require authentication and INVENTORY feature
 router.use(authenticate);
+router.use(requireFeature(FEATURES.INVENTORY));
 
 /**
  * @route   GET /api/inventory/stats

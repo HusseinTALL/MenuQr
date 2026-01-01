@@ -18,11 +18,18 @@ import {
   completeDelivery,
   getDeliveryETA,
   getDeliveryRoute,
+  addDeliveryTip,
+  rateDelivery,
 } from '../controllers/deliveryController.js';
 import { authenticate, authenticateDriver, authenticateUserOrDriver } from '../middleware/auth.js';
 import { hasPermission, hasAnyPermission } from '../middleware/permission.js';
+import { requireFeature } from '../middleware/feature.js';
+import { FEATURES } from '../config/features.js';
 
 const router = Router();
+
+// Feature middleware for authenticated routes
+const deliveryFeature = requireFeature(FEATURES.DELIVERY_MODULE);
 
 // ============================================
 // Public Routes (Customer Tracking)
@@ -37,6 +44,12 @@ router.get('/:id/eta', getDeliveryETA);
 // GET /api/deliveries/:id/route - Get delivery route with polyline (public for customers)
 router.get('/:id/route', getDeliveryRoute);
 
+// POST /api/deliveries/:id/tip - Add tip to completed delivery (public for customers)
+router.post('/:id/tip', addDeliveryTip);
+
+// POST /api/deliveries/:id/rate - Rate completed delivery (public for customers)
+router.post('/:id/rate', rateDelivery);
+
 // ============================================
 // Authenticated Routes
 // ============================================
@@ -45,6 +58,7 @@ router.get('/:id/route', getDeliveryRoute);
 router.get(
   '/',
   authenticate,
+  deliveryFeature,
   hasPermission('deliveries:read'),
   getDeliveries
 );
@@ -53,6 +67,7 @@ router.get(
 router.get(
   '/active',
   authenticate,
+  deliveryFeature,
   hasPermission('deliveries:read'),
   getActiveDeliveries
 );
@@ -61,6 +76,7 @@ router.get(
 router.get(
   '/stats',
   authenticate,
+  deliveryFeature,
   hasPermission('deliveries:stats'),
   getDeliveryStats
 );
@@ -69,6 +85,7 @@ router.get(
 router.post(
   '/',
   authenticate,
+  deliveryFeature,
   hasPermission('deliveries:create'),
   createDelivery
 );
@@ -77,6 +94,7 @@ router.post(
 router.get(
   '/:id',
   authenticate,
+  deliveryFeature,
   hasAnyPermission(['deliveries:read', 'driver:self:deliveries']),
   getDeliveryById
 );
@@ -85,6 +103,7 @@ router.get(
 router.post(
   '/:id/assign',
   authenticate,
+  deliveryFeature,
   hasPermission('deliveries:assign'),
   assignDriver
 );
@@ -107,6 +126,7 @@ router.put(
 router.post(
   '/:id/pod',
   authenticate,
+  deliveryFeature,
   hasAnyPermission(['deliveries:update', 'driver:self:deliveries']),
   submitProofOfDelivery
 );
@@ -115,6 +135,7 @@ router.post(
 router.post(
   '/:id/issue',
   authenticate,
+  deliveryFeature,
   hasAnyPermission(['deliveries:update', 'driver:self:deliveries']),
   reportDeliveryIssue
 );
@@ -123,6 +144,7 @@ router.post(
 router.post(
   '/:id/chat',
   authenticate,
+  deliveryFeature,
   addChatMessage
 );
 
@@ -130,6 +152,7 @@ router.post(
 router.post(
   '/:id/cancel',
   authenticate,
+  deliveryFeature,
   hasPermission('deliveries:cancel'),
   cancelDelivery
 );

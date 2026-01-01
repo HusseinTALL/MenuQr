@@ -353,26 +353,26 @@ hotelOrderSchema.pre('save', async function () {
     const now = new Date();
     switch (this.status) {
       case 'confirmed':
-        if (!this.confirmedAt) this.confirmedAt = now;
+        if (!this.confirmedAt) {this.confirmedAt = now;}
         break;
       case 'preparing':
-        if (!this.preparingAt) this.preparingAt = now;
+        if (!this.preparingAt) {this.preparingAt = now;}
         break;
       case 'ready':
-        if (!this.readyAt) this.readyAt = now;
+        if (!this.readyAt) {this.readyAt = now;}
         break;
       case 'picked_up':
-        if (!this.pickedUpAt) this.pickedUpAt = now;
+        if (!this.pickedUpAt) {this.pickedUpAt = now;}
         break;
       case 'delivered':
-        if (!this.deliveredAt) this.deliveredAt = now;
+        if (!this.deliveredAt) {this.deliveredAt = now;}
         this.actualDeliveryTime = now;
         break;
       case 'completed':
-        if (!this.completedAt) this.completedAt = now;
+        if (!this.completedAt) {this.completedAt = now;}
         break;
       case 'cancelled':
-        if (!this.cancelledAt) this.cancelledAt = now;
+        if (!this.cancelledAt) {this.cancelledAt = now;}
         break;
     }
   }
@@ -406,7 +406,7 @@ hotelOrderSchema.virtual('isActive').get(function () {
 });
 
 hotelOrderSchema.virtual('deliveryDuration').get(function () {
-  if (!this.confirmedAt || !this.deliveredAt) return null;
+  if (!this.confirmedAt || !this.deliveredAt) {return null;}
   return Math.round((this.deliveredAt.getTime() - this.confirmedAt.getTime()) / 60000); // Minutes
 });
 
@@ -459,8 +459,8 @@ hotelOrderSchema.statics.getStats = async function (
   const match: Record<string, unknown> = { hotelId };
   if (startDate || endDate) {
     match.createdAt = {};
-    if (startDate) (match.createdAt as Record<string, Date>).$gte = startDate;
-    if (endDate) (match.createdAt as Record<string, Date>).$lte = endDate;
+    if (startDate) {(match.createdAt as Record<string, Date>).$gte = startDate;}
+    if (endDate) {(match.createdAt as Record<string, Date>).$lte = endDate;}
   }
 
   const stats = await this.aggregate([

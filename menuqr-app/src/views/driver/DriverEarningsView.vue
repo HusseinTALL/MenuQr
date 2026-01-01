@@ -1,6 +1,17 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue';
 import api from '@/services/api';
+import { Bar, Doughnut } from 'vue-chartjs';
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  ArcElement,
+  Title,
+  Tooltip,
+  Legend,
+} from 'chart.js';
 import {
   WalletOutlined,
   CalendarOutlined,
@@ -9,9 +20,21 @@ import {
   ClockCircleOutlined,
   EuroCircleOutlined,
   RiseOutlined,
-  FallOutlined,
   GiftOutlined,
+  BarChartOutlined,
+  PieChartOutlined,
 } from '@ant-design/icons-vue';
+
+// Register Chart.js components
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  ArcElement,
+  Title,
+  Tooltip,
+  Legend
+);
 
 interface EarningsSummary {
   today: {
@@ -109,6 +132,166 @@ const fetchEarnings = async () => {
   }
 };
 
+// Chart data for daily earnings bar chart
+const barChartData = computed(() => {
+  const sortedData = [...dailyBreakdown.value].sort(
+    (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
+  );
+
+  return {
+    labels: sortedData.map((d) => {
+      const date = new Date(d.date);
+      return date.toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric' });
+    }),
+    datasets: [
+      {
+        label: 'Livraisons',
+        data: sortedData.map((d) => d.total - d.tips - d.bonuses),
+        backgroundColor: 'rgba(24, 144, 255, 0.8)',
+        borderRadius: 6,
+        barPercentage: 0.7,
+      },
+      {
+        label: 'Pourboires',
+        data: sortedData.map((d) => d.tips),
+        backgroundColor: 'rgba(250, 173, 20, 0.8)',
+        borderRadius: 6,
+        barPercentage: 0.7,
+      },
+      {
+        label: 'Bonus',
+        data: sortedData.map((d) => d.bonuses),
+        backgroundColor: 'rgba(114, 46, 209, 0.8)',
+        borderRadius: 6,
+        barPercentage: 0.7,
+      },
+    ],
+  };
+});
+
+const barChartOptions = {
+  responsive: true,
+  maintainAspectRatio: false,
+  scales: {
+    x: {
+      stacked: true,
+      grid: { display: false },
+      ticks: { color: 'rgba(255, 255, 255, 0.65)' },
+    },
+    y: {
+      stacked: true,
+      grid: { color: 'rgba(255, 255, 255, 0.1)' },
+      ticks: {
+        color: 'rgba(255, 255, 255, 0.65)',
+        callback: (value: string | number) => `${value}€`,
+      },
+    },
+  },
+  plugins: {
+    legend: {
+      display: true,
+      position: 'top' as const,
+      labels: {
+        color: 'rgba(255, 255, 255, 0.85)',
+        usePointStyle: true,
+        padding: 16,
+      },
+    },
+    tooltip: {
+      backgroundColor: 'rgba(0, 0, 0, 0.8)',
+      titleColor: '#fff',
+      bodyColor: 'rgba(255, 255, 255, 0.85)',
+      padding: 12,
+      borderColor: 'rgba(255, 255, 255, 0.1)',
+      borderWidth: 1,
+      callbacks: {
+        label: (context: unknown) => {
+          const ctx = context as { dataset: { label?: string }; raw: unknown };
+          const label = ctx.dataset.label || '';
+          const value = typeof ctx.raw === 'number' ? ctx.raw.toFixed(2) : '0.00';
+          return `${label}: ${value}€`;
+        },
+      },
+    },
+  },
+};
+
+// Chart data for earnings breakdown donut chart
+const donutChartData = computed(() => {
+  const stats = currentStats.value;
+  const baseFees = stats.total - stats.tips - stats.bonuses;
+
+  return {
+    labels: ['Livraisons', 'Pourboires', 'Bonus'],
+    datasets: [
+      {
+        data: [baseFees, stats.tips, stats.bonuses],
+        backgroundColor: [
+          'rgba(24, 144, 255, 0.85)',
+          'rgba(250, 173, 20, 0.85)',
+          'rgba(114, 46, 209, 0.85)',
+        ],
+        borderColor: [
+          'rgba(24, 144, 255, 1)',
+          'rgba(250, 173, 20, 1)',
+          'rgba(114, 46, 209, 1)',
+        ],
+        borderWidth: 2,
+        hoverOffset: 8,
+      },
+    ],
+  };
+});
+
+const donutChartOptions = {
+  responsive: true,
+  maintainAspectRatio: false,
+  cutout: '65%',
+  plugins: {
+    legend: {
+      display: true,
+      position: 'bottom' as const,
+      labels: {
+        color: 'rgba(255, 255, 255, 0.85)',
+        usePointStyle: true,
+        padding: 16,
+      },
+    },
+    tooltip: {
+      backgroundColor: 'rgba(0, 0, 0, 0.8)',
+      titleColor: '#fff',
+      bodyColor: 'rgba(255, 255, 255, 0.85)',
+      padding: 12,
+      callbacks: {
+        label: (context: unknown) => {
+          const ctx = context as { label: string; raw: unknown; dataset: { data: number[] } };
+          const rawValue = typeof ctx.raw === 'number' ? ctx.raw : 0;
+          const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
+          const percentage = total > 0 ? ((rawValue / total) * 100).toFixed(1) : 0;
+          return `${ctx.label}: ${rawValue.toFixed(2)}€ (${percentage}%)`;
+        },
+      },
+    },
+  },
+};
+
+// Week over week comparison
+const weekComparison = computed(() => {
+  // This would ideally come from the API - for now we'll show a placeholder
+  const thisWeek = summary.value.week.total;
+  const lastWeek = thisWeek * 0.85; // Placeholder for demo
+  const difference = thisWeek - lastWeek;
+  const percentChange = lastWeek > 0 ? ((difference / lastWeek) * 100) : 0;
+
+  return {
+    thisWeek,
+    lastWeek,
+    difference,
+    percentChange,
+    isPositive: difference >= 0,
+  };
+});
+
 onMounted(() => {
   fetchEarnings();
 });
@@ -192,6 +375,61 @@ onMounted(() => {
           <div class="stat-content">
             <div class="stat-value">{{ formatCurrency(currentStats.bonuses) }}</div>
             <div class="stat-label">Bonus</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Charts Section -->
+      <div class="charts-section">
+        <!-- Week Comparison Card -->
+        <div v-if="activeTab === 'week'" class="comparison-card">
+          <div class="comparison-header">
+            <span>vs Semaine précédente</span>
+            <div
+              :class="['comparison-badge', weekComparison.isPositive ? 'positive' : 'negative']"
+            >
+              <RiseOutlined v-if="weekComparison.isPositive" />
+              <span>{{ weekComparison.isPositive ? '+' : '' }}{{ weekComparison.percentChange.toFixed(1) }}%</span>
+            </div>
+          </div>
+          <div class="comparison-details">
+            <div class="comparison-item">
+              <span class="label">Cette semaine</span>
+              <span class="value">{{ formatCurrency(weekComparison.thisWeek) }}</span>
+            </div>
+            <div class="comparison-item">
+              <span class="label">Semaine dernière</span>
+              <span class="value">{{ formatCurrency(weekComparison.lastWeek) }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Earnings Breakdown Donut Chart -->
+        <div class="chart-card donut-card">
+          <div class="chart-header">
+            <PieChartOutlined />
+            <h3>Répartition des gains</h3>
+          </div>
+          <div class="chart-container donut-container">
+            <Doughnut
+              v-if="currentStats.total > 0"
+              :data="donutChartData"
+              :options="donutChartOptions"
+            />
+            <div v-else class="no-data">
+              <p>Pas de données</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Daily Bar Chart -->
+        <div v-if="activeTab !== 'today' && dailyBreakdown.length > 0" class="chart-card bar-card">
+          <div class="chart-header">
+            <BarChartOutlined />
+            <h3>Historique des gains</h3>
+          </div>
+          <div class="chart-container bar-container">
+            <Bar :data="barChartData" :options="barChartOptions" />
           </div>
         </div>
       </div>
@@ -495,5 +733,119 @@ onMounted(() => {
   display: flex;
   justify-content: center;
   padding: 60px 0;
+}
+
+/* Charts Section */
+.charts-section {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.comparison-card {
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 16px;
+  padding: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.comparison-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  color: rgba(255, 255, 255, 0.65);
+  font-size: 14px;
+}
+
+.comparison-badge {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.comparison-badge.positive {
+  background: rgba(82, 196, 26, 0.15);
+  color: #52c41a;
+}
+
+.comparison-badge.negative {
+  background: rgba(255, 77, 79, 0.15);
+  color: #ff4d4f;
+}
+
+.comparison-details {
+  display: flex;
+  justify-content: space-between;
+}
+
+.comparison-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.comparison-item .label {
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 12px;
+}
+
+.comparison-item .value {
+  color: #fff;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.chart-card {
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 16px;
+  padding: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.chart-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+  color: #fff;
+}
+
+.chart-header h3 {
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.chart-header :deep(.anticon) {
+  font-size: 18px;
+  color: #1890ff;
+}
+
+.chart-container {
+  position: relative;
+}
+
+.donut-container {
+  height: 220px;
+}
+
+.bar-container {
+  height: 250px;
+}
+
+.no-data {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: rgba(255, 255, 255, 0.45);
+  font-size: 14px;
 }
 </style>

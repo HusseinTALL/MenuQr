@@ -3,7 +3,9 @@ import { ref, onMounted, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { useDriverAuthStore } from '@/stores/driverAuth';
 import api from '@/services/api';
+import { useCall } from '@/composables/useCall';
 import ChatBox from '@/components/chat/ChatBox.vue';
+import { message } from 'ant-design-vue';
 import {
   CarOutlined,
   ClockCircleOutlined,
@@ -151,11 +153,43 @@ const handleUnreadChange = (count: number) => {
   unreadMessages.value = count;
 };
 
+// Masked calling
+const {
+  isCallingEnabled,
+  isLoading: callLoading,
+  callStatusText,
+  isCallActive,
+  checkCallingEnabled,
+  callCustomer: initiateCustomerCall,
+} = useCall();
+
+const callCustomer = async () => {
+  if (!activeDelivery.value) {
+    return;
+  }
+
+  // If masked calling is enabled, use it
+  if (isCallingEnabled.value) {
+    const success = await initiateCustomerCall(activeDelivery.value._id);
+    if (success) {
+      message.info('Appel en cours... Vous allez recevoir un appel.');
+    } else {
+      message.error('Impossible d\'initier l\'appel');
+    }
+  } else {
+    // Fallback to direct phone call
+    if (activeDelivery.value.customer?.phone) {
+      window.location.href = `tel:${activeDelivery.value.customer.phone}`;
+    }
+  }
+};
+
 onMounted(async () => {
   loading.value = true;
   await Promise.all([
     fetchActiveDelivery(),
     fetchDailyStats(),
+    checkCallingEnabled(),
   ]);
   loading.value = false;
 });
@@ -375,11 +409,12 @@ onMounted(async () => {
           </a-button>
           <a-button
             v-if="activeDelivery.customer?.phone"
-            :href="'tel:' + activeDelivery.customer.phone"
+            @click="callCustomer"
             type="text"
             class="contact-btn"
+            :loading="callLoading"
           >
-            <PhoneOutlined /> Client
+            <PhoneOutlined /> {{ isCallActive ? callStatusText : 'Client' }}
           </a-button>
         </div>
       </div>

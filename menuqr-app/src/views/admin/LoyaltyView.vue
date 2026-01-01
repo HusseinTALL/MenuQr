@@ -4,6 +4,10 @@ import { api } from '@/services/api';
 import type { LoyaltyStats, CustomerWithLoyalty, LoyaltyTier } from '@/types/loyalty';
 import { TIER_CONFIG } from '@/types/loyalty';
 import { message } from 'ant-design-vue';
+import { useSubscription, FEATURES } from '@/composables/useSubscription';
+import { FeatureGate } from '@/components/subscription';
+
+const { hasFeature } = useSubscription();
 import type { TableColumnsType } from 'ant-design-vue';
 import {
   SearchOutlined,
@@ -323,9 +327,10 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="loyalty-view space-y-6">
-    <!-- Hero Header -->
-    <a-card class="header-card" :bordered="false">
+  <FeatureGate :feature="FEATURES.LOYALTY_PROGRAM" :show-upgrade="true">
+    <div class="loyalty-view space-y-6">
+      <!-- Hero Header -->
+      <a-card class="header-card" :bordered="false">
       <div class="header-gradient">
         <!-- Background decorations -->
         <div class="header-decoration"></div>
@@ -654,7 +659,8 @@ onMounted(() => {
         </div>
       </div>
     </a-modal>
-  </div>
+    </div>
+  </FeatureGate>
 </template>
 
 <style scoped>

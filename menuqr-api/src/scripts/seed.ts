@@ -40,7 +40,7 @@ async function seed() {
     console.info('Creating admin user...');
     const user = await User.create({
       email: 'admin@menuqr.fr',
-      password: 'admin123',
+      password: 'Admin123!',
       name: 'Admin Garbadrome',
       role: 'owner',
     });
@@ -850,7 +850,7 @@ async function seed() {
         phone: c.phone,
         name: c.name,
         email: c.email,
-        password: 'customer123', // Default password for test customers
+        password: 'Customer123!', // Default password for test customers
         restaurantId: restaurant._id,
         isPhoneVerified: true,
         isActive: true,
@@ -1103,7 +1103,7 @@ async function seed() {
 
     console.info('\n✅ Seed completed successfully!');
     console.info('\nCreated:');
-    console.info('  - 1 Admin user (admin@menuqr.fr / admin123)');
+    console.info('  - 1 Admin user (admin@menuqr.fr / Admin123!)');
     console.info("  - 1 Restaurant (Garbadrome Patte d'Oie)");
     console.info('  - 8 Categories');
     console.info('  - 45 Dishes');
@@ -1116,7 +1116,7 @@ async function seed() {
     console.info('  - 5 Campaigns');
     console.info('\nYou can now login at /admin/login with:');
     console.info('  Email: admin@menuqr.fr');
-    console.info('  Password: admin123');
+    console.info('  Password: Admin123!');
     console.info('\nPublic menu available at: /menu/slug/garbadrome-patte-doie');
 
   } catch (error) {

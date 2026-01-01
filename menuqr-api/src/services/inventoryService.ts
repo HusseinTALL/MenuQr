@@ -378,7 +378,10 @@ export async function validateOrderStock(
 
 /**
  * Reduce stock for multiple items (for order processing)
- * Uses a transaction to ensure atomicity
+ * Uses ATOMIC findOneAndUpdate operations to prevent race conditions.
+ *
+ * This is the SAFE way to reduce stock - it validates AND reduces in a single
+ * atomic operation, preventing overselling even under concurrent load.
  */
 export async function reduceStockForOrder(
   items: Array<{ dishId: string; quantity: number }>,
@@ -386,20 +389,24 @@ export async function reduceStockForOrder(
 ): Promise<StockUpdateResult[]> {
   const session = await mongoose.startSession();
   const results: StockUpdateResult[] = [];
+  const successfulUpdates: Array<{ dishId: string; quantity: number; previousStock: number }> = [];
 
   try {
     await session.withTransaction(async () => {
       for (const item of items) {
-        const dish = await Dish.findById(item.dishId).session(session);
+        // First, check if dish exists and get its current state
+        const dish = await Dish.findById(item.dishId).session(session).lean();
         if (!dish) {
           throw new ApiError(404, `Dish ${item.dishId} not found`);
         }
 
-        // Skip if not tracking stock
+        const dishName = (dish.name as Record<string, string>).fr;
+
+        // Skip if not tracking stock or unlimited
         if (!dish.trackStock || dish.stock === -1) {
           results.push({
             dishId: dish._id.toString(),
-            dishName: (dish.name as Record<string, string>).fr,
+            dishName,
             previousStock: -1,
             newStock: -1,
             isLowStock: false,
@@ -408,35 +415,63 @@ export async function reduceStockForOrder(
           continue;
         }
 
-        if (dish.stock < item.quantity) {
+        // ATOMIC operation: Only update if stock >= requested quantity
+        // This prevents race conditions - if two orders try simultaneously,
+        // only one will succeed because the $gte check and $inc are atomic
+        const updatedDish = await Dish.findOneAndUpdate(
+          {
+            _id: item.dishId,
+            trackStock: true,
+            stock: { $gte: item.quantity }, // CRITICAL: Atomic stock check
+          },
+          {
+            $inc: { stock: -item.quantity },
+            $set: { lastStockUpdate: new Date() },
+          },
+          {
+            new: true, // Return updated document
+            session,
+          }
+        );
+
+        // If no document returned, the atomic check failed (insufficient stock)
+        if (!updatedDish) {
+          // Get current stock for error message
+          const currentDish = await Dish.findById(item.dishId).session(session).lean();
+          const currentStock = currentDish?.stock ?? 0;
           throw new ApiError(
             400,
-            `Insufficient stock for ${(dish.name as Record<string, string>).fr}. Available: ${dish.stock}, Requested: ${item.quantity}`
+            `Insufficient stock for ${dishName}. Available: ${currentStock}, Requested: ${item.quantity}`
           );
         }
 
         const previousStock = dish.stock;
-        dish.stock -= item.quantity;
-        dish.lastStockUpdate = new Date();
+        const newStock = updatedDish.stock;
 
-        if (dish.stock === 0) {
-          dish.isAvailable = false;
+        // Track successful update for potential rollback
+        successfulUpdates.push({ dishId: item.dishId, quantity: item.quantity, previousStock });
+
+        // Auto-disable if out of stock (separate update to avoid complexity in atomic op)
+        if (newStock === 0) {
+          await Dish.updateOne(
+            { _id: item.dishId },
+            { $set: { isAvailable: false } },
+            { session }
+          );
         }
 
-        await dish.save({ session });
-
         results.push({
-          dishId: dish._id.toString(),
-          dishName: (dish.name as Record<string, string>).fr,
+          dishId: updatedDish._id.toString(),
+          dishName,
           previousStock,
-          newStock: dish.stock,
-          isLowStock: isLowStock(dish),
-          isOutOfStock: dish.stock === 0,
+          newStock,
+          isLowStock: isLowStock(updatedDish),
+          isOutOfStock: newStock === 0,
         });
       }
     });
 
-    // Audit log outside transaction
+    // Audit log outside transaction (non-critical)
     if (userId) {
       for (const result of results) {
         if (result.previousStock !== -1) {

@@ -511,7 +511,7 @@ export function useDriverSocket() {
   let driverSocket: Socket | null = null;
 
   const connect = (token: string) => {
-    if (driverSocket?.connected) return;
+    if (driverSocket?.connected) {return;}
 
     if (driverSocket) {
       driverSocket.disconnect();
@@ -659,7 +659,7 @@ export function useDeliveryTracking(deliveryId: string) {
     });
 
     // Listen for delivery completed
-    socket?.on('delivery:completed', (data: {
+    socket?.on('delivery:completed', (_data: {
       orderId: string;
       completedAt: Date;
       podType?: string;
