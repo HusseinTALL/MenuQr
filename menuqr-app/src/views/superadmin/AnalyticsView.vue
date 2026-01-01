@@ -2218,8 +2218,20 @@ const generateSparklinePath = (data: number[], width = 80, height = 28) => {
   height: 380px;
 }
 
+/* Fix: Force a-spin to fill chart container height */
+.chart-container :deep(.ant-spin-nested-loading) {
+  width: 100%;
+  height: 100%;
+}
+
+.chart-container :deep(.ant-spin-container) {
+  width: 100%;
+  height: 100%;
+}
+
 .chart-container canvas {
-  max-height: 100%;
+  width: 100% !important;
+  height: 100% !important;
 }
 
 /* Table Styling */
