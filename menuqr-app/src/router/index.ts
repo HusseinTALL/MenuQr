@@ -244,6 +244,22 @@ const routes: RouteRecordRaw[] = [
         },
       },
       {
+        path: 'delivery-batching',
+        name: 'AdminDeliveryBatching',
+        component: () => import('@/views/admin/DeliveryBatchingView.vue'),
+        meta: {
+          title: 'Lots de livraison',
+        },
+      },
+      {
+        path: 'drivers',
+        name: 'AdminDrivers',
+        component: () => import('@/views/admin/DriverManagementView.vue'),
+        meta: {
+          title: 'Livreurs',
+        },
+      },
+      {
         path: 'dishes',
         name: 'AdminDishes',
         component: () => import('@/views/admin/DishesView.vue'),
@@ -329,6 +345,14 @@ const routes: RouteRecordRaw[] = [
         component: () => import('@/views/admin/StaffView.vue'),
         meta: {
           title: 'Personnel',
+        },
+      },
+      {
+        path: 'billing',
+        name: 'billing',
+        component: () => import('@/views/admin/BillingView.vue'),
+        meta: {
+          title: 'Abonnement & Facturation',
         },
       },
     ],
@@ -497,6 +521,14 @@ const routes: RouteRecordRaw[] = [
     },
   },
   {
+    path: '/driver/register',
+    name: 'DriverRegister',
+    component: () => import('@/views/driver/DriverRegistrationView.vue'),
+    meta: {
+      title: 'Devenir Livreur',
+    },
+  },
+  {
     path: '/driver',
     component: () => import('@/layouts/DriverLayout.vue'),
     meta: {
@@ -530,7 +562,7 @@ const routes: RouteRecordRaw[] = [
       {
         path: 'profile',
         name: 'DriverProfile',
-        component: () => import('@/views/driver/DriverDashboardView.vue'), // TODO: Create DriverProfileView
+        component: () => import('@/views/driver/DriverProfileView.vue'),
         meta: {
           title: 'Mon Profil',
         },
@@ -538,10 +570,196 @@ const routes: RouteRecordRaw[] = [
       {
         path: 'delivery/:id',
         name: 'DriverDeliveryDetail',
-        component: () => import('@/views/driver/DriverDashboardView.vue'), // TODO: Create DriverDeliveryDetailView
+        component: () => import('@/views/driver/DriverDeliveryDetailView.vue'),
         props: true,
         meta: {
-          title: 'Détail Livraison',
+          title: 'Detail Livraison',
+        },
+      },
+    ],
+  },
+
+  // ============================================
+  // Hotel Guest Routes (Room Service)
+  // ============================================
+  // QR Code landing page (from room QR scan)
+  {
+    path: '/hotel/qr/:qrCode',
+    name: 'hotel-qr',
+    component: () => import('@/views/hotel/HotelQRLandingView.vue'),
+    props: true,
+    meta: {
+      title: 'Room Service',
+    },
+  },
+  // Hotel landing page (by slug)
+  {
+    path: '/hotel/:hotelSlug',
+    name: 'hotel-landing',
+    component: () => import('@/views/hotel/HotelQRLandingView.vue'),
+    props: true,
+    meta: {
+      title: 'Room Service',
+    },
+  },
+  // Hotel guest authentication
+  {
+    path: '/hotel/:hotelSlug/auth',
+    name: 'hotel-auth',
+    component: () => import('@/views/hotel/HotelGuestAuthView.vue'),
+    props: true,
+    meta: {
+      title: 'Connexion',
+    },
+  },
+  // Hotel menu
+  {
+    path: '/hotel/:hotelSlug/menu',
+    name: 'hotel-menu',
+    component: () => import('@/views/hotel/HotelMenuView.vue'),
+    props: true,
+    meta: {
+      title: 'Menu',
+    },
+  },
+  // Hotel cart
+  {
+    path: '/hotel/:hotelSlug/cart',
+    name: 'hotel-cart',
+    component: () => import('@/views/hotel/HotelCartView.vue'),
+    props: true,
+    meta: {
+      title: 'Panier',
+    },
+  },
+  // Hotel checkout
+  {
+    path: '/hotel/:hotelSlug/checkout',
+    name: 'hotel-checkout',
+    component: () => import('@/views/hotel/HotelCheckoutView.vue'),
+    props: true,
+    meta: {
+      title: 'Finaliser la commande',
+    },
+  },
+  // Hotel orders history
+  {
+    path: '/hotel/:hotelSlug/orders',
+    name: 'hotel-orders',
+    component: () => import('@/views/hotel/HotelOrdersView.vue'),
+    props: true,
+    meta: {
+      title: 'Mes commandes',
+    },
+  },
+  // Hotel order tracking
+  {
+    path: '/hotel/:hotelSlug/order/:orderId',
+    name: 'hotel-order-tracking',
+    component: () => import('@/views/hotel/HotelOrderTrackingView.vue'),
+    props: true,
+    meta: {
+      title: 'Suivi de commande',
+    },
+  },
+
+  // ============================================
+  // Hotel Admin Routes
+  // ============================================
+  {
+    path: '/hotel-admin',
+    component: () => import('@/layouts/HotelAdminLayout.vue'),
+    meta: {
+      requiresAuth: true,
+      requiresHotelRole: true,
+    },
+    children: [
+      {
+        path: '',
+        name: 'HotelDashboard',
+        component: () => import('@/views/hotel-admin/HotelDashboardView.vue'),
+        meta: {
+          title: 'Tableau de bord - Hotel',
+        },
+      },
+      {
+        path: 'rooms',
+        name: 'HotelRooms',
+        component: () => import('@/views/hotel-admin/HotelRoomsView.vue'),
+        meta: {
+          title: 'Chambres - Hotel',
+        },
+      },
+      {
+        path: 'guests',
+        name: 'HotelGuests',
+        component: () => import('@/views/hotel-admin/HotelGuestsView.vue'),
+        meta: {
+          title: 'Clients - Hotel',
+        },
+      },
+      {
+        path: 'orders',
+        name: 'HotelOrdersAdmin',
+        component: () => import('@/views/hotel-admin/HotelOrdersAdminView.vue'),
+        meta: {
+          title: 'Commandes - Hotel',
+        },
+      },
+      {
+        path: 'kds',
+        name: 'HotelKDS',
+        component: () => import('@/views/hotel-admin/HotelKDSView.vue'),
+        meta: {
+          title: 'Cuisine (KDS) - Hotel',
+        },
+      },
+      {
+        path: 'menus',
+        name: 'HotelMenus',
+        component: () => import('@/views/hotel-admin/HotelMenusView.vue'),
+        meta: {
+          title: 'Menus - Hotel',
+        },
+      },
+      {
+        path: 'dishes',
+        name: 'HotelDishes',
+        component: () => import('@/views/hotel-admin/HotelMenusView.vue'),
+        meta: {
+          title: 'Plats - Hotel',
+        },
+      },
+      {
+        path: 'qr-codes',
+        name: 'HotelQRCodes',
+        component: () => import('@/views/hotel-admin/HotelRoomsView.vue'),
+        meta: {
+          title: 'QR Codes - Hotel',
+        },
+      },
+      {
+        path: 'reports',
+        name: 'HotelReports',
+        component: () => import('@/views/hotel-admin/HotelDashboardView.vue'),
+        meta: {
+          title: 'Rapports - Hotel',
+        },
+      },
+      {
+        path: 'staff',
+        name: 'HotelStaff',
+        component: () => import('@/views/admin/StaffView.vue'),
+        meta: {
+          title: 'Personnel - Hotel',
+        },
+      },
+      {
+        path: 'settings',
+        name: 'HotelSettings',
+        component: () => import('@/views/hotel-admin/HotelSettingsView.vue'),
+        meta: {
+          title: 'Parametres - Hotel',
         },
       },
     ],
@@ -610,6 +828,17 @@ router.beforeEach(async (to, _from, next) => {
     if (authStore.isPasswordExpired && to.name !== 'AdminSettings') {
       next({ path: '/admin/settings', query: { passwordExpired: 'true' } });
       return;
+    }
+
+    // Check if route requires hotel role
+    if (to.matched.some((record) => record.meta.requiresHotelRole)) {
+      const hotelRoles = ['hotel_owner', 'hotel_manager', 'reception', 'room_service', 'hotel_kitchen'];
+      const userRole = authStore.user?.role;
+      if (!userRole || !hotelRoles.includes(userRole)) {
+        // Redirect to admin dashboard if not a hotel user
+        next({ path: '/admin' });
+        return;
+      }
     }
   }
 

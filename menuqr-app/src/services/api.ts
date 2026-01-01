@@ -3076,6 +3076,177 @@ class ApiService {
     const queryStr = query.toString();
     return this.request<HotelReportData>(`/hotels/${hotelId}/reports/${reportType}${queryStr ? `?${queryStr}` : ''}`);
   }
+
+  // ============================================
+  // Subscription API Methods
+  // ============================================
+
+  /**
+   * Get all available subscription plans (public)
+   */
+  async getSubscriptionPlans() {
+    return this.request<{ plans: SubscriptionPlan[] }>('/subscription/plans', { auth: 'none' });
+  }
+
+  /**
+   * Get plan by slug (public)
+   */
+  async getSubscriptionPlanBySlug(slug: string) {
+    return this.request<SubscriptionPlan>(`/subscription/plans/${slug}`, { auth: 'none' });
+  }
+
+  /**
+   * Get current restaurant's subscription
+   */
+  async getCurrentSubscription() {
+    return this.request<SubscriptionInfo>('/subscription/current');
+  }
+
+  /**
+   * Get available features for current subscription
+   */
+  async getSubscriptionFeatures() {
+    return this.request<{ features: SubscriptionFeature[]; featureKeys: string[] }>('/subscription/features');
+  }
+
+  /**
+   * Check if a specific feature is available
+   */
+  async checkSubscriptionFeature(feature: string) {
+    return this.request<{ feature: string; featureName: string; hasAccess: boolean }>(
+      '/subscription/check-feature',
+      { method: 'POST', body: { feature } }
+    );
+  }
+
+  /**
+   * Check multiple features at once
+   */
+  async checkSubscriptionFeatures(features: string[]) {
+    return this.request<{ features: Array<{ key: string; name: string; hasAccess: boolean }> }>(
+      '/subscription/check-features',
+      { method: 'POST', body: { features } }
+    );
+  }
+
+  /**
+   * Get usage summary for current subscription
+   */
+  async getSubscriptionUsage() {
+    return this.request<{ usage: Record<string, UsageCheckResult> }>('/subscription/usage');
+  }
+
+  /**
+   * Get usage for a specific resource
+   */
+  async getResourceUsage(resource: string) {
+    return this.request<UsageCheckResult>(`/subscription/usage/${resource}`);
+  }
+
+  /**
+   * Preview upgrade to a new plan
+   */
+  async previewSubscriptionUpgrade(planSlug: string) {
+    return this.request<UpgradePreview>(
+      '/subscription/preview-upgrade',
+      { method: 'POST', body: { planSlug } }
+    );
+  }
+
+  /**
+   * Preview downgrade to a lower plan
+   */
+  async previewSubscriptionDowngrade(planSlug: string) {
+    return this.request<DowngradePreview>(
+      '/subscription/preview-downgrade',
+      { method: 'POST', body: { planSlug } }
+    );
+  }
+
+  /**
+   * Change subscription plan
+   */
+  async changeSubscriptionPlan(planId: string, immediate = false) {
+    return this.request<{ subscriptionId: string; newPlan: string; effectiveDate: string }>(
+      '/subscription/change-plan',
+      { method: 'POST', body: { planId, immediate } }
+    );
+  }
+
+  /**
+   * Cancel subscription
+   */
+  async cancelSubscription(reason?: string) {
+    return this.request<{ status: string; accessUntil: string }>(
+      '/subscription/cancel',
+      { method: 'POST', body: { reason } }
+    );
+  }
+
+  /**
+   * Reactivate a cancelled subscription
+   */
+  async reactivateSubscription() {
+    return this.request<{ status: string; currentPeriodEnd: string }>(
+      '/subscription/reactivate',
+      { method: 'POST' }
+    );
+  }
+
+  // ============================================
+  // Downgrade Handling Methods
+  // ============================================
+
+  /**
+   * Analyze impact of downgrading to a specific plan
+   */
+  async analyzeDowngrade(planSlug: string) {
+    return this.request<DowngradeAnalysis>(
+      '/subscription/analyze-downgrade',
+      { method: 'POST', body: { planSlug } }
+    );
+  }
+
+  /**
+   * Schedule a downgrade for end of billing period
+   */
+  async scheduleDowngrade(planSlug: string, reason?: string, immediate = false) {
+    return this.request<{ scheduled: boolean; effectiveDate: string; archivedItems?: { dishes: number; campaigns: number }; newPlan: string }>(
+      '/subscription/schedule-downgrade',
+      { method: 'POST', body: { planSlug, reason, immediate } }
+    );
+  }
+
+  /**
+   * Cancel a pending scheduled downgrade
+   */
+  async cancelScheduledDowngrade() {
+    return this.request<{ message: string }>(
+      '/subscription/cancel-scheduled-downgrade',
+      { method: 'POST' }
+    );
+  }
+
+  /**
+   * Get pending subscription changes
+   */
+  async getPendingChanges() {
+    return this.request<PendingChangesInfo>('/subscription/pending-changes');
+  }
+
+  /**
+   * Get grace period status
+   */
+  async getGracePeriodStatus() {
+    return this.request<GracePeriodInfo>('/subscription/grace-period');
+  }
+
+  /**
+   * Get history of past downgrades
+   */
+  async getDowngradeHistory() {
+    return this.request<DowngradeHistoryInfo>('/subscription/downgrade-history');
+  }
 }
 
 export class ApiError extends Error {
@@ -4053,6 +4224,173 @@ export interface HotelReportData {
     method: string;
     count: number;
     total: number;
+  }>;
+}
+
+// ============================================
+// Subscription Types
+// ============================================
+
+export interface SubscriptionPlan {
+  id: string;
+  name: string;
+  slug: string;
+  tier: string;
+  tierDisplayName: string;
+  description?: string;
+  displayFeatures: string[];
+  limits: {
+    dishes: number;
+    orders: number;
+    smsCredits: number;
+    storage: number;
+    campaigns: number;
+    users: number;
+    tables: number;
+    locations: number;
+  };
+  pricing: {
+    monthly: number;
+    yearly: number;
+    currency: string;
+    monthlyFormatted: string;
+    yearlyFormatted: string;
+    yearlySavings: number;
+  };
+  trialDays: number;
+  isPopular?: boolean;
+}
+
+export interface SubscriptionFeature {
+  key: string;
+  name: string;
+}
+
+export interface SubscriptionUsage {
+  dishes: number;
+  orders: number;
+  smsCredits: number;
+  storage: number;
+  campaigns: number;
+}
+
+export interface SubscriptionInfo {
+  id: string;
+  plan: {
+    id: string;
+    name: string;
+    slug: string;
+    tier: string;
+    tierDisplayName: string;
+    displayFeatures?: string[];
+    pricing?: {
+      monthly: number;
+      yearly: number;
+      currency: string;
+      monthlyFormatted?: string;
+      yearlyFormatted?: string;
+      yearlySavings?: number;
+    };
+  };
+  status: 'active' | 'trial' | 'cancelled' | 'expired' | 'past_due';
+  isValid: boolean;
+  isInTrial: boolean;
+  trialEndsAt?: string;
+  currentPeriodEnd?: string;
+  features: SubscriptionFeature[];
+  limits: SubscriptionPlan['limits'];
+  usage: SubscriptionUsage;
+}
+
+export interface UsageCheckResult {
+  resource: string;
+  used: number;
+  limit: number;
+  remaining: number;
+  percentage: number;
+  isUnlimited: boolean;
+  canUse: boolean;
+}
+
+export interface UpgradePreview {
+  currentPlan: { name: string; tier: string };
+  targetPlan: { name: string; tier: string };
+  newFeatures: SubscriptionFeature[];
+  newLimits: Record<string, { current: number; new: number }>;
+  priceDifference: { monthly: number; yearly: number };
+}
+
+export interface DowngradePreview {
+  currentPlan: { name: string; tier: string };
+  targetPlan: { name: string; tier: string };
+  lostFeatures: SubscriptionFeature[];
+  impactedLimits: Array<{
+    resource: string;
+    currentUsage: number;
+    newLimit: number;
+    action: string;
+  }>;
+  warnings: string[];
+}
+
+export interface DowngradeAnalysis {
+  dishes?: {
+    current: number;
+    limit: number;
+    toArchive: number;
+  };
+  campaigns?: {
+    current: number;
+    limit: number;
+    toCancel: number;
+  };
+  featuresLosing: Array<{ key: string; name: string }>;
+  featuresKeeping: Array<{ key: string; name: string }>;
+  warnings: string[];
+  blockers: string[];
+  newPlan: {
+    id: string;
+    name: string;
+    slug: string;
+    tier: string;
+  };
+}
+
+export interface PendingChangesInfo {
+  hasPendingChanges: boolean;
+  pendingChange?: {
+    type: 'upgrade' | 'downgrade' | 'cancellation';
+    effectiveDate: string;
+    requestedAt: string;
+    reason?: string;
+    newPlan?: {
+      name: string;
+      slug: string;
+      tier: string;
+    };
+  };
+}
+
+export interface GracePeriodInfo {
+  inGracePeriod: boolean;
+  gracePeriod?: {
+    reason: 'payment_failed' | 'downgrade' | 'trial_ended';
+    startedAt: string;
+    endsAt: string;
+    daysRemaining: number;
+    notificationsSent: number;
+  };
+}
+
+export interface DowngradeHistoryInfo {
+  history: Array<{
+    fromPlan: { name: string; slug: string; tier: string };
+    toPlan: { name: string; slug: string; tier: string };
+    effectiveDate: string;
+    archivedItems: {
+      dishes: number;
+      campaigns: number;
+    };
   }>;
 }
 

@@ -7,3 +7,4 @@ export { useLocale, useI18n } from './useI18n';
 export { useToast } from './useToast';
 export { usePWA } from './usePWA';
 export { useImagePreloader } from './useImagePreloader';
+export { useSubscription, FEATURES } from './useSubscription';
