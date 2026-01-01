@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { message } from 'ant-design-vue';
+import { useRouter } from 'vue-router';
 import {
   ReloadOutlined,
   ExportOutlined,
@@ -10,7 +11,10 @@ import {
   CloseOutlined,
   SoundOutlined,
   SoundFilled,
+  AppstoreOutlined,
 } from '@ant-design/icons-vue';
+
+const router = useRouter();
 import api, { type Order, type Restaurant, type Dish } from '@/services/api';
 import { formatPrice } from '@/utils/formatters';
 import type { ColumnType } from 'ant-design-vue/es/table';
@@ -785,6 +789,15 @@ onUnmounted(() => {
           </div>
 
           <a-space wrap>
+            <a-button
+              type="primary"
+              class="bg-gradient-to-r from-purple-500 to-indigo-500 border-none hover:from-purple-600 hover:to-indigo-600"
+              @click="router.push('/admin/kds')"
+            >
+              <template #icon><AppstoreOutlined /></template>
+              Vue Kanban (KDS)
+            </a-button>
+
             <a-button
               :type="kitchenMode ? 'primary' : 'default'"
               ghost
