@@ -27,6 +27,7 @@ import {
   markNoShow,
   cancelReservation,
   getReservationStats,
+  getDailyReservationStats,
   getTodayReservations,
   createReservationAdmin,
 } from '../controllers/reservationController.js';
@@ -63,6 +64,7 @@ adminRouter.use(authenticate);
 // Quick views (read)
 adminRouter.get('/today', hasPermission(PERMISSIONS.RESERVATIONS_READ), getTodayReservations);
 adminRouter.get('/stats', hasPermission(PERMISSIONS.RESERVATIONS_STATS), getReservationStats);
+adminRouter.get('/stats/daily', hasPermission(PERMISSIONS.RESERVATIONS_STATS), getDailyReservationStats);
 
 // CRUD
 adminRouter.get('/', hasPermission(PERMISSIONS.RESERVATIONS_READ), getReservations);

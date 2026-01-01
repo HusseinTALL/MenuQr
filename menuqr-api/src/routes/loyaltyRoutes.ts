@@ -7,6 +7,7 @@ import {
   getExpiringPoints,
   // Admin endpoints
   getLoyaltyStats,
+  getDailyLoyaltyStats,
   getCustomersLoyalty,
   getCustomerLoyaltyAdmin,
   getCustomerHistoryAdmin,
@@ -58,6 +59,7 @@ adminLoyaltyRouter.use(authenticate);
 
 // Read routes
 adminLoyaltyRouter.get('/stats', hasPermission(PERMISSIONS.LOYALTY_READ), getLoyaltyStats);
+adminLoyaltyRouter.get('/stats/daily', hasPermission(PERMISSIONS.LOYALTY_READ), getDailyLoyaltyStats);
 adminLoyaltyRouter.get('/customers', hasPermission(PERMISSIONS.LOYALTY_READ), validate(loyaltyCustomersQueryValidator), getCustomersLoyalty);
 adminLoyaltyRouter.get(
   '/customers/:customerId',

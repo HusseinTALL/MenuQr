@@ -95,6 +95,8 @@ const dailyOrderStats = ref<Array<{ date: string; dayOfWeek: string; count: numb
 const orderLocationStats = ref<{ locations: Array<{ location: string; count: number; revenue: number; percentage: number }>; total: number } | null>(null);
 const reviewDistribution = ref<{ distribution: Array<{ rating: number; count: number; percentage: number }>; total: number } | null>(null);
 const reviewTrend = ref<Array<{ label: string; avgRating: number; count: number }>>([]);
+const dailyReservationStats = ref<Array<{ date: string; dayOfWeek: string; count: number; confirmed: number; cancelled: number; noShow: number; totalGuests: number }>>([]);
+const dailyLoyaltyStats = ref<Array<{ date: string; dayOfWeek: string; pointsIssued: number; pointsRedeemed: number; pointsExpired: number; bonusPoints: number; transactionCount: number }>>([]);
 
 // Chart data refs
 const revenueChartData = shallowRef<any>(null);
@@ -427,15 +429,14 @@ const initCharts = () => {
     }],
   };
 
-  // Reservations chart - distribute total across days
-  const resTotal = reservationStats.value?.total || 0;
-  const numDays = chartLabels.length || 7;
-  const avgResPerDay = Math.round(resTotal / numDays);
+  // Reservations chart - use real daily data from API
+  const resLabels = dailyReservationStats.value.map(d => d.dayOfWeek);
+  const resData = dailyReservationStats.value.map(d => d.count);
   reservationsChartData.value = {
-    labels: chartLabels,
+    labels: resLabels.length > 0 ? resLabels : chartLabels,
     datasets: [{
       label: 'Réservations',
-      data: chartLabels.map((_, i) => Math.max(0, avgResPerDay + Math.round((Math.random() - 0.5) * avgResPerDay * 0.4))),
+      data: resData.length > 0 ? resData : chartLabels.map(() => 0),
       borderColor: colors.secondary,
       backgroundColor: 'rgba(139, 92, 246, 0.12)',
       fill: true,
@@ -467,17 +468,16 @@ const initCharts = () => {
     }],
   };
 
-  // Points flow chart - distribute totals across days
-  const pointsIssued = loyaltyStats.value?.totalPointsIssued || 0;
-  const pointsRedeemed = loyaltyStats.value?.totalPointsRedeemed || 0;
-  const avgPointsIssued = Math.round(pointsIssued / numDays);
-  const avgPointsRedeemed = Math.round(pointsRedeemed / numDays);
+  // Points flow chart - use real daily data from API
+  const loyaltyLabels = dailyLoyaltyStats.value.map(d => d.dayOfWeek);
+  const pointsIssuedData = dailyLoyaltyStats.value.map(d => d.pointsIssued + d.bonusPoints);
+  const pointsRedeemedData = dailyLoyaltyStats.value.map(d => d.pointsRedeemed);
   pointsFlowChartData.value = {
-    labels: chartLabels,
+    labels: loyaltyLabels.length > 0 ? loyaltyLabels : chartLabels,
     datasets: [
       {
         label: 'Gagnés',
-        data: chartLabels.map(() => Math.max(0, avgPointsIssued + Math.round((Math.random() - 0.5) * avgPointsIssued * 0.3))),
+        data: pointsIssuedData.length > 0 ? pointsIssuedData : chartLabels.map(() => 0),
         borderColor: colors.success,
         backgroundColor: 'rgba(16, 185, 129, 0.1)',
         fill: true,
@@ -490,7 +490,7 @@ const initCharts = () => {
       },
       {
         label: 'Utilisés',
-        data: chartLabels.map(() => Math.max(0, avgPointsRedeemed + Math.round((Math.random() - 0.5) * avgPointsRedeemed * 0.4))),
+        data: pointsRedeemedData.length > 0 ? pointsRedeemedData : chartLabels.map(() => 0),
         borderColor: colors.warning,
         backgroundColor: 'rgba(245, 158, 11, 0.1)',
         fill: true,
@@ -586,13 +586,15 @@ const fetchData = async (loader = true) => {
   try {
     const range = getDateRange(dateRange.value), prev = getPrevRange(dateRange.value);
 
+    const numDays = dateRange.value === 'today' ? 1 : dateRange.value === 'week' ? 7 : 30;
     const [
       orderStatsRes, prevOrderStatsRes, activeOrdersRes,
       restaurantRes, categoriesRes, dishesRes,
       reservationStatsRes, tableStatsRes, loyaltyStatsRes,
       reviewStatsRes, campaignStatsRes,
       dailyOrderStatsRes, orderLocationStatsRes,
-      reviewDistributionRes, reviewTrendRes
+      reviewDistributionRes, reviewTrendRes,
+      dailyReservationStatsRes, dailyLoyaltyStatsRes
     ] = await Promise.all([
       api.getOrderStats(range),
       api.getOrderStats(prev),
@@ -605,10 +607,12 @@ const fetchData = async (loader = true) => {
       api.getLoyaltyStats(),
       api.getAdminReviewStats(),
       api.getCampaignStats(),
-      api.getDailyOrderStats(dateRange.value === 'today' ? 1 : dateRange.value === 'week' ? 7 : 30),
+      api.getDailyOrderStats(numDays),
       api.getOrderLocationStats(range),
       api.getReviewDistribution(),
       api.getReviewTrend({ period: 'week', months: 3 }),
+      api.getDailyReservationStats(numDays),
+      api.getDailyLoyaltyStats(numDays),
     ]);
 
     if (orderStatsRes.success && orderStatsRes.data) {stats.value = orderStatsRes.data;}
@@ -626,6 +630,8 @@ const fetchData = async (loader = true) => {
     if (orderLocationStatsRes.success && orderLocationStatsRes.data) {orderLocationStats.value = orderLocationStatsRes.data;}
     if (reviewDistributionRes.success && reviewDistributionRes.data) {reviewDistribution.value = reviewDistributionRes.data;}
     if (reviewTrendRes.success && reviewTrendRes.data) {reviewTrend.value = reviewTrendRes.data;}
+    if (dailyReservationStatsRes.success && dailyReservationStatsRes.data) {dailyReservationStats.value = dailyReservationStatsRes.data;}
+    if (dailyLoyaltyStatsRes.success && dailyLoyaltyStatsRes.data) {dailyLoyaltyStats.value = dailyLoyaltyStatsRes.data;}
 
     initCharts();
   } catch { error.value = 'Erreur de chargement'; }

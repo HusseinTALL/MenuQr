@@ -1057,6 +1057,18 @@ class ApiService {
     return this.request<LoyaltyStats>('/loyalty/stats');
   }
 
+  async getDailyLoyaltyStats(days: number = 7) {
+    return this.request<Array<{
+      date: string;
+      dayOfWeek: string;
+      pointsIssued: number;
+      pointsRedeemed: number;
+      pointsExpired: number;
+      bonusPoints: number;
+      transactionCount: number;
+    }>>(`/loyalty/stats/daily?days=${days}`);
+  }
+
   async getLoyaltyCustomers(params?: {
     page?: number;
     limit?: number;
@@ -1217,6 +1229,18 @@ class ApiService {
     if (params?.dateTo) {query.set('dateTo', params.dateTo);}
     const queryString = query.toString();
     return this.request<ReservationStats>(`/reservations/stats${queryString ? `?${queryString}` : ''}`);
+  }
+
+  async getDailyReservationStats(days: number = 7) {
+    return this.request<Array<{
+      date: string;
+      dayOfWeek: string;
+      count: number;
+      confirmed: number;
+      cancelled: number;
+      noShow: number;
+      totalGuests: number;
+    }>>(`/reservations/stats/daily?days=${days}`);
   }
 
   async getReservation(id: string) {
