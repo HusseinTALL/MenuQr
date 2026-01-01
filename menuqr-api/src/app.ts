@@ -8,6 +8,7 @@ import config from './config/env.js';
 import { logger, requestIdMiddleware, httpLoggerMiddleware } from './utils/logger.js';
 import { sentryErrorHandler } from './services/sentryService.js';
 import { setupSwagger } from './docs/swagger.js';
+import { requestMetricsMiddleware } from './middleware/requestMetrics.js';
 
 const app: Application = express();
 
@@ -20,6 +21,9 @@ app.use(requestIdMiddleware);
 
 // HTTP request logging
 app.use(httpLoggerMiddleware);
+
+// Request metrics for monitoring dashboard
+app.use(requestMetricsMiddleware);
 
 // ===========================================
 // Security Middleware
