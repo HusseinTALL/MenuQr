@@ -382,8 +382,8 @@ const deliverySchema = new Schema<IDelivery>(
 
     deliveryNumber: {
       type: String,
-      required: true,
       unique: true,
+      // Note: generated in pre-save hook if not provided
     },
 
     // Status

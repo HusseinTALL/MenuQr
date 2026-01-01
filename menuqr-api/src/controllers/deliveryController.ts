@@ -69,7 +69,12 @@ export const createDelivery = async (req: Request, res: Response): Promise<void>
       pickupAddress: {
         street: restaurant.address?.street || '',
         city: restaurant.address?.city || '',
-        postalCode: restaurant.address?.postalCode,
+        postalCode: restaurant.address?.postalCode || '',
+        country: restaurant.address?.country || 'France',
+        coordinates: {
+          lat: restaurant.address?.coordinates?.lat || 0,
+          lng: restaurant.address?.coordinates?.lng || 0,
+        },
       },
       deliveryAddress: order.deliveryAddress,
       deliveryInstructions: deliveryInstructions || order.deliveryInstructions,
@@ -1471,6 +1476,186 @@ export const getDeliveryRoute = async (req: Request, res: Response): Promise<voi
   }
 };
 
+/**
+ * Add tip to a completed delivery
+ * POST /api/deliveries/:id/tip
+ */
+export const addDeliveryTip = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const { amount, message: tipMessage } = req.body;
+
+    // Validate amount
+    const tipAmount = parseFloat(amount);
+    if (isNaN(tipAmount) || tipAmount <= 0 || tipAmount > 100) {
+      res.status(400).json({
+        success: false,
+        message: 'Montant de pourboire invalide (entre 0€ et 100€)',
+      });
+      return;
+    }
+
+    const delivery = await Delivery.findById(id);
+    if (!delivery) {
+      res.status(404).json({
+        success: false,
+        message: 'Livraison non trouvée',
+      });
+      return;
+    }
+
+    // Verify delivery is completed
+    if (delivery.status !== 'delivered') {
+      res.status(400).json({
+        success: false,
+        message: 'Le pourboire ne peut être ajouté qu\'après la livraison',
+      });
+      return;
+    }
+
+    // Check if tip already added
+    if (delivery.tipAmount && delivery.tipAmount > 0) {
+      res.status(400).json({
+        success: false,
+        message: 'Un pourboire a déjà été ajouté à cette livraison',
+      });
+      return;
+    }
+
+    // Update delivery with tip
+    delivery.tipAmount = tipAmount;
+    delivery.tipAddedAt = new Date();
+
+    // Update earnings
+    if (delivery.earnings) {
+      delivery.earnings.tip = tipAmount;
+      delivery.earnings.total = (delivery.earnings.total || 0) + tipAmount;
+    }
+
+    // Add tip message to notes if provided
+    if (tipMessage) {
+      delivery.customerNotes = delivery.customerNotes
+        ? `${delivery.customerNotes}\n[Pourboire: ${tipMessage}]`
+        : `[Pourboire: ${tipMessage}]`;
+    }
+
+    await delivery.save();
+
+    // Update driver balance (tips go 100% to driver)
+    if (delivery.driverId) {
+      await DeliveryDriver.findByIdAndUpdate(delivery.driverId, {
+        $inc: {
+          currentBalance: tipAmount,
+          lifetimeEarnings: tipAmount,
+          'stats.totalEarnings': tipAmount,
+        },
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Pourboire ajouté avec succès',
+      data: {
+        tipAmount,
+        deliveryId: delivery._id,
+      },
+    });
+  } catch (error) {
+    console.error('Add delivery tip error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur lors de l\'ajout du pourboire',
+    });
+  }
+};
+
+/**
+ * Rate a completed delivery
+ * POST /api/deliveries/:id/rate
+ */
+export const rateDelivery = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const { rating, comment } = req.body;
+
+    // Validate rating
+    const ratingValue = parseInt(rating);
+    if (isNaN(ratingValue) || ratingValue < 1 || ratingValue > 5) {
+      res.status(400).json({
+        success: false,
+        message: 'Note invalide (entre 1 et 5)',
+      });
+      return;
+    }
+
+    const delivery = await Delivery.findById(id);
+    if (!delivery) {
+      res.status(404).json({
+        success: false,
+        message: 'Livraison non trouvée',
+      });
+      return;
+    }
+
+    // Verify delivery is completed
+    if (delivery.status !== 'delivered') {
+      res.status(400).json({
+        success: false,
+        message: 'La note ne peut être ajoutée qu\'après la livraison',
+      });
+      return;
+    }
+
+    // Check if already rated
+    if (delivery.customerRating) {
+      res.status(400).json({
+        success: false,
+        message: 'Cette livraison a déjà été notée',
+      });
+      return;
+    }
+
+    // Update delivery with rating
+    delivery.customerRating = {
+      rating: ratingValue,
+      comment: comment || undefined,
+      ratedAt: new Date(),
+    };
+
+    await delivery.save();
+
+    // Update driver average rating
+    if (delivery.driverId) {
+      const driverDeliveries = await Delivery.find({
+        driverId: delivery.driverId,
+        'customerRating.rating': { $exists: true },
+      });
+
+      const avgRating = driverDeliveries.reduce((sum, d) => sum + (d.customerRating?.rating || 0), 0) / driverDeliveries.length;
+
+      await DeliveryDriver.findByIdAndUpdate(delivery.driverId, {
+        'stats.averageRating': Math.round(avgRating * 10) / 10,
+        'stats.totalRatings': driverDeliveries.length,
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Merci pour votre évaluation',
+      data: {
+        rating: ratingValue,
+        deliveryId: delivery._id,
+      },
+    });
+  } catch (error) {
+    console.error('Rate delivery error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur lors de l\'évaluation',
+    });
+  }
+};
+
 export default {
   createDelivery,
   getDeliveries,
@@ -1490,4 +1675,6 @@ export default {
   completeDelivery,
   getDeliveryETA,
   getDeliveryRoute,
+  addDeliveryTip,
+  rateDelivery,
 };
