@@ -208,7 +208,7 @@ const tabs = [
 
 // Calculate trial countdown
 function updateTrialCountdown() {
-  if (!trialStatus.value?.isInTrial || !trialStatus.value?.trialEndDate) return;
+  if (!trialStatus.value?.isInTrial || !trialStatus.value?.trialEndDate) {return;}
 
   const now = new Date().getTime();
   const end = new Date(trialStatus.value.trialEndDate).getTime();
@@ -216,7 +216,7 @@ function updateTrialCountdown() {
 
   if (diff <= 0) {
     trialCountdown.value = { days: 0, hours: 0, minutes: 0, seconds: 0 };
-    if (countdownInterval) clearInterval(countdownInterval);
+    if (countdownInterval) {clearInterval(countdownInterval);}
     return;
   }
 
@@ -254,7 +254,7 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
-  if (countdownInterval) clearInterval(countdownInterval);
+  if (countdownInterval) {clearInterval(countdownInterval);}
 });
 
 watch(() => route.query, (newQuery) => {

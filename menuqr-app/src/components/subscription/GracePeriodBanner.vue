@@ -1,3 +1,85 @@
+<script setup lang="ts">
+import { ref, computed, onMounted } from 'vue';
+import api from '@/services/api';
+
+interface GracePeriod {
+  reason: 'payment_failed' | 'downgrade' | 'trial_ended';
+  startedAt: string;
+  endsAt: string;
+  daysRemaining: number;
+  notificationsSent: number;
+}
+
+defineEmits<{
+  (e: 'update-payment'): void;
+  (e: 'loaded', data: GracePeriod | null): void;
+}>();
+
+const gracePeriod = ref<GracePeriod | null>(null);
+const loading = ref(true);
+
+const bannerTitle = computed(() => {
+  if (!gracePeriod.value) {return '';}
+  switch (gracePeriod.value.reason) {
+    case 'payment_failed':
+      return 'Paiement echoue - Action requise';
+    case 'downgrade':
+      return 'Periode de transition en cours';
+    case 'trial_ended':
+      return 'Periode d\'essai terminee';
+    default:
+      return 'Periode de grace active';
+  }
+});
+
+const bannerDescription = computed(() => {
+  if (!gracePeriod.value) {return '';}
+  switch (gracePeriod.value.reason) {
+    case 'payment_failed':
+      return 'Votre dernier paiement a echoue. Veuillez mettre a jour vos informations de paiement pour eviter la suspension de votre compte.';
+    case 'downgrade':
+      return 'Votre forfait est en cours de transition. Certaines fonctionnalites peuvent etre limitees pendant cette periode.';
+    case 'trial_ended':
+      return 'Votre periode d\'essai est terminee. Passez a un forfait payant pour continuer a utiliser toutes les fonctionnalites.';
+    default:
+      return 'Votre compte est en periode de grace. Veuillez regulariser votre situation.';
+  }
+});
+
+const progressWidth = computed(() => {
+  if (!gracePeriod.value) {return '100%';}
+  // Assuming 7 days grace period by default
+  const totalDays = 7;
+  const remaining = gracePeriod.value.daysRemaining;
+  const elapsed = totalDays - remaining;
+  const percentage = Math.min(100, Math.max(0, (elapsed / totalDays) * 100));
+  return `${percentage}%`;
+});
+
+async function loadGracePeriodStatus() {
+  loading.value = true;
+  try {
+    const response = await api.getGracePeriodStatus();
+    if (response.data?.inGracePeriod && response.data.gracePeriod) {
+      gracePeriod.value = response.data.gracePeriod;
+    } else {
+      gracePeriod.value = null;
+    }
+  } catch (error) {
+    console.error('Failed to load grace period status:', error);
+    gracePeriod.value = null;
+  } finally {
+    loading.value = false;
+  }
+}
+
+onMounted(() => {
+  loadGracePeriodStatus();
+});
+
+defineExpose({ refresh: loadGracePeriodStatus });
+</script>
+
 <template>
   <div
     v-if="gracePeriod"
@@ -43,85 +125,3 @@
     </div>
   </div>
 </template>
-
-<script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
-import api from '@/services/api';
-
-interface GracePeriod {
-  reason: 'payment_failed' | 'downgrade' | 'trial_ended';
-  startedAt: string;
-  endsAt: string;
-  daysRemaining: number;
-  notificationsSent: number;
-}
-
-defineEmits<{
-  (e: 'update-payment'): void;
-  (e: 'loaded', data: GracePeriod | null): void;
-}>();
-
-const gracePeriod = ref<GracePeriod | null>(null);
-const loading = ref(true);
-
-const bannerTitle = computed(() => {
-  if (!gracePeriod.value) return '';
-  switch (gracePeriod.value.reason) {
-    case 'payment_failed':
-      return 'Paiement echoue - Action requise';
-    case 'downgrade':
-      return 'Periode de transition en cours';
-    case 'trial_ended':
-      return 'Periode d\'essai terminee';
-    default:
-      return 'Periode de grace active';
-  }
-});
-
-const bannerDescription = computed(() => {
-  if (!gracePeriod.value) return '';
-  switch (gracePeriod.value.reason) {
-    case 'payment_failed':
-      return 'Votre dernier paiement a echoue. Veuillez mettre a jour vos informations de paiement pour eviter la suspension de votre compte.';
-    case 'downgrade':
-      return 'Votre forfait est en cours de transition. Certaines fonctionnalites peuvent etre limitees pendant cette periode.';
-    case 'trial_ended':
-      return 'Votre periode d\'essai est terminee. Passez a un forfait payant pour continuer a utiliser toutes les fonctionnalites.';
-    default:
-      return 'Votre compte est en periode de grace. Veuillez regulariser votre situation.';
-  }
-});
-
-const progressWidth = computed(() => {
-  if (!gracePeriod.value) return '100%';
-  // Assuming 7 days grace period by default
-  const totalDays = 7;
-  const remaining = gracePeriod.value.daysRemaining;
-  const elapsed = totalDays - remaining;
-  const percentage = Math.min(100, Math.max(0, (elapsed / totalDays) * 100));
-  return `${percentage}%`;
-});
-
-async function loadGracePeriodStatus() {
-  loading.value = true;
-  try {
-    const response = await api.getGracePeriodStatus();
-    if (response.data?.inGracePeriod && response.data.gracePeriod) {
-      gracePeriod.value = response.data.gracePeriod;
-    } else {
-      gracePeriod.value = null;
-    }
-  } catch (error) {
-    console.error('Failed to load grace period status:', error);
-    gracePeriod.value = null;
-  } finally {
-    loading.value = false;
-  }
-}
-
-onMounted(() => {
-  loadGracePeriodStatus();
-});
-
-defineExpose({ refresh: loadGracePeriodStatus });
-</script>

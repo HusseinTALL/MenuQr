@@ -201,7 +201,7 @@ const aggregateByMonth = (data: ChartDataPoint[]) => {
 
 // Get last 7 days data for sparklines
 const last7DaysData = computed(() => {
-  if (!chartData.value?.ordersByDay) return [];
+  if (!chartData.value?.ordersByDay) {return [];}
   return chartData.value.ordersByDay.slice(-7);
 });
 
@@ -211,20 +211,20 @@ const ordersSparkline = computed(() => last7DaysData.value.map(d => d.orders));
 
 // Calculate trends (compare last 7 days vs previous 7 days)
 const revenueTrend = computed(() => {
-  if (!chartData.value?.ordersByDay || chartData.value.ordersByDay.length < 14) return 0;
+  if (!chartData.value?.ordersByDay || chartData.value.ordersByDay.length < 14) {return 0;}
   const data = chartData.value.ordersByDay;
   const recent = data.slice(-7).reduce((sum, d) => sum + d.revenue, 0);
   const previous = data.slice(-14, -7).reduce((sum, d) => sum + d.revenue, 0);
-  if (previous === 0) return recent > 0 ? 100 : 0;
+  if (previous === 0) {return recent > 0 ? 100 : 0;}
   return ((recent - previous) / previous) * 100;
 });
 
 const ordersTrend = computed(() => {
-  if (!chartData.value?.ordersByDay || chartData.value.ordersByDay.length < 14) return 0;
+  if (!chartData.value?.ordersByDay || chartData.value.ordersByDay.length < 14) {return 0;}
   const data = chartData.value.ordersByDay;
   const recent = data.slice(-7).reduce((sum, d) => sum + d.orders, 0);
   const previous = data.slice(-14, -7).reduce((sum, d) => sum + d.orders, 0);
-  if (previous === 0) return recent > 0 ? 100 : 0;
+  if (previous === 0) {return recent > 0 ? 100 : 0;}
   return ((recent - previous) / previous) * 100;
 });
 
@@ -266,7 +266,7 @@ const insights = computed(() => {
 
 // Weekly comparison stats for Trends tab
 const weeklyStats = computed(() => {
-  if (!chartData.value?.ordersByDay) return null;
+  if (!chartData.value?.ordersByDay) {return null;}
   const data = chartData.value.ordersByDay;
 
   const thisWeek = data.slice(-7);
@@ -300,7 +300,7 @@ const weeklyStats = computed(() => {
 
 // Monthly comparison for Trends tab
 const monthlyStats = computed(() => {
-  if (!chartData.value?.ordersByDay) return null;
+  if (!chartData.value?.ordersByDay) {return null;}
   const data = chartData.value.ordersByDay;
 
   const thisMonth = data.slice(-30);
@@ -326,7 +326,7 @@ const monthlyStats = computed(() => {
 
 // Restaurant performance stats
 const restaurantStats = computed(() => {
-  if (!chartData.value?.topRestaurants?.length) return null;
+  if (!chartData.value?.topRestaurants?.length) {return null;}
   const restaurants = chartData.value.topRestaurants;
 
   const totalRevenue = restaurants.reduce((sum, r) => sum + r.revenue, 0);
@@ -733,22 +733,22 @@ const mixedChartOptions = {
 
 // Calculate computed stats
 const totalRevenue = computed(() => {
-  if (!chartData.value?.ordersByDay) return 0;
+  if (!chartData.value?.ordersByDay) {return 0;}
   return chartData.value.ordersByDay.reduce((sum, d) => sum + d.revenue, 0);
 });
 
 const totalOrders = computed(() => {
-  if (!chartData.value?.ordersByDay) return 0;
+  if (!chartData.value?.ordersByDay) {return 0;}
   return chartData.value.ordersByDay.reduce((sum, d) => sum + d.orders, 0);
 });
 
 const avgOrderValue = computed(() => {
-  if (totalOrders.value === 0) return 0;
+  if (totalOrders.value === 0) {return 0;}
   return totalRevenue.value / totalOrders.value;
 });
 
 const avgDailyOrders = computed(() => {
-  if (!chartData.value?.ordersByDay) return 0;
+  if (!chartData.value?.ordersByDay) {return 0;}
   return totalOrders.value / chartData.value.ordersByDay.length;
 });
 
@@ -764,14 +764,14 @@ const formatCurrency = (value: number) => {
 
 // Format large numbers
 const formatNumber = (value: number) => {
-  if (value >= 1000000) return `${(value / 1000000).toFixed(1)}M`;
-  if (value >= 1000) return `${(value / 1000).toFixed(1)}K`;
+  if (value >= 1000000) {return `${(value / 1000000).toFixed(1)}M`;}
+  if (value >= 1000) {return `${(value / 1000).toFixed(1)}K`;}
   return value.toFixed(0);
 };
 
 // Export data
 const exportData = () => {
-  if (!chartData.value) return;
+  if (!chartData.value) {return;}
 
   const exportObj = {
     period: `${period.value} jours`,
@@ -797,7 +797,7 @@ const exportData = () => {
 
 // SVG Sparkline generator
 const generateSparklinePath = (data: number[], width = 80, height = 28) => {
-  if (!data.length) return '';
+  if (!data.length) {return '';}
   const max = Math.max(...data, 1);
   const min = Math.min(...data, 0);
   const range = max - min || 1;

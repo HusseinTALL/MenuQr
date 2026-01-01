@@ -97,7 +97,7 @@ function getSavings(plan: SubscriptionPlan): number {
 }
 
 async function handleSelectPlan(plan: SubscriptionPlan) {
-  if (isCurrentPlan(plan)) return;
+  if (isCurrentPlan(plan)) {return;}
 
   selectedPlan.value = plan.id;
   emit('select-plan', plan);

@@ -19,6 +19,7 @@ import {
 
 // Extend Express Request with subscription info
 declare global {
+  // eslint-disable-next-line @typescript-eslint/no-namespace
   namespace Express {
     interface Request {
       subscription?: {
@@ -544,7 +545,7 @@ export function checkFeatures(featuresToCheck: Feature[]) {
       }
 
       next();
-    } catch (error) {
+    } catch (_error) {
       // Don't fail on soft check
       next();
     }

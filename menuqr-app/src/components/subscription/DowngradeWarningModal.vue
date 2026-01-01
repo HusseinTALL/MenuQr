@@ -1,3 +1,131 @@
+<script setup lang="ts">
+import { ref, computed, watch } from 'vue';
+import api from '@/services/api';
+
+interface FeatureItem {
+  key: string;
+  name: string;
+}
+
+interface DowngradeAnalysis {
+  dishes?: {
+    current: number;
+    limit: number;
+    toArchive: number;
+  };
+  campaigns?: {
+    current: number;
+    limit: number;
+    toCancel: number;
+  };
+  featuresLosing?: FeatureItem[];
+  featuresKeeping?: FeatureItem[];
+  warnings?: string[];
+  blockers?: string[];
+  newPlan?: {
+    id: string;
+    name: string;
+    slug: string;
+    tier: string;
+  };
+}
+
+const props = defineProps<{
+  isOpen: boolean;
+  planSlug: string;
+  reason?: string;
+}>();
+
+const emit = defineEmits<{
+  (e: 'close'): void;
+  (e: 'confirmed', data: { scheduled: boolean; effectiveDate: Date }): void;
+}>();
+
+const loading = ref(false);
+const error = ref<string | null>(null);
+const scheduling = ref(false);
+const analysis = ref<DowngradeAnalysis | null>(null);
+const targetPlan = ref<{ id: string; name: string; slug: string; tier: string } | null>(null);
+const effectiveDate = ref<Date | null>(null);
+
+const hasDataImpact = computed(() => {
+  if (!analysis.value) {return false;}
+  return (
+    (analysis.value.dishes?.toArchive ?? 0) > 0 ||
+    (analysis.value.campaigns?.toCancel ?? 0) > 0
+  );
+});
+
+const formattedEffectiveDate = computed(() => {
+  if (!effectiveDate.value) {return 'la fin de votre periode actuelle';}
+  return new Date(effectiveDate.value).toLocaleDateString('fr-FR', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  });
+});
+
+async function loadAnalysis() {
+  if (!props.planSlug) {return;}
+
+  loading.value = true;
+  error.value = null;
+
+  try {
+    const response = await api.analyzeDowngrade(props.planSlug);
+    if (response.data) {
+      analysis.value = response.data;
+      targetPlan.value = response.data.newPlan ?? null;
+    } else {
+      error.value = 'Erreur lors de l\'analyse';
+    }
+  } catch (err: unknown) {
+    console.error('Failed to analyze downgrade:', err);
+    const errorMessage = err instanceof Error ? err.message : 'Erreur inconnue';
+    error.value = errorMessage;
+  } finally {
+    loading.value = false;
+  }
+}
+
+async function confirmDowngrade() {
+  scheduling.value = true;
+  error.value = null;
+
+  try {
+    const response = await api.scheduleDowngrade(props.planSlug, props.reason);
+    if (response.data) {
+      effectiveDate.value = new Date(response.data.effectiveDate);
+      emit('confirmed', {
+        scheduled: response.data.scheduled,
+        effectiveDate: new Date(response.data.effectiveDate),
+      });
+    } else {
+      error.value = 'Erreur lors de la planification';
+    }
+  } catch (err: unknown) {
+    console.error('Failed to schedule downgrade:', err);
+    const errorMessage = err instanceof Error ? err.message : 'Erreur inconnue';
+    error.value = errorMessage;
+  } finally {
+    scheduling.value = false;
+  }
+}
+
+watch(
+  () => props.isOpen,
+  (isOpen) => {
+    if (isOpen && props.planSlug) {
+      loadAnalysis();
+    } else {
+      analysis.value = null;
+      error.value = null;
+    }
+  },
+  { immediate: true }
+);
+</script>
+
 <template>
   <Teleport to="body">
     <Transition name="modal">
@@ -216,134 +344,6 @@
     </Transition>
   </Teleport>
 </template>
-
-<script setup lang="ts">
-import { ref, computed, watch } from 'vue';
-import api from '@/services/api';
-
-interface FeatureItem {
-  key: string;
-  name: string;
-}
-
-interface DowngradeAnalysis {
-  dishes?: {
-    current: number;
-    limit: number;
-    toArchive: number;
-  };
-  campaigns?: {
-    current: number;
-    limit: number;
-    toCancel: number;
-  };
-  featuresLosing?: FeatureItem[];
-  featuresKeeping?: FeatureItem[];
-  warnings?: string[];
-  blockers?: string[];
-  newPlan?: {
-    id: string;
-    name: string;
-    slug: string;
-    tier: string;
-  };
-}
-
-const props = defineProps<{
-  isOpen: boolean;
-  planSlug: string;
-  reason?: string;
-}>();
-
-const emit = defineEmits<{
-  (e: 'close'): void;
-  (e: 'confirmed', data: { scheduled: boolean; effectiveDate: Date }): void;
-}>();
-
-const loading = ref(false);
-const error = ref<string | null>(null);
-const scheduling = ref(false);
-const analysis = ref<DowngradeAnalysis | null>(null);
-const targetPlan = ref<{ id: string; name: string; slug: string; tier: string } | null>(null);
-const effectiveDate = ref<Date | null>(null);
-
-const hasDataImpact = computed(() => {
-  if (!analysis.value) return false;
-  return (
-    (analysis.value.dishes?.toArchive ?? 0) > 0 ||
-    (analysis.value.campaigns?.toCancel ?? 0) > 0
-  );
-});
-
-const formattedEffectiveDate = computed(() => {
-  if (!effectiveDate.value) return 'la fin de votre periode actuelle';
-  return new Date(effectiveDate.value).toLocaleDateString('fr-FR', {
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-  });
-});
-
-async function loadAnalysis() {
-  if (!props.planSlug) return;
-
-  loading.value = true;
-  error.value = null;
-
-  try {
-    const response = await api.analyzeDowngrade(props.planSlug);
-    if (response.data) {
-      analysis.value = response.data;
-      targetPlan.value = response.data.newPlan ?? null;
-    } else {
-      error.value = 'Erreur lors de l\'analyse';
-    }
-  } catch (err: unknown) {
-    console.error('Failed to analyze downgrade:', err);
-    const errorMessage = err instanceof Error ? err.message : 'Erreur inconnue';
-    error.value = errorMessage;
-  } finally {
-    loading.value = false;
-  }
-}
-
-async function confirmDowngrade() {
-  scheduling.value = true;
-  error.value = null;
-
-  try {
-    const response = await api.scheduleDowngrade(props.planSlug, props.reason);
-    if (response.data) {
-      effectiveDate.value = new Date(response.data.effectiveDate);
-      emit('confirmed', {
-        scheduled: response.data.scheduled,
-        effectiveDate: new Date(response.data.effectiveDate),
-      });
-    } else {
-      error.value = 'Erreur lors de la planification';
-    }
-  } catch (err: unknown) {
-    console.error('Failed to schedule downgrade:', err);
-    const errorMessage = err instanceof Error ? err.message : 'Erreur inconnue';
-    error.value = errorMessage;
-  } finally {
-    scheduling.value = false;
-  }
-}
-
-watch(
-  () => props.isOpen,
-  (isOpen) => {
-    if (isOpen && props.planSlug) {
-      loadAnalysis();
-    } else {
-      analysis.value = null;
-      error.value = null;
-    }
-  },
-  { immediate: true }
-);
-</script>
 
 <style scoped>
 .modal-enter-active,

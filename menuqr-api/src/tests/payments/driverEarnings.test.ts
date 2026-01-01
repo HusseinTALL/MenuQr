@@ -8,13 +8,13 @@ import { describe, it, expect } from 'vitest';
 import mongoose from 'mongoose';
 import { DeliveryDriver } from '../../models/DeliveryDriver.js';
 import { Delivery } from '../../models/Delivery.js';
-import { DriverPayout } from '../../models/DriverPayout.js';
+import { DriverPayout as _DriverPayout } from '../../models/DriverPayout.js';
 import {
   createTestRestaurant,
   createTestDriver,
   createCompletedDelivery,
   createDriverShift,
-  createDriverPayout,
+  createDriverPayout as _createDriverPayout,
   createEarningsScenario,
 } from './paymentsHelpers.js';
 import * as driverEarningsService from '../../services/driverEarningsService.js';
@@ -137,7 +137,7 @@ describe('Driver Earnings Service', () => {
   // =====================================================
   describe('getDriverEarnings', () => {
     it('should return earnings for today', async () => {
-      const { driver, deliveries } = await createEarningsScenario();
+      const { driver, deliveries: _deliveries } = await createEarningsScenario();
 
       const earnings = await driverEarningsService.getDriverEarnings(driver._id, 'today');
 
@@ -196,7 +196,7 @@ describe('Driver Earnings Service', () => {
   // =====================================================
   describe('getDailyEarnings', () => {
     it('should return daily earnings with delivery count', async () => {
-      const { driver, deliveries } = await createEarningsScenario();
+      const { driver, deliveries: _deliveries } = await createEarningsScenario();
       const today = new Date();
 
       const daily = await driverEarningsService.getDailyEarnings(driver._id, today);
@@ -280,7 +280,7 @@ describe('Driver Earnings Service', () => {
     });
 
     it('should include pending payout amount', async () => {
-      const { driver, pendingPayout } = await createEarningsScenario();
+      const { driver, pendingPayout: _pendingPayout } = await createEarningsScenario();
 
       const summary = await driverEarningsService.getPayoutSummary(driver._id);
 
@@ -288,7 +288,7 @@ describe('Driver Earnings Service', () => {
     });
 
     it('should include last payout details', async () => {
-      const { driver, completedPayout } = await createEarningsScenario();
+      const { driver, completedPayout: _completedPayout } = await createEarningsScenario();
 
       const summary = await driverEarningsService.getPayoutSummary(driver._id);
 

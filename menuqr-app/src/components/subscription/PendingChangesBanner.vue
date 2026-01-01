@@ -1,80 +1,3 @@
-<template>
-  <Transition name="banner-slide">
-    <div
-      v-if="pendingChange"
-      class="pending-banner"
-      :class="bannerTypeClass"
-    >
-      <!-- Gradient Accent Line -->
-      <div class="banner-accent" :style="{ background: accentGradient }" />
-
-      <!-- Banner Content -->
-      <div class="banner-body">
-        <!-- Icon Section -->
-        <div class="banner-icon-wrapper" :style="{ background: iconBg }">
-          <component :is="bannerIcon" class="banner-icon" :style="{ color: iconColor }" />
-        </div>
-
-        <!-- Text Content -->
-        <div class="banner-content">
-          <div class="banner-header">
-            <span class="banner-tag" :style="{ background: tagBg, color: tagColor }">
-              {{ bannerTag }}
-            </span>
-            <h4 class="banner-title">{{ bannerTitle }}</h4>
-          </div>
-
-          <p class="banner-description">{{ bannerDescription }}</p>
-
-          <!-- Effective Date -->
-          <div class="banner-meta">
-            <CalendarOutlined class="meta-icon" />
-            <span class="meta-label">Date effective:</span>
-            <span class="meta-value">{{ formattedEffectiveDate }}</span>
-          </div>
-        </div>
-
-        <!-- Actions -->
-        <div class="banner-actions">
-          <template v-if="pendingChange.type === 'upgrade'">
-            <button class="btn-view" @click="$emit('view-details')">
-              <span>Voir les détails</span>
-              <ArrowRightOutlined />
-            </button>
-          </template>
-
-          <template v-else-if="pendingChange.type === 'downgrade'">
-            <button
-              class="btn-cancel"
-              :disabled="cancelling"
-              @click="cancelChange"
-            >
-              <CloseOutlined v-if="!cancelling" />
-              <LoadingOutlined v-else class="spin" />
-              <span>{{ cancelling ? 'Annulation...' : 'Annuler' }}</span>
-            </button>
-          </template>
-
-          <template v-else-if="pendingChange.type === 'cancellation'">
-            <button class="btn-reactivate" @click="$emit('reactivate')">
-              <CheckOutlined />
-              <span>Conserver</span>
-            </button>
-          </template>
-        </div>
-      </div>
-
-      <!-- Progress indicator for time remaining -->
-      <div v-if="timeProgress > 0" class="banner-progress">
-        <div
-          class="progress-fill"
-          :style="{ width: `${timeProgress}%`, background: accentGradient }"
-        />
-      </div>
-    </div>
-  </Transition>
-</template>
-
 <script setup lang="ts">
 import { ref, computed, onMounted, h } from 'vue';
 import {
@@ -170,7 +93,7 @@ const bannerIcon = computed(() => {
 });
 
 const bannerTitle = computed(() => {
-  if (!pendingChange.value) return '';
+  if (!pendingChange.value) {return '';}
   const planName = pendingChange.value.newPlan?.name || 'un nouveau forfait';
   switch (pendingChange.value.type) {
     case 'upgrade':
@@ -185,7 +108,7 @@ const bannerTitle = computed(() => {
 });
 
 const bannerDescription = computed(() => {
-  if (!pendingChange.value) return '';
+  if (!pendingChange.value) {return '';}
   switch (pendingChange.value.type) {
     case 'upgrade':
       return 'Votre mise à niveau sera effective à la date indiquée. Vous bénéficierez immédiatement des nouvelles fonctionnalités.';
@@ -199,7 +122,7 @@ const bannerDescription = computed(() => {
 });
 
 const formattedEffectiveDate = computed(() => {
-  if (!pendingChange.value?.effectiveDate) return 'Non définie';
+  if (!pendingChange.value?.effectiveDate) {return 'Non définie';}
   const date = new Date(pendingChange.value.effectiveDate);
   return date.toLocaleDateString('fr-FR', {
     weekday: 'long',
@@ -211,14 +134,14 @@ const formattedEffectiveDate = computed(() => {
 
 // Calculate time progress (percentage of time elapsed until effective date)
 const timeProgress = computed(() => {
-  if (!pendingChange.value?.effectiveDate || !pendingChange.value?.requestedAt) return 0;
+  if (!pendingChange.value?.effectiveDate || !pendingChange.value?.requestedAt) {return 0;}
 
   const start = new Date(pendingChange.value.requestedAt).getTime();
   const end = new Date(pendingChange.value.effectiveDate).getTime();
   const now = Date.now();
 
-  if (now >= end) return 100;
-  if (now <= start) return 0;
+  if (now >= end) {return 100;}
+  if (now <= start) {return 0;}
 
   return Math.round(((now - start) / (end - start)) * 100);
 });
@@ -242,7 +165,7 @@ async function loadPendingChanges() {
 }
 
 async function cancelChange() {
-  if (!pendingChange.value || pendingChange.value.type !== 'downgrade') return;
+  if (!pendingChange.value || pendingChange.value.type !== 'downgrade') {return;}
 
   cancelling.value = true;
   try {
@@ -262,6 +185,83 @@ onMounted(() => {
 
 defineExpose({ refresh: loadPendingChanges });
 </script>
+
+<template>
+  <Transition name="banner-slide">
+    <div
+      v-if="pendingChange"
+      class="pending-banner"
+      :class="bannerTypeClass"
+    >
+      <!-- Gradient Accent Line -->
+      <div class="banner-accent" :style="{ background: accentGradient }" />
+
+      <!-- Banner Content -->
+      <div class="banner-body">
+        <!-- Icon Section -->
+        <div class="banner-icon-wrapper" :style="{ background: iconBg }">
+          <component :is="bannerIcon" class="banner-icon" :style="{ color: iconColor }" />
+        </div>
+
+        <!-- Text Content -->
+        <div class="banner-content">
+          <div class="banner-header">
+            <span class="banner-tag" :style="{ background: tagBg, color: tagColor }">
+              {{ bannerTag }}
+            </span>
+            <h4 class="banner-title">{{ bannerTitle }}</h4>
+          </div>
+
+          <p class="banner-description">{{ bannerDescription }}</p>
+
+          <!-- Effective Date -->
+          <div class="banner-meta">
+            <CalendarOutlined class="meta-icon" />
+            <span class="meta-label">Date effective:</span>
+            <span class="meta-value">{{ formattedEffectiveDate }}</span>
+          </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="banner-actions">
+          <template v-if="pendingChange.type === 'upgrade'">
+            <button class="btn-view" @click="$emit('view-details')">
+              <span>Voir les détails</span>
+              <ArrowRightOutlined />
+            </button>
+          </template>
+
+          <template v-else-if="pendingChange.type === 'downgrade'">
+            <button
+              class="btn-cancel"
+              :disabled="cancelling"
+              @click="cancelChange"
+            >
+              <CloseOutlined v-if="!cancelling" />
+              <LoadingOutlined v-else class="spin" />
+              <span>{{ cancelling ? 'Annulation...' : 'Annuler' }}</span>
+            </button>
+          </template>
+
+          <template v-else-if="pendingChange.type === 'cancellation'">
+            <button class="btn-reactivate" @click="$emit('reactivate')">
+              <CheckOutlined />
+              <span>Conserver</span>
+            </button>
+          </template>
+        </div>
+      </div>
+
+      <!-- Progress indicator for time remaining -->
+      <div v-if="timeProgress > 0" class="banner-progress">
+        <div
+          class="progress-fill"
+          :style="{ width: `${timeProgress}%`, background: accentGradient }"
+        />
+      </div>
+    </div>
+  </Transition>
+</template>
 
 <style scoped>
 /* ═══════════════════════════════════════════════════════════════
