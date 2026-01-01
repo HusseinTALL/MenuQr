@@ -81,6 +81,34 @@ export interface UpdateStaffData {
   customPermissions?: string[];
 }
 
+// Staff types
+export interface StaffMember {
+  id: string;
+  email: string;
+  name: string;
+  role: string;
+  roleDisplayName: string;
+  isActive: boolean;
+  lastLogin?: string;
+  twoFactorEnabled: boolean;
+  createdAt: string;
+  customPermissions?: string[];
+}
+
+export interface CreateStaffData {
+  email: string;
+  name: string;
+  role: string;
+  customPermissions?: string[];
+}
+
+export interface UpdateStaffData {
+  name?: string;
+  role?: string;
+  isActive?: boolean;
+  customPermissions?: string[];
+}
+
 // JWT token expiry buffer (refresh 5 minutes before expiry)
 const TOKEN_EXPIRY_BUFFER_MS = 5 * 60 * 1000;
 
