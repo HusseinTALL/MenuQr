@@ -165,7 +165,7 @@ export const getDeliveries = async (req: Request, res: Response): Promise<void> 
       [sortBy as string]: sortOrder === 'asc' ? 1 : -1,
     };
 
-    const [deliveries, total] = await Promise.all([
+    const [deliveries, total, statsAgg] = await Promise.all([
       Delivery.find(query)
         .populate('driverId', 'firstName lastName phone vehicleType rating')
         .populate('orderId', 'orderNumber total items')
@@ -173,16 +173,45 @@ export const getDeliveries = async (req: Request, res: Response): Promise<void> 
         .skip(skip)
         .limit(Number(limit)),
       Delivery.countDocuments(query),
+      Delivery.aggregate([
+        { $match: { restaurantId: user.restaurantId } },
+        {
+          $group: {
+            _id: null,
+            pending: { $sum: { $cond: [{ $eq: ['$status', 'pending'] }, 1, 0] } },
+            assigned: { $sum: { $cond: [{ $in: ['$status', ['assigned', 'accepted']] }, 1, 0] } },
+            inProgress: { $sum: { $cond: [{ $in: ['$status', ['arriving_restaurant', 'at_restaurant', 'picked_up', 'in_transit', 'arrived']] }, 1, 0] } },
+            delivered: { $sum: { $cond: [{ $eq: ['$status', 'delivered'] }, 1, 0] } },
+            cancelled: { $sum: { $cond: [{ $eq: ['$status', 'cancelled'] }, 1, 0] } },
+            totalDuration: { $sum: { $cond: [{ $eq: ['$status', 'delivered'] }, '$actualDuration', 0] } },
+            deliveredCount: { $sum: { $cond: [{ $eq: ['$status', 'delivered'] }, 1, 0] } },
+          },
+        },
+      ]),
     ]);
+
+    const statsData = statsAgg[0] || { pending: 0, assigned: 0, inProgress: 0, delivered: 0, cancelled: 0, totalDuration: 0, deliveredCount: 0 };
+    const avgDeliveryTime = statsData.deliveredCount > 0 ? Math.round(statsData.totalDuration / statsData.deliveredCount) : 0;
 
     res.json({
       success: true,
-      data: deliveries,
-      pagination: {
-        page: Number(page),
-        limit: Number(limit),
-        total,
-        pages: Math.ceil(total / Number(limit)),
+      data: {
+        deliveries,
+        stats: {
+          pending: statsData.pending,
+          assigned: statsData.assigned,
+          inProgress: statsData.inProgress,
+          delivered: statsData.delivered,
+          cancelled: statsData.cancelled,
+          avgDeliveryTime,
+          totalToday: total,
+        },
+        pagination: {
+          page: Number(page),
+          limit: Number(limit),
+          total,
+          pages: Math.ceil(total / Number(limit)),
+        },
       },
     });
   } catch (error) {
