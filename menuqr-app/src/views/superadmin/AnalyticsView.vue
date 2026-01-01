@@ -264,6 +264,98 @@ const insights = computed(() => {
   return result.slice(0, 4);
 });
 
+// Weekly comparison stats for Trends tab
+const weeklyStats = computed(() => {
+  if (!chartData.value?.ordersByDay) return null;
+  const data = chartData.value.ordersByDay;
+
+  const thisWeek = data.slice(-7);
+  const lastWeek = data.slice(-14, -7);
+
+  const thisWeekOrders = thisWeek.reduce((sum, d) => sum + d.orders, 0);
+  const lastWeekOrders = lastWeek.reduce((sum, d) => sum + d.orders, 0);
+  const thisWeekRevenue = thisWeek.reduce((sum, d) => sum + d.revenue, 0);
+  const lastWeekRevenue = lastWeek.reduce((sum, d) => sum + d.revenue, 0);
+
+  const ordersChange = lastWeekOrders > 0 ? ((thisWeekOrders - lastWeekOrders) / lastWeekOrders) * 100 : 0;
+  const revenueChange = lastWeekRevenue > 0 ? ((thisWeekRevenue - lastWeekRevenue) / lastWeekRevenue) * 100 : 0;
+
+  const avgDailyOrders = thisWeekOrders / 7;
+  const avgDailyRevenue = thisWeekRevenue / 7;
+  const peakDay = thisWeek.reduce((max, d) => d.orders > max.orders ? d : max, thisWeek[0]);
+
+  return {
+    thisWeekOrders,
+    lastWeekOrders,
+    thisWeekRevenue,
+    lastWeekRevenue,
+    ordersChange,
+    revenueChange,
+    avgDailyOrders,
+    avgDailyRevenue,
+    peakDay: peakDay ? new Date(peakDay.date).toLocaleDateString('fr-FR', { weekday: 'long' }) : '-',
+    peakOrders: peakDay?.orders || 0,
+  };
+});
+
+// Monthly comparison for Trends tab
+const monthlyStats = computed(() => {
+  if (!chartData.value?.ordersByDay) return null;
+  const data = chartData.value.ordersByDay;
+
+  const thisMonth = data.slice(-30);
+  const lastMonth = data.slice(-60, -30);
+
+  const thisMonthOrders = thisMonth.reduce((sum, d) => sum + d.orders, 0);
+  const lastMonthOrders = lastMonth.reduce((sum, d) => sum + d.orders, 0);
+  const thisMonthRevenue = thisMonth.reduce((sum, d) => sum + d.revenue, 0);
+  const lastMonthRevenue = lastMonth.reduce((sum, d) => sum + d.revenue, 0);
+
+  const ordersChange = lastMonthOrders > 0 ? ((thisMonthOrders - lastMonthOrders) / lastMonthOrders) * 100 : 0;
+  const revenueChange = lastMonthRevenue > 0 ? ((thisMonthRevenue - lastMonthRevenue) / lastMonthRevenue) * 100 : 0;
+
+  return {
+    thisMonthOrders,
+    lastMonthOrders,
+    thisMonthRevenue,
+    lastMonthRevenue,
+    ordersChange,
+    revenueChange,
+  };
+});
+
+// Restaurant performance stats
+const restaurantStats = computed(() => {
+  if (!chartData.value?.topRestaurants?.length) return null;
+  const restaurants = chartData.value.topRestaurants;
+
+  const totalRevenue = restaurants.reduce((sum, r) => sum + r.revenue, 0);
+  const totalOrders = restaurants.reduce((sum, r) => sum + r.orders, 0);
+  const avgRevenue = totalRevenue / restaurants.length;
+  const avgOrders = totalOrders / restaurants.length;
+
+  const topPerformer = restaurants[0];
+  const topRevenueShare = topPerformer ? (topPerformer.revenue / totalRevenue * 100) : 0;
+
+  // Find best performing restaurant by average order value
+  const bestAvgOrder = restaurants.reduce((best, r) => {
+    const avgOrder = r.orders > 0 ? r.revenue / r.orders : 0;
+    const bestAvg = best.orders > 0 ? best.revenue / best.orders : 0;
+    return avgOrder > bestAvg ? r : best;
+  }, restaurants[0]);
+
+  return {
+    totalRevenue,
+    totalOrders,
+    avgRevenue,
+    avgOrders,
+    topPerformer,
+    topRevenueShare,
+    bestAvgOrder,
+    restaurantCount: restaurants.length,
+  };
+});
+
 // Monthly revenue chart data
 const monthlyRevenueChartData = computed(() => {
   if (!chartData.value?.ordersByDay) {
@@ -1064,6 +1156,51 @@ const generateSparklinePath = (data: number[], width = 80, height = 28) => {
 
         <a-tab-pane key="trends" tab="Tendances">
           <a-row :gutter="[24, 24]">
+            <!-- Weekly Comparison Cards -->
+            <a-col :span="24">
+              <div class="comparison-section">
+                <div class="comparison-header">
+                  <CalendarOutlined class="comparison-icon" />
+                  <span>Comparaison Hebdomadaire</span>
+                  <span class="comparison-subtitle">Cette semaine vs semaine precedente</span>
+                </div>
+                <div class="comparison-grid">
+                  <div class="comparison-card">
+                    <div class="comparison-label">Commandes cette semaine</div>
+                    <div class="comparison-value">{{ weeklyStats?.thisWeekOrders || 0 }}</div>
+                    <div class="comparison-change" :class="(weeklyStats?.ordersChange || 0) >= 0 ? 'positive' : 'negative'">
+                      <RiseOutlined v-if="(weeklyStats?.ordersChange || 0) >= 0" />
+                      <FallOutlined v-else />
+                      {{ Math.abs(weeklyStats?.ordersChange || 0).toFixed(1) }}% vs sem. derniere
+                    </div>
+                    <div class="comparison-previous">Semaine precedente: {{ weeklyStats?.lastWeekOrders || 0 }}</div>
+                  </div>
+                  <div class="comparison-card">
+                    <div class="comparison-label">Revenus cette semaine</div>
+                    <div class="comparison-value">{{ formatCurrency(weeklyStats?.thisWeekRevenue || 0) }}</div>
+                    <div class="comparison-change" :class="(weeklyStats?.revenueChange || 0) >= 0 ? 'positive' : 'negative'">
+                      <RiseOutlined v-if="(weeklyStats?.revenueChange || 0) >= 0" />
+                      <FallOutlined v-else />
+                      {{ Math.abs(weeklyStats?.revenueChange || 0).toFixed(1) }}% vs sem. derniere
+                    </div>
+                    <div class="comparison-previous">Semaine precedente: {{ formatCurrency(weeklyStats?.lastWeekRevenue || 0) }}</div>
+                  </div>
+                  <div class="comparison-card highlight">
+                    <div class="comparison-label">Moyenne journaliere</div>
+                    <div class="comparison-value">{{ (weeklyStats?.avgDailyOrders || 0).toFixed(1) }}</div>
+                    <div class="comparison-subtitle-small">commandes/jour</div>
+                    <div class="comparison-extra">{{ formatCurrency(weeklyStats?.avgDailyRevenue || 0) }}/jour</div>
+                  </div>
+                  <div class="comparison-card accent">
+                    <div class="comparison-label">Jour le plus actif</div>
+                    <div class="comparison-value capitalize">{{ weeklyStats?.peakDay || '-' }}</div>
+                    <div class="comparison-subtitle-small">cette semaine</div>
+                    <div class="comparison-extra">{{ weeklyStats?.peakOrders || 0 }} commandes</div>
+                  </div>
+                </div>
+              </div>
+            </a-col>
+
             <!-- Weekly Trend Chart -->
             <a-col :span="24">
               <div class="chart-card">
@@ -1073,7 +1210,7 @@ const generateSparklinePath = (data: number[], width = 80, height = 28) => {
                     <span>Tendance hebdomadaire</span>
                   </div>
                 </div>
-                <div class="chart-container large">
+                <div class="chart-container xlarge">
                   <a-spin :spinning="loading">
                     <Line
                       v-if="weeklyTrendChartData.labels.length > 0"
@@ -1082,6 +1219,59 @@ const generateSparklinePath = (data: number[], width = 80, height = 28) => {
                     />
                     <a-empty v-else description="Aucune donnee disponible" />
                   </a-spin>
+                </div>
+              </div>
+            </a-col>
+
+            <!-- Monthly Comparison Cards -->
+            <a-col :span="24">
+              <div class="comparison-section">
+                <div class="comparison-header">
+                  <BarChartOutlined class="comparison-icon" />
+                  <span>Comparaison Mensuelle</span>
+                  <span class="comparison-subtitle">30 derniers jours vs 30 jours precedents</span>
+                </div>
+                <div class="comparison-grid two-col">
+                  <div class="comparison-card large">
+                    <div class="comparison-icon-box orders">
+                      <ShoppingCartOutlined />
+                    </div>
+                    <div class="comparison-content">
+                      <div class="comparison-label">Commandes (30j)</div>
+                      <div class="comparison-value">{{ monthlyStats?.thisMonthOrders || 0 }}</div>
+                      <div class="comparison-bar">
+                        <div class="bar-track">
+                          <div class="bar-fill orders" :style="{ width: Math.min(100, ((monthlyStats?.thisMonthOrders || 0) / Math.max(monthlyStats?.lastMonthOrders || 1, 1)) * 100) + '%' }"></div>
+                        </div>
+                        <span class="bar-label">vs {{ monthlyStats?.lastMonthOrders || 0 }} (mois prec.)</span>
+                      </div>
+                    </div>
+                    <div class="comparison-badge" :class="(monthlyStats?.ordersChange || 0) >= 0 ? 'positive' : 'negative'">
+                      <RiseOutlined v-if="(monthlyStats?.ordersChange || 0) >= 0" />
+                      <FallOutlined v-else />
+                      {{ Math.abs(monthlyStats?.ordersChange || 0).toFixed(1) }}%
+                    </div>
+                  </div>
+                  <div class="comparison-card large">
+                    <div class="comparison-icon-box revenue">
+                      <DollarOutlined />
+                    </div>
+                    <div class="comparison-content">
+                      <div class="comparison-label">Revenus (30j)</div>
+                      <div class="comparison-value">{{ formatCurrency(monthlyStats?.thisMonthRevenue || 0) }}</div>
+                      <div class="comparison-bar">
+                        <div class="bar-track">
+                          <div class="bar-fill revenue" :style="{ width: Math.min(100, ((monthlyStats?.thisMonthRevenue || 0) / Math.max(monthlyStats?.lastMonthRevenue || 1, 1)) * 100) + '%' }"></div>
+                        </div>
+                        <span class="bar-label">vs {{ formatCurrency(monthlyStats?.lastMonthRevenue || 0) }} (mois prec.)</span>
+                      </div>
+                    </div>
+                    <div class="comparison-badge" :class="(monthlyStats?.revenueChange || 0) >= 0 ? 'positive' : 'negative'">
+                      <RiseOutlined v-if="(monthlyStats?.revenueChange || 0) >= 0" />
+                      <FallOutlined v-else />
+                      {{ Math.abs(monthlyStats?.revenueChange || 0).toFixed(1) }}%
+                    </div>
+                  </div>
                 </div>
               </div>
             </a-col>
@@ -1095,7 +1285,7 @@ const generateSparklinePath = (data: number[], width = 80, height = 28) => {
                     <span>Croissance des restaurants</span>
                   </div>
                 </div>
-                <div class="chart-container large">
+                <div class="chart-container xlarge">
                   <a-spin :spinning="loading">
                     <Line
                       v-if="restaurantGrowthChartData.labels.length > 0"
@@ -1112,16 +1302,107 @@ const generateSparklinePath = (data: number[], width = 80, height = 28) => {
 
         <a-tab-pane key="restaurants" tab="Restaurants">
           <a-row :gutter="[24, 24]">
+            <!-- Restaurant Performance Summary -->
+            <a-col :span="24">
+              <div class="performance-section">
+                <div class="performance-header">
+                  <TrophyOutlined class="performance-icon" />
+                  <span>Performance des Restaurants</span>
+                  <span class="performance-subtitle">Top 10 ce mois</span>
+                </div>
+                <div class="performance-grid">
+                  <!-- Top Performer Card -->
+                  <div class="performance-card champion">
+                    <div class="champion-crown">
+                      <CrownOutlined />
+                    </div>
+                    <div class="champion-content">
+                      <div class="champion-label">Champion du mois</div>
+                      <div class="champion-name">{{ restaurantStats?.topPerformer?.name || '-' }}</div>
+                      <div class="champion-stats">
+                        <span class="champion-stat">
+                          <ShoppingCartOutlined />
+                          {{ restaurantStats?.topPerformer?.orders || 0 }} commandes
+                        </span>
+                        <span class="champion-stat">
+                          <DollarOutlined />
+                          {{ formatCurrency(restaurantStats?.topPerformer?.revenue || 0) }}
+                        </span>
+                      </div>
+                      <div class="champion-share">
+                        {{ (restaurantStats?.topRevenueShare || 0).toFixed(1) }}% du revenu total
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Stats Cards -->
+                  <div class="performance-card">
+                    <div class="perf-icon-box purple">
+                      <ShopOutlined />
+                    </div>
+                    <div class="perf-data">
+                      <div class="perf-value">{{ restaurantStats?.restaurantCount || 0 }}</div>
+                      <div class="perf-label">Restaurants actifs</div>
+                    </div>
+                  </div>
+
+                  <div class="performance-card">
+                    <div class="perf-icon-box green">
+                      <DollarOutlined />
+                    </div>
+                    <div class="perf-data">
+                      <div class="perf-value">{{ formatCurrency(restaurantStats?.totalRevenue || 0) }}</div>
+                      <div class="perf-label">Revenu total Top 10</div>
+                    </div>
+                  </div>
+
+                  <div class="performance-card">
+                    <div class="perf-icon-box blue">
+                      <ShoppingCartOutlined />
+                    </div>
+                    <div class="perf-data">
+                      <div class="perf-value">{{ restaurantStats?.totalOrders || 0 }}</div>
+                      <div class="perf-label">Commandes Top 10</div>
+                    </div>
+                  </div>
+
+                  <div class="performance-card">
+                    <div class="perf-icon-box orange">
+                      <BarChartOutlined />
+                    </div>
+                    <div class="perf-data">
+                      <div class="perf-value">{{ formatCurrency(restaurantStats?.avgRevenue || 0) }}</div>
+                      <div class="perf-label">Revenu moyen/restaurant</div>
+                    </div>
+                  </div>
+
+                  <!-- Best Average Order Card -->
+                  <div class="performance-card highlight">
+                    <div class="perf-icon-box emerald">
+                      <StarOutlined />
+                    </div>
+                    <div class="perf-data">
+                      <div class="perf-label">Meilleur panier moyen</div>
+                      <div class="perf-value small">{{ restaurantStats?.bestAvgOrder?.name?.substring(0, 20) || '-' }}</div>
+                      <div class="perf-extra">
+                        {{ restaurantStats?.bestAvgOrder?.orders ? formatCurrency(restaurantStats.bestAvgOrder.revenue / restaurantStats.bestAvgOrder.orders) : '-' }}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </a-col>
+
             <!-- Top Restaurants Chart -->
             <a-col :span="24">
               <div class="chart-card">
                 <div class="chart-header">
                   <div class="chart-title">
                     <TrophyOutlined />
-                    <span>Top 10 Restaurants (ce mois)</span>
+                    <span>Comparaison des Top 10</span>
                   </div>
                 </div>
-                <div class="chart-container large">
+                <div class="chart-container xlarge">
                   <a-spin :spinning="loading">
                     <Bar
                       v-if="topRestaurantsChartData.labels.length > 0"
@@ -1140,7 +1421,7 @@ const generateSparklinePath = (data: number[], width = 80, height = 28) => {
                 <div class="chart-header">
                   <div class="chart-title">
                     <CrownOutlined />
-                    <span>Classement des restaurants</span>
+                    <span>Classement detaille</span>
                   </div>
                 </div>
                 <a-table
@@ -1178,6 +1459,14 @@ const generateSparklinePath = (data: number[], width = 80, height = 28) => {
                       <span class="stat-cell">
                         {{ record.orders > 0 ? formatCurrency(record.revenue / record.orders) : '-' }}
                       </span>
+                    </template>
+                  </a-table-column>
+                  <a-table-column title="Part revenus" :width="120">
+                    <template #default="{ record }">
+                      <div class="share-bar">
+                        <div class="share-fill" :style="{ width: (restaurantStats?.totalRevenue ? (record.revenue / restaurantStats.totalRevenue * 100) : 0) + '%' }"></div>
+                        <span class="share-text">{{ restaurantStats?.totalRevenue ? (record.revenue / restaurantStats.totalRevenue * 100).toFixed(1) : 0 }}%</span>
+                      </div>
                     </template>
                   </a-table-column>
                 </a-table>
@@ -2119,6 +2408,473 @@ const generateSparklinePath = (data: number[], width = 80, height = 28) => {
   color: #64748b;
 }
 
+/* Extra Large Chart Container */
+.chart-container.xlarge {
+  height: 450px;
+}
+
+/* Comparison Section - Trends Tab */
+.comparison-section {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 20px;
+  padding: 24px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.comparison-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.comparison-icon {
+  font-size: 20px;
+  color: #4f46e5;
+}
+
+.comparison-header > span:first-of-type {
+  font-size: 18px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.comparison-subtitle {
+  font-size: 13px;
+  color: #64748b;
+  padding: 4px 12px;
+  background: #f1f5f9;
+  border-radius: 20px;
+  margin-left: auto;
+}
+
+.comparison-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}
+
+.comparison-grid.two-col {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+@media (max-width: 1200px) {
+  .comparison-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .comparison-grid.two-col {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .comparison-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.comparison-card {
+  background: #f8fafc;
+  border: 1px solid #f1f5f9;
+  border-radius: 16px;
+  padding: 20px;
+}
+
+.comparison-card.highlight {
+  background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+  border-color: #bbf7d0;
+}
+
+.comparison-card.accent {
+  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+  border-color: #bfdbfe;
+}
+
+.comparison-card.large {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 24px;
+}
+
+.comparison-label {
+  font-size: 12px;
+  color: #64748b;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  margin-bottom: 8px;
+}
+
+.comparison-value {
+  font-size: 28px;
+  font-weight: 800;
+  color: #0f172a;
+  line-height: 1.1;
+}
+
+.comparison-value.capitalize {
+  text-transform: capitalize;
+}
+
+.comparison-change {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 10px;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.comparison-change.positive {
+  background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+  color: #059669;
+}
+
+.comparison-change.negative {
+  background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+  color: #dc2626;
+}
+
+.comparison-previous {
+  font-size: 11px;
+  color: #94a3b8;
+  margin-top: 8px;
+}
+
+.comparison-subtitle-small {
+  font-size: 12px;
+  color: #64748b;
+  margin-top: 4px;
+}
+
+.comparison-extra {
+  font-size: 14px;
+  font-weight: 600;
+  color: #059669;
+  margin-top: 8px;
+}
+
+.comparison-icon-box {
+  width: 56px;
+  height: 56px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  flex-shrink: 0;
+}
+
+.comparison-icon-box.orders {
+  background: linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%);
+  color: #4f46e5;
+}
+
+.comparison-icon-box.revenue {
+  background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+  color: #059669;
+}
+
+.comparison-content {
+  flex: 1;
+}
+
+.comparison-bar {
+  margin-top: 12px;
+}
+
+.bar-track {
+  height: 8px;
+  background: #e2e8f0;
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 6px;
+}
+
+.bar-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.5s ease;
+}
+
+.bar-fill.orders {
+  background: linear-gradient(90deg, #4f46e5, #6366f1);
+}
+
+.bar-fill.revenue {
+  background: linear-gradient(90deg, #059669, #10b981);
+}
+
+.bar-label {
+  font-size: 11px;
+  color: #94a3b8;
+}
+
+.comparison-badge {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 16px;
+  border-radius: 24px;
+  font-size: 14px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.comparison-badge.positive {
+  background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+  color: #059669;
+}
+
+.comparison-badge.negative {
+  background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+  color: #dc2626;
+}
+
+/* Performance Section - Restaurants Tab */
+.performance-section {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 20px;
+  padding: 24px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.performance-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.performance-icon {
+  font-size: 20px;
+  color: #f59e0b;
+}
+
+.performance-header > span:first-of-type {
+  font-size: 18px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.performance-subtitle {
+  font-size: 13px;
+  color: #64748b;
+  padding: 4px 12px;
+  background: #f1f5f9;
+  border-radius: 20px;
+  margin-left: auto;
+}
+
+.performance-grid {
+  display: grid;
+  grid-template-columns: 2fr repeat(5, 1fr);
+  gap: 16px;
+}
+
+@media (max-width: 1400px) {
+  .performance-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 900px) {
+  .performance-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .performance-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.performance-card {
+  background: #f8fafc;
+  border: 1px solid #f1f5f9;
+  border-radius: 16px;
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.performance-card.highlight {
+  background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+  border-color: #bbf7d0;
+}
+
+.performance-card.champion {
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  border: 2px solid #fbbf24;
+  flex-direction: column;
+  align-items: stretch;
+  padding: 24px;
+  position: relative;
+  overflow: hidden;
+}
+
+.champion-crown {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  font-size: 28px;
+  color: #f59e0b;
+  opacity: 0.6;
+}
+
+.champion-content {
+  position: relative;
+}
+
+.champion-label {
+  font-size: 12px;
+  color: #92400e;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+}
+
+.champion-name {
+  font-size: 22px;
+  font-weight: 800;
+  color: #78350f;
+  line-height: 1.2;
+  margin-bottom: 12px;
+}
+
+.champion-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+.champion-stat {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #92400e;
+}
+
+.champion-share {
+  font-size: 13px;
+  color: #a16207;
+  padding: 6px 12px;
+  background: rgba(255, 255, 255, 0.5);
+  border-radius: 20px;
+  display: inline-block;
+}
+
+.perf-icon-box {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.perf-icon-box.purple {
+  background: linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%);
+  color: #7c3aed;
+}
+
+.perf-icon-box.green {
+  background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+  color: #059669;
+}
+
+.perf-icon-box.blue {
+  background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+  color: #2563eb;
+}
+
+.perf-icon-box.orange {
+  background: linear-gradient(135deg, #ffedd5 0%, #fed7aa 100%);
+  color: #ea580c;
+}
+
+.perf-icon-box.emerald {
+  background: linear-gradient(135deg, #d1fae5 0%, #6ee7b7 100%);
+  color: #059669;
+}
+
+.perf-data {
+  flex: 1;
+  min-width: 0;
+}
+
+.perf-value {
+  font-size: 22px;
+  font-weight: 700;
+  color: #0f172a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.perf-value.small {
+  font-size: 16px;
+}
+
+.perf-label {
+  font-size: 12px;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.perf-extra {
+  font-size: 14px;
+  font-weight: 600;
+  color: #059669;
+  margin-top: 4px;
+}
+
+/* Share Bar in Table */
+.share-bar {
+  position: relative;
+  height: 24px;
+  background: #f1f5f9;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.share-fill {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  background: linear-gradient(90deg, #4f46e5, #6366f1);
+  border-radius: 12px;
+  transition: width 0.5s ease;
+  min-width: 20px;
+}
+
+.share-text {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 11px;
+  font-weight: 600;
+  color: #0f172a;
+  z-index: 1;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
   .page-title {
@@ -2142,6 +2898,10 @@ const generateSparklinePath = (data: number[], width = 80, height = 28) => {
     height: 300px;
   }
 
+  .chart-container.xlarge {
+    height: 350px;
+  }
+
   .metrics-row {
     padding: 16px;
     gap: 16px;
@@ -2153,6 +2913,19 @@ const generateSparklinePath = (data: number[], width = 80, height = 28) => {
 
   .insights-grid {
     grid-template-columns: 1fr;
+  }
+
+  .comparison-value {
+    font-size: 22px;
+  }
+
+  .comparison-card.large {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .comparison-badge {
+    margin-top: 12px;
   }
 }
 </style>
