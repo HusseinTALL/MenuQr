@@ -8,6 +8,8 @@ import {
   updateOrderItems,
   getActiveOrders,
   getOrderStats,
+  getDailyOrderStats,
+  getOrderLocationStats,
 } from '../controllers/orderController.js';
 import { authenticate } from '../middleware/auth.js';
 import { hasPermission, PERMISSIONS } from '../middleware/permission.js';
@@ -248,6 +250,117 @@ router.get(
   authenticate,
   hasPermission(PERMISSIONS.ORDERS_STATS),
   getOrderStats
+);
+
+/**
+ * @swagger
+ * /orders/stats/daily:
+ *   get:
+ *     summary: Get daily order statistics
+ *     tags: [Orders]
+ *     security:
+ *       - AdminAuth: []
+ *     description: Get order count and revenue per day for the specified number of days
+ *     parameters:
+ *       - in: query
+ *         name: days
+ *         schema:
+ *           type: integer
+ *           default: 7
+ *           maximum: 90
+ *         description: Number of days to retrieve (max 90)
+ *     responses:
+ *       200:
+ *         description: Daily statistics
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       date:
+ *                         type: string
+ *                         format: date
+ *                       dayOfWeek:
+ *                         type: string
+ *                       count:
+ *                         type: integer
+ *                       revenue:
+ *                         type: number
+ *                       completedCount:
+ *                         type: integer
+ *       401:
+ *         $ref: '#/components/responses/Unauthorized'
+ */
+router.get(
+  '/stats/daily',
+  authenticate,
+  hasPermission(PERMISSIONS.ORDERS_STATS),
+  getDailyOrderStats
+);
+
+/**
+ * @swagger
+ * /orders/stats/locations:
+ *   get:
+ *     summary: Get order location distribution
+ *     tags: [Orders]
+ *     security:
+ *       - AdminAuth: []
+ *     description: Get breakdown of orders by table location (interior, terrace, private, etc.)
+ *     parameters:
+ *       - in: query
+ *         name: dateFrom
+ *         schema:
+ *           type: string
+ *           format: date
+ *       - in: query
+ *         name: dateTo
+ *         schema:
+ *           type: string
+ *           format: date
+ *     responses:
+ *       200:
+ *         description: Location distribution
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     locations:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           location:
+ *                             type: string
+ *                           count:
+ *                             type: integer
+ *                           revenue:
+ *                             type: number
+ *                           percentage:
+ *                             type: number
+ *                     total:
+ *                       type: integer
+ *       401:
+ *         $ref: '#/components/responses/Unauthorized'
+ */
+router.get(
+  '/stats/locations',
+  authenticate,
+  hasPermission(PERMISSIONS.ORDERS_STATS),
+  getOrderLocationStats
 );
 
 /**

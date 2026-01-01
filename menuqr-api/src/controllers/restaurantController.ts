@@ -11,9 +11,36 @@ export const createRestaurant = asyncHandler(async (req: Request, res: Response)
     throw new ApiError(409, 'You already have a restaurant');
   }
 
+  // Extract only allowed fields (prevent field injection)
+  const {
+    name,
+    description,
+    logo,
+    coverImage,
+    address,
+    phone,
+    email,
+    website,
+    openingHours,
+    cuisine,
+    priceRange,
+    features,
+  } = req.body;
+
   // Create restaurant
   const restaurant = new Restaurant({
-    ...req.body,
+    name,
+    description,
+    logo,
+    coverImage,
+    address,
+    phone,
+    email,
+    website,
+    openingHours,
+    cuisine,
+    priceRange,
+    features,
     ownerId: user._id,
   });
   await restaurant.save();

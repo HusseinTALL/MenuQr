@@ -7,6 +7,7 @@ import {
   getExpiringPoints,
   // Admin endpoints
   getLoyaltyStats,
+  getDailyLoyaltyStats,
   getCustomersLoyalty,
   getCustomerLoyaltyAdmin,
   getCustomerHistoryAdmin,
@@ -17,6 +18,8 @@ import {
 import { authenticateCustomer } from '../middleware/customerAuth.js';
 import { authenticate } from '../middleware/auth.js';
 import { hasPermission, PERMISSIONS } from '../middleware/permission.js';
+import { requireFeature } from '../middleware/feature.js';
+import { FEATURES } from '../config/features.js';
 import { validate } from '../middleware/validate.js';
 import {
   redeemPointsValidator,
@@ -53,11 +56,13 @@ customerLoyaltyRouter.get('/me/expiring', validate(expiringPointsQueryValidator)
 // ============================================
 export const adminLoyaltyRouter = Router();
 
-// All routes require authentication
+// All routes require authentication and LOYALTY_PROGRAM feature
 adminLoyaltyRouter.use(authenticate);
+adminLoyaltyRouter.use(requireFeature(FEATURES.LOYALTY_PROGRAM));
 
 // Read routes
 adminLoyaltyRouter.get('/stats', hasPermission(PERMISSIONS.LOYALTY_READ), getLoyaltyStats);
+adminLoyaltyRouter.get('/stats/daily', hasPermission(PERMISSIONS.LOYALTY_READ), getDailyLoyaltyStats);
 adminLoyaltyRouter.get('/customers', hasPermission(PERMISSIONS.LOYALTY_READ), validate(loyaltyCustomersQueryValidator), getCustomersLoyalty);
 adminLoyaltyRouter.get(
   '/customers/:customerId',

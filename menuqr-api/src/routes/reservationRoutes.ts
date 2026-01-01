@@ -7,6 +7,8 @@ import { Router } from 'express';
 import { authenticate } from '../middleware/auth.js';
 import { hasPermission, PERMISSIONS } from '../middleware/permission.js';
 import { authenticateCustomer, optionalCustomerAuth } from '../middleware/customerAuth.js';
+import { requireFeature } from '../middleware/feature.js';
+import { FEATURES } from '../config/features.js';
 import {
   // Customer endpoints
   getAvailableDates,
@@ -27,6 +29,7 @@ import {
   markNoShow,
   cancelReservation,
   getReservationStats,
+  getDailyReservationStats,
   getTodayReservations,
   createReservationAdmin,
 } from '../controllers/reservationController.js';
@@ -57,12 +60,14 @@ customerRouter.post('/:restaurantId', optionalCustomerAuth, createReservation);
 
 const adminRouter = Router();
 
-// All admin routes require authentication
+// All admin routes require authentication and RESERVATIONS feature
 adminRouter.use(authenticate);
+adminRouter.use(requireFeature(FEATURES.RESERVATIONS));
 
 // Quick views (read)
 adminRouter.get('/today', hasPermission(PERMISSIONS.RESERVATIONS_READ), getTodayReservations);
 adminRouter.get('/stats', hasPermission(PERMISSIONS.RESERVATIONS_STATS), getReservationStats);
+adminRouter.get('/stats/daily', hasPermission(PERMISSIONS.RESERVATIONS_STATS), getDailyReservationStats);
 
 // CRUD
 adminRouter.get('/', hasPermission(PERMISSIONS.RESERVATIONS_READ), getReservations);

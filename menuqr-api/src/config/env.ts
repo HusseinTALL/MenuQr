@@ -9,41 +9,59 @@ dotenv.config();
 const isProduction = process.env.NODE_ENV === 'production';
 const isTest = process.env.NODE_ENV === 'test';
 
-// Validate required environment variables in production
+// Validate required environment variables
+// JWT_SECRET is ALWAYS required (except in test mode) to prevent accidental use of weak defaults
 const validateEnv = (): void => {
-  const requiredInProduction = [
-    'JWT_SECRET',
-    'MONGODB_URI',
-  ];
+  // Skip validation in test mode
+  if (isTest) {
+    return;
+  }
 
+  // JWT_SECRET is required in ALL environments (dev, staging, production)
+  // This prevents accidentally running with weak/predictable secrets
+  if (!process.env.JWT_SECRET) {
+    throw new Error(
+      'FATAL: JWT_SECRET environment variable is required.\n' +
+      'Generate a secure secret with: node -e "console.log(require(\'crypto\').randomBytes(64).toString(\'hex\'))"\n' +
+      'Then set: export JWT_SECRET=<your-secret>'
+    );
+  }
+
+  const jwtSecret = process.env.JWT_SECRET;
+
+  // Validate JWT_SECRET minimum length (32 chars = 256 bits minimum)
+  if (jwtSecret.length < 32) {
+    throw new Error(
+      'FATAL: JWT_SECRET must be at least 32 characters.\n' +
+      'Generate a secure secret with: node -e "console.log(require(\'crypto\').randomBytes(64).toString(\'hex\'))"'
+    );
+  }
+
+  // Block known weak/placeholder values
+  const weakPatterns = ['default', 'secret', 'change', 'password', '12345', 'your-', 'example'];
+  const secretLower = jwtSecret.toLowerCase();
+  for (const pattern of weakPatterns) {
+    if (secretLower.includes(pattern)) {
+      throw new Error(
+        `FATAL: JWT_SECRET appears to contain a weak/placeholder value ('${pattern}').\n` +
+        'Generate a secure secret with: node -e "console.log(require(\'crypto\').randomBytes(64).toString(\'hex\'))"'
+      );
+    }
+  }
+
+  // Production-specific validations
   if (isProduction) {
-    const missing: string[] = [];
-
-    for (const key of requiredInProduction) {
-      if (!process.env[key]) {
-        missing.push(key);
-      }
-    }
-
-    if (missing.length > 0) {
+    // Stricter length requirement in production (64 chars = 512 bits)
+    if (jwtSecret.length < 64) {
       throw new Error(
-        `FATAL: Missing required environment variables in production: ${missing.join(', ')}`
+        'FATAL: JWT_SECRET must be at least 64 characters in production.\n' +
+        'Generate a secure secret with: node -e "console.log(require(\'crypto\').randomBytes(64).toString(\'hex\'))"'
       );
     }
 
-    // Validate JWT_SECRET strength in production
-    const jwtSecret = process.env.JWT_SECRET;
-    if (jwtSecret && jwtSecret.length < 32) {
-      throw new Error(
-        'FATAL: JWT_SECRET must be at least 32 characters in production'
-      );
-    }
-
-    // Warn if using default-like values
-    if (jwtSecret?.includes('default') || jwtSecret?.includes('secret') || jwtSecret?.includes('change')) {
-      throw new Error(
-        'FATAL: JWT_SECRET appears to be a default/placeholder value. Use a strong random secret in production.'
-      );
+    // MONGODB_URI is required in production
+    if (!process.env.MONGODB_URI) {
+      throw new Error('FATAL: MONGODB_URI environment variable is required in production.');
     }
   }
 };
@@ -66,8 +84,11 @@ export const config = {
   // MongoDB
   mongodbUri: process.env.MONGODB_URI || 'mongodb://menuqr:menuqr123@localhost:27017/menuqr?authSource=menuqr',
 
-  // JWT - NEVER use default in production (validated above)
-  jwtSecret: process.env.JWT_SECRET || (isProduction ? '' : 'dev-only-secret-not-for-production-use'),
+  // Redis (for live GPS tracking and caching)
+  redisUrl: process.env.REDIS_URL || '', // e.g., 'redis://localhost:6379'
+
+  // JWT - REQUIRED in all environments (validated above, test mode uses fallback)
+  jwtSecret: process.env.JWT_SECRET || (isTest ? 'test-only-jwt-secret-not-for-production' : ''),
   jwtExpiresIn: process.env.JWT_EXPIRES_IN || '15m', // Reduced from 7d to 15m for security
   jwtRefreshExpiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '7d', // Reduced from 30d to 7d
 
@@ -97,6 +118,17 @@ export const config = {
     orangeClientId: process.env.ORANGE_CLIENT_ID || '',
     orangeClientSecret: process.env.ORANGE_CLIENT_SECRET || '',
     orangeSenderId: process.env.ORANGE_SENDER_ID || 'tel:+22600000000',
+  },
+
+  // Twilio Voice (Masked Calling)
+  twilioVoice: {
+    enabled: !!process.env.TWILIO_ACCOUNT_SID && !!process.env.TWILIO_VOICE_NUMBER,
+    accountSid: process.env.TWILIO_ACCOUNT_SID || '',
+    authToken: process.env.TWILIO_AUTH_TOKEN || '',
+    voiceNumber: process.env.TWILIO_VOICE_NUMBER || '', // Dedicated number for voice calls
+    webhookBaseUrl: process.env.TWILIO_WEBHOOK_BASE_URL || '', // e.g., https://api.menuqr.fr
+    callTimeout: parseInt(process.env.TWILIO_CALL_TIMEOUT || '30', 10), // seconds
+    recordCalls: process.env.TWILIO_RECORD_CALLS === 'true',
   },
 
   // OTP Configuration
@@ -154,6 +186,28 @@ export const config = {
       notifyNewIP: process.env.LOGIN_NOTIFY_NEW_IP !== 'false',
       notifyNewLocation: process.env.LOGIN_NOTIFY_NEW_LOCATION !== 'false',
     },
+  },
+
+  // Google Maps API
+  googleMaps: {
+    apiKey: process.env.GOOGLE_MAPS_API_KEY || '',
+    enabled: !!process.env.GOOGLE_MAPS_API_KEY,
+  },
+
+  // Stripe Connect (Driver Payouts)
+  stripe: {
+    enabled: !!process.env.STRIPE_SECRET_KEY,
+    secretKey: process.env.STRIPE_SECRET_KEY || '',
+    publishableKey: process.env.STRIPE_PUBLISHABLE_KEY || '',
+    webhookSecret: process.env.STRIPE_WEBHOOK_SECRET || '',
+    // Connect settings
+    connectEnabled: !!process.env.STRIPE_SECRET_KEY,
+    platformFeePercent: parseFloat(process.env.STRIPE_PLATFORM_FEE_PERCENT || '15'), // 15% platform fee
+    minPayoutAmount: parseInt(process.env.STRIPE_MIN_PAYOUT_AMOUNT || '1000', 10), // 10 EUR minimum (in cents)
+    payoutSchedule: process.env.STRIPE_PAYOUT_SCHEDULE || 'weekly', // 'daily' | 'weekly' | 'monthly'
+    payoutDay: parseInt(process.env.STRIPE_PAYOUT_DAY || '1', 10), // Day of week (1=Monday) or month (1-28)
+    currency: process.env.STRIPE_CURRENCY || 'eur',
+    country: process.env.STRIPE_COUNTRY || 'FR',
   },
 
   // Sentry Error Tracking

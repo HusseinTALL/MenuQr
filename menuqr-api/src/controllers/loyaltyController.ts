@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import mongoose from 'mongoose';
-import { Customer } from '../models/index.js';
+import { Customer, LoyaltyTransaction } from '../models/index.js';
 import { asyncHandler, ApiError } from '../middleware/errorHandler.js';
 import * as loyaltyService from '../services/loyaltyService.js';
 import { getAuthenticatedRestaurant } from '../middleware/restaurantContext.js';
@@ -331,6 +331,106 @@ export const triggerExpirePoints = asyncHandler(
     res.json({
       success: true,
       message: `${result.customersProcessed} clients traités, ${result.totalPointsExpired} points expirés`,
+      data: result,
+    });
+  }
+);
+
+/**
+ * Get daily loyalty points statistics (for dashboard charts)
+ * @swagger
+ * /loyalty/stats/daily:
+ *   get:
+ *     summary: Get daily loyalty points statistics
+ *     tags: [Loyalty]
+ *     security:
+ *       - AdminAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: days
+ *         schema:
+ *           type: integer
+ *           default: 7
+ *           maximum: 90
+ *     responses:
+ *       200:
+ *         description: Daily loyalty points statistics
+ */
+export const getDailyLoyaltyStats = asyncHandler(
+  async (req: Request, res: Response): Promise<void> => {
+    const restaurant = await getAuthenticatedRestaurant(req);
+    if (!restaurant) {
+      throw new ApiError(404, 'Restaurant not found or access denied');
+    }
+
+    const { days = 7 } = req.query;
+    const numDays = Math.min(Math.max(1, Number(days)), 90);
+
+    // Calculate date range
+    const endDate = new Date();
+    endDate.setHours(23, 59, 59, 999);
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - numDays + 1);
+    startDate.setHours(0, 0, 0, 0);
+
+    // Get all customers for this restaurant
+    const customers = await Customer.find({ restaurantId: restaurant._id }).select('_id');
+    const customerIds = customers.map((c) => c._id);
+
+    // Aggregate loyalty transactions by day
+    const dailyStats = await LoyaltyTransaction.aggregate([
+      {
+        $match: {
+          customerId: { $in: customerIds },
+          createdAt: { $gte: startDate, $lte: endDate },
+        },
+      },
+      {
+        $group: {
+          _id: {
+            $dateToString: { format: '%Y-%m-%d', date: '$createdAt' },
+          },
+          pointsIssued: {
+            $sum: { $cond: [{ $eq: ['$type', 'earned'] }, '$points', 0] },
+          },
+          pointsRedeemed: {
+            $sum: { $cond: [{ $eq: ['$type', 'redeemed'] }, '$points', 0] },
+          },
+          pointsExpired: {
+            $sum: { $cond: [{ $eq: ['$type', 'expired'] }, '$points', 0] },
+          },
+          bonusPoints: {
+            $sum: { $cond: [{ $eq: ['$type', 'bonus'] }, '$points', 0] },
+          },
+          transactionCount: { $sum: 1 },
+        },
+      },
+      { $sort: { _id: 1 } },
+    ]);
+
+    // Create a map for quick lookup
+    const statsMap = new Map(dailyStats.map((s) => [s._id, s]));
+
+    // Fill in missing days
+    const result = [];
+    const current = new Date(startDate);
+    while (current <= endDate) {
+      const dateStr = current.toISOString().split('T')[0];
+      const dayStats = statsMap.get(dateStr);
+      result.push({
+        date: dateStr,
+        dayOfWeek: current.toLocaleDateString('fr-FR', { weekday: 'short' }),
+        pointsIssued: dayStats?.pointsIssued || 0,
+        pointsRedeemed: dayStats?.pointsRedeemed || 0,
+        pointsExpired: dayStats?.pointsExpired || 0,
+        bonusPoints: dayStats?.bonusPoints || 0,
+        transactionCount: dayStats?.transactionCount || 0,
+      });
+      current.setDate(current.getDate() + 1);
+    }
+
+    res.json({
+      success: true,
       data: result,
     });
   }

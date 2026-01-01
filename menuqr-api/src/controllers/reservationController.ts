@@ -197,8 +197,10 @@ export const getMyReservations = asyncHandler(
 
     res.json({
       success: true,
-      data: result.reservations,
-      pagination: result.pagination,
+      data: {
+        reservations: result.reservations,
+        pagination: result.pagination,
+      },
     });
   }
 );
@@ -327,8 +329,10 @@ export const getReservations = asyncHandler(
 
     res.json({
       success: true,
-      data: result.reservations,
-      pagination: result.pagination,
+      data: {
+        reservations: result.reservations,
+        pagination: result.pagination,
+      },
     });
   }
 );
@@ -792,6 +796,101 @@ export const createReservationAdmin = asyncHandler(
       success: true,
       message: 'Réservation créée avec succès',
       data: reservation,
+    });
+  }
+);
+
+/**
+ * Get daily reservation statistics (for dashboard charts)
+ * @swagger
+ * /reservations/admin/stats/daily:
+ *   get:
+ *     summary: Get daily reservation statistics
+ *     tags: [Reservations]
+ *     security:
+ *       - AdminAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: days
+ *         schema:
+ *           type: integer
+ *           default: 7
+ *           maximum: 90
+ *     responses:
+ *       200:
+ *         description: Daily reservation statistics
+ */
+export const getDailyReservationStats = asyncHandler(
+  async (req: Request, res: Response): Promise<void> => {
+    const user = req.user!;
+    const { days = 7 } = req.query;
+    const numDays = Math.min(Math.max(1, Number(days)), 90);
+
+    const restaurant = await Restaurant.findOne({ ownerId: user._id });
+    if (!restaurant) {
+      throw new ApiError(404, 'Restaurant non trouvé');
+    }
+
+    // Calculate date range
+    const endDate = new Date();
+    endDate.setHours(23, 59, 59, 999);
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - numDays + 1);
+    startDate.setHours(0, 0, 0, 0);
+
+    // Aggregate reservations by day
+    const dailyStats = await Reservation.aggregate([
+      {
+        $match: {
+          restaurantId: restaurant._id,
+          reservationDate: { $gte: startDate, $lte: endDate },
+        },
+      },
+      {
+        $group: {
+          _id: {
+            $dateToString: { format: '%Y-%m-%d', date: '$reservationDate' },
+          },
+          count: { $sum: 1 },
+          confirmed: {
+            $sum: { $cond: [{ $in: ['$status', ['confirmed', 'arrived', 'seated', 'completed']] }, 1, 0] },
+          },
+          cancelled: {
+            $sum: { $cond: [{ $eq: ['$status', 'cancelled'] }, 1, 0] },
+          },
+          noShow: {
+            $sum: { $cond: [{ $eq: ['$status', 'no_show'] }, 1, 0] },
+          },
+          totalGuests: { $sum: '$partySize' },
+        },
+      },
+      { $sort: { _id: 1 } },
+    ]);
+
+    // Create a map for quick lookup
+    const statsMap = new Map(dailyStats.map((s) => [s._id, s]));
+
+    // Fill in missing days
+    const result = [];
+    const current = new Date(startDate);
+    while (current <= endDate) {
+      const dateStr = current.toISOString().split('T')[0];
+      const dayStats = statsMap.get(dateStr);
+      result.push({
+        date: dateStr,
+        dayOfWeek: current.toLocaleDateString('fr-FR', { weekday: 'short' }),
+        count: dayStats?.count || 0,
+        confirmed: dayStats?.confirmed || 0,
+        cancelled: dayStats?.cancelled || 0,
+        noShow: dayStats?.noShow || 0,
+        totalGuests: dayStats?.totalGuests || 0,
+      });
+      current.setDate(current.getDate() + 1);
+    }
+
+    res.json({
+      success: true,
+      data: result,
     });
   }
 );

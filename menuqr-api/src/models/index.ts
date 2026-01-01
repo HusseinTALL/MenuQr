@@ -21,6 +21,9 @@ export {
   type IOrderItem,
   type OrderStatus,
   type PaymentStatus,
+  type FulfillmentType,
+  type DeliveryTrackingStatus,
+  type IDeliveryAddress,
 } from './Order.js';
 export { Customer, type ICustomer, type IAddress } from './Customer.js';
 export { OTP, type IOTP, type IOTPModel } from './OTP.js';
@@ -139,3 +142,89 @@ export {
   type BackupType,
   type BackupStatus,
 } from './Backup.js';
+
+// Delivery System Models
+export {
+  DeliveryDriver,
+  type IDeliveryDriver,
+  type IDriverDocument,
+  type IDriverStats,
+  type VehicleType,
+  type DriverStatus,
+  type ShiftStatus,
+} from './DeliveryDriver.js';
+export {
+  Delivery,
+  type IDelivery,
+  type DeliveryStatus,
+  type IProofOfDelivery,
+  type IChatMessage,
+  type IDeliveryEarnings,
+  type IDeliveryIssue,
+  type PODType,
+  type DeliveryIssueType,
+} from './Delivery.js';
+export {
+  DriverShift,
+  type IDriverShift,
+  type IBreakPeriod,
+  type IShiftLocation,
+  type IShiftStats,
+  type ShiftEndReason,
+} from './DriverShift.js';
+export {
+  DriverPayout,
+  type IDriverPayout,
+  type IPayoutBreakdown,
+  type IPayoutDelivery,
+  type IPayoutAdjustment,
+  type PayoutStatus,
+  type PayoutMethod,
+  type PayoutType,
+} from './DriverPayout.js';
+
+// Hotel System Models
+export {
+  Hotel,
+  type IHotel,
+  type IHotelSettings,
+  type IRoomServiceSettings,
+  type IGuestAuthSettings,
+} from './Hotel.js';
+export {
+  Room,
+  type IRoom,
+  type RoomStatus,
+  type IDeliveryPreferences,
+} from './Room.js';
+export {
+  HotelGuest,
+  type IHotelGuest,
+} from './HotelGuest.js';
+export {
+  HotelMenu,
+  type IHotelMenu,
+  type HotelMenuType,
+  type MenuSourceType,
+  type IPricingRules,
+} from './HotelMenu.js';
+export {
+  HotelCategory,
+  type IHotelCategory,
+} from './HotelCategory.js';
+export {
+  HotelDish,
+  type IHotelDish,
+  type IHotelDishOption,
+  type IHotelDishVariant,
+} from './HotelDish.js';
+export {
+  HotelOrder,
+  type IHotelOrder,
+  type IHotelOrderItem,
+  type IStaffAssignment,
+  type IDeliveryInfo,
+  type HotelOrderStatus,
+  type PaymentStatus as HotelPaymentStatus,
+  type PaymentMethod as HotelPaymentMethod,
+} from './HotelOrder.js';

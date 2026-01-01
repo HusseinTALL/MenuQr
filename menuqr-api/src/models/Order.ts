@@ -30,6 +30,18 @@ export type PaymentStatus = 'pending' | 'paid' | 'refunded' | 'failed';
 
 export type FulfillmentType = 'dine-in' | 'pickup' | 'delivery';
 
+// Delivery tracking status (denormalized from Delivery model for quick access)
+export type DeliveryTrackingStatus =
+  | 'pending'           // Waiting for driver assignment
+  | 'assigned'          // Driver assigned
+  | 'accepted'          // Driver accepted
+  | 'picked_up'         // Order picked up by driver
+  | 'in_transit'        // On the way to customer
+  | 'arrived'           // Driver arrived at customer location
+  | 'delivered'         // Successfully delivered
+  | 'failed'            // Delivery failed
+  | 'cancelled';        // Delivery cancelled
+
 export interface IDeliveryAddress {
   street: string;
   city: string;
@@ -84,6 +96,21 @@ export interface IOrder extends Document {
     pointsEarned: number;
     finalTotal: number;
   };
+
+  // Delivery Tracking (for fulfillmentType: 'delivery')
+  deliveryId?: mongoose.Types.ObjectId;
+  deliveryStatus?: DeliveryTrackingStatus;
+  driverInfo?: {
+    driverId: mongoose.Types.ObjectId;
+    name: string;
+    phone: string;
+    photo?: string;
+    vehicleType: string;
+    rating: number;
+  };
+  estimatedDeliveryTime?: Date;
+  actualDeliveryTime?: Date;
+  deliveryInstructions?: string;
 
   createdAt: Date;
   updatedAt: Date;
@@ -255,6 +282,30 @@ const orderSchema = new Schema<IOrder>(
         min: 0,
       },
     },
+
+    // Delivery Tracking (for fulfillmentType: 'delivery')
+    deliveryId: {
+      type: Schema.Types.ObjectId,
+      ref: 'Delivery',
+    },
+    deliveryStatus: {
+      type: String,
+      enum: ['pending', 'assigned', 'accepted', 'picked_up', 'in_transit', 'arrived', 'delivered', 'failed', 'cancelled'],
+    },
+    driverInfo: {
+      driverId: { type: Schema.Types.ObjectId, ref: 'DeliveryDriver' },
+      name: { type: String },
+      phone: { type: String },
+      photo: { type: String },
+      vehicleType: { type: String },
+      rating: { type: Number },
+    },
+    estimatedDeliveryTime: { type: Date },
+    actualDeliveryTime: { type: Date },
+    deliveryInstructions: {
+      type: String,
+      maxlength: [500, 'Delivery instructions cannot exceed 500 characters'],
+    },
   },
   {
     timestamps: true,
@@ -285,6 +336,10 @@ orderSchema.index({ restaurantId: 1, tableNumber: 1 });
 orderSchema.index({ customerId: 1, createdAt: -1 }); // For customer order history
 orderSchema.index({ createdAt: -1 });
 orderSchema.index({ restaurantId: 1, isScheduled: 1, scheduledFor: 1 }); // For scheduled orders
+// Delivery indexes
+orderSchema.index({ restaurantId: 1, fulfillmentType: 1, deliveryStatus: 1 }); // For delivery orders
+orderSchema.index({ deliveryId: 1 }); // For delivery lookup
+orderSchema.index({ 'driverInfo.driverId': 1, deliveryStatus: 1 }); // For driver's active deliveries
 
 export const Order = mongoose.model<IOrder>('Order', orderSchema);
 export default Order;

@@ -28,12 +28,13 @@ interface OrderEventData {
 }
 
 interface NotificationEventData {
-  id: string;
-  type: 'order' | 'reservation' | 'review' | 'system';
+  id?: string;
+  type: 'order' | 'reservation' | 'review' | 'system' | 'delivery' | string;
   title: string;
   message: string;
   link?: string;
-  createdAt: Date;
+  data?: Record<string, unknown>;
+  createdAt?: Date;
 }
 
 interface ReservationEventData {
@@ -132,6 +133,35 @@ export function initializeSocket(httpServer: HttpServer): Server {
       }
     });
 
+    // Handle joining delivery tracking room (for customers tracking their delivery)
+    socket.on('join:delivery', (deliveryId: string) => {
+      socket.join(`delivery:${deliveryId}`);
+      logger.debug('Socket joined delivery tracking room', { deliveryId });
+    });
+
+    // Handle driver location updates
+    socket.on('driver:location:update', async (data: {
+      lat: number;
+      lng: number;
+      heading?: number;
+      speed?: number;
+      accuracy?: number;
+    }) => {
+      if (socket.userId && socket.userRole === 'driver') {
+        // Import dynamically to avoid circular dependency
+        const { updateDriverLocation } = await import('./liveLocationService.js');
+        await updateDriverLocation({
+          driverId: socket.userId,
+          lat: data.lat,
+          lng: data.lng,
+          heading: data.heading,
+          speed: data.speed,
+          accuracy: data.accuracy,
+          timestamp: Date.now(),
+        });
+      }
+    });
+
     // Handle leaving rooms
     socket.on('leave:restaurant', (restaurantId: string) => {
       socket.leave(`restaurant:${restaurantId}:public`);
@@ -139,6 +169,104 @@ export function initializeSocket(httpServer: HttpServer): Server {
 
     socket.on('leave:order', (orderId: string) => {
       socket.leave(`order:${orderId}`);
+    });
+
+    socket.on('leave:delivery', (deliveryId: string) => {
+      socket.leave(`delivery:${deliveryId}`);
+    });
+
+    // Handle joining chat room for delivery
+    socket.on('join:chat', (deliveryId: string) => {
+      socket.join(`chat:${deliveryId}`);
+      logger.debug('Socket joined chat room', { deliveryId, userId: socket.userId });
+    });
+
+    socket.on('leave:chat', (deliveryId: string) => {
+      socket.leave(`chat:${deliveryId}`);
+    });
+
+    // Handle real-time chat messages
+    socket.on('chat:send', async (data: {
+      deliveryId: string;
+      orderId: string;
+      recipientType: 'driver' | 'customer' | 'restaurant' | 'all';
+      content: string;
+      messageType?: 'text' | 'image' | 'location';
+      imageUrl?: string;
+      location?: { lat: number; lng: number };
+    }) => {
+      if (!socket.userId) {
+        socket.emit('chat:error', { message: 'Not authenticated' });
+        return;
+      }
+
+      try {
+        // Import dynamically to avoid circular dependency
+        const chatService = await import('./chatService.js');
+
+        // Determine sender type from socket role
+        let senderType: 'driver' | 'customer' | 'restaurant' = 'customer';
+        if (socket.userRole === 'driver') {
+          senderType = 'driver';
+        } else if (socket.userRole === 'owner' || socket.userRole === 'admin' || socket.userRole === 'staff') {
+          senderType = 'restaurant';
+        }
+
+        await chatService.sendMessage({
+          deliveryId: data.deliveryId,
+          orderId: data.orderId,
+          senderType,
+          senderId: socket.userId,
+          senderName: 'User', // Will be enriched by the service
+          recipientType: data.recipientType,
+          messageType: data.messageType || 'text',
+          content: data.content,
+          imageUrl: data.imageUrl,
+          location: data.location,
+        });
+      } catch (error) {
+        logger.error('Failed to send chat message via socket:', error);
+        socket.emit('chat:error', { message: 'Failed to send message' });
+      }
+    });
+
+    // Handle typing indicator
+    socket.on('chat:typing', (data: { deliveryId: string; isTyping: boolean }) => {
+      if (!socket.userId) {return;}
+
+      let senderType = 'customer';
+      if (socket.userRole === 'driver') {
+        senderType = 'driver';
+      } else if (socket.userRole === 'owner' || socket.userRole === 'admin') {
+        senderType = 'restaurant';
+      }
+
+      socket.to(`chat:${data.deliveryId}`).emit('chat:typing', {
+        deliveryId: data.deliveryId,
+        userId: socket.userId,
+        userType: senderType,
+        isTyping: data.isTyping,
+      });
+    });
+
+    // Handle message read acknowledgment
+    socket.on('chat:read', async (data: { deliveryId: string }) => {
+      if (!socket.userId) {return;}
+
+      try {
+        const chatService = await import('./chatService.js');
+
+        let readerType: 'driver' | 'customer' | 'restaurant' = 'customer';
+        if (socket.userRole === 'driver') {
+          readerType = 'driver';
+        } else if (socket.userRole === 'owner' || socket.userRole === 'admin') {
+          readerType = 'restaurant';
+        }
+
+        await chatService.markMessagesAsRead(data.deliveryId, readerType, socket.userId);
+      } catch (error) {
+        logger.error('Failed to mark messages as read:', error);
+      }
     });
 
     // Handle order acknowledgement from KDS
@@ -343,6 +471,75 @@ export function getRestaurantClientsCount(restaurantId: string): number {
   return (adminRoom?.size || 0) + (publicRoom?.size || 0);
 }
 
+// ===========================================
+// Delivery Event Emitters
+// ===========================================
+
+/**
+ * Emit delivery status update
+ */
+export function emitDeliveryStatusUpdate(deliveryId: string, data: {
+  status: string;
+  driverName?: string;
+  eta?: number;
+  updatedAt: Date;
+}): void {
+  if (!io) {return;}
+
+  io.to(`delivery:${deliveryId}`).emit('delivery:status', data);
+  logger.debug('Emitted delivery status update', { deliveryId, status: data.status });
+}
+
+/**
+ * Emit delivery assignment to driver
+ */
+export function emitDeliveryAssignment(driverId: string, deliveryData: {
+  deliveryId: string;
+  orderId: string;
+  pickupAddress: { street: string; city: string };
+  deliveryAddress: { street: string; city: string };
+  estimatedEarnings: number;
+  restaurantName: string;
+}): void {
+  if (!io) {return;}
+
+  io.to(`user:${driverId}`).emit('delivery:assigned', deliveryData);
+  logger.debug('Emitted delivery assignment', { driverId, deliveryId: deliveryData.deliveryId });
+}
+
+/**
+ * Emit driver location update to delivery subscribers
+ */
+export function emitDriverLocation(deliveryId: string, location: {
+  lat: number;
+  lng: number;
+  heading?: number;
+  speed?: number;
+  eta?: number;
+}): void {
+  if (!io) {return;}
+
+  io.to(`delivery:${deliveryId}`).emit('driver:location', {
+    deliveryId,
+    location,
+    timestamp: Date.now(),
+  });
+}
+
+/**
+ * Emit delivery completed event
+ */
+export function emitDeliveryCompleted(deliveryId: string, data: {
+  orderId: string;
+  completedAt: Date;
+  podType?: string;
+}): void {
+  if (!io) {return;}
+
+  io.to(`delivery:${deliveryId}`).emit('delivery:completed', data);
+  logger.debug('Emitted delivery completed', { deliveryId });
+}
+
 export default {
   initializeSocket,
   getIO,
@@ -356,4 +553,8 @@ export default {
   emitNewReview,
   emitMenuUpdate,
   getRestaurantClientsCount,
+  emitDeliveryStatusUpdate,
+  emitDeliveryAssignment,
+  emitDriverLocation,
+  emitDeliveryCompleted,
 };

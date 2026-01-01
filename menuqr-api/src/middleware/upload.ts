@@ -10,7 +10,7 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-// Cloudinary storage configuration
+// Cloudinary storage configuration with WebP optimization
 const storage = new CloudinaryStorage({
   cloudinary: cloudinary,
   params: async (_req: Request, file: Express.Multer.File) => {
@@ -22,10 +22,11 @@ const storage = new CloudinaryStorage({
       folder: 'menuqr/dishes',
       public_id: `${originalName}-${timestamp}`,
       allowed_formats: ['jpg', 'jpeg', 'png', 'webp'],
+      format: 'webp', // Force WebP format for storage optimization
       transformation: [
         { width: 800, height: 600, crop: 'limit' }, // Max dimensions
         { quality: 'auto:good' }, // Auto quality optimization
-        { fetch_format: 'auto' }, // Auto format (webp if supported)
+        { fetch_format: 'webp' }, // Serve as WebP
       ],
     };
   },

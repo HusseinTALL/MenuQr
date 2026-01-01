@@ -50,6 +50,35 @@ interface RequestOptions {
   method?: string;
   body?: unknown;
   headers?: Record<string, string>;
+  auth?: 'admin' | 'customer' | 'driver' | 'none';
+}
+
+// Staff types
+export interface StaffMember {
+  id: string;
+  email: string;
+  name: string;
+  role: string;
+  roleDisplayName: string;
+  isActive: boolean;
+  lastLogin?: string;
+  twoFactorEnabled: boolean;
+  createdAt: string;
+  customPermissions?: string[];
+}
+
+export interface CreateStaffData {
+  email: string;
+  name: string;
+  role: string;
+  customPermissions?: string[];
+}
+
+export interface UpdateStaffData {
+  name?: string;
+  role?: string;
+  isActive?: boolean;
+  customPermissions?: string[];
 }
 
 // Staff types
@@ -174,6 +203,13 @@ class ApiService {
     return null;
   }
 
+  /**
+   * Get driver access token from localStorage
+   */
+  private getDriverToken(): string | null {
+    return localStorage.getItem('driver_token');
+  }
+
   // Legacy methods kept for backward compatibility - they do nothing now
   // Token is always read from localStorage directly
   setToken(_token: string | null): void {
@@ -185,29 +221,41 @@ class ApiService {
   }
 
   private async request<T>(endpoint: string, options: RequestOptions = {}, useCustomerToken = false): Promise<ApiResponse<T>> {
-    const { method = 'GET', body, headers = {} } = options;
+    const { method = 'GET', body, headers = {}, auth } = options;
 
     const requestHeaders: Record<string, string> = {
       'Content-Type': 'application/json',
       ...headers,
     };
 
-    // Always read token fresh from localStorage to avoid cache sync issues
-    let token = useCustomerToken ? this.getCustomerToken() : this.getAccessToken();
+    // Determine auth type - support both legacy parameter and new auth option
+    const authType = auth || (useCustomerToken ? 'customer' : 'admin');
 
-    // Proactive token refresh: if token is about to expire, refresh it before making the request
-    if (token && isTokenExpiringSoon(token)) {
-      const refreshed = useCustomerToken
-        ? await this.refreshCustomerToken()
-        : await this.refreshToken();
-      if (refreshed) {
-        // Get the new token after refresh
-        token = useCustomerToken ? this.getCustomerToken() : this.getAccessToken();
+    // Skip auth for 'none'
+    if (authType !== 'none') {
+      // Get token based on auth type
+      let token: string | null = null;
+      if (authType === 'driver') {
+        token = this.getDriverToken();
+      } else if (authType === 'customer') {
+        token = this.getCustomerToken();
+      } else {
+        token = this.getAccessToken();
       }
-    }
 
-    if (token) {
-      requestHeaders['Authorization'] = `Bearer ${token}`;
+      // Proactive token refresh for non-driver tokens
+      if (token && authType !== 'driver' && isTokenExpiringSoon(token)) {
+        const refreshed = authType === 'customer'
+          ? await this.refreshCustomerToken()
+          : await this.refreshToken();
+        if (refreshed) {
+          token = authType === 'customer' ? this.getCustomerToken() : this.getAccessToken();
+        }
+      }
+
+      if (token) {
+        requestHeaders['Authorization'] = `Bearer ${token}`;
+      }
     }
 
     try {
@@ -570,6 +618,32 @@ class ApiService {
       };
       statusCounts: Record<string, number>;
     }>(`/orders/stats${queryString ? `?${queryString}` : ''}`);
+  }
+
+  async getDailyOrderStats(days: number = 7) {
+    return this.request<Array<{
+      date: string;
+      dayOfWeek: string;
+      count: number;
+      revenue: number;
+      completedCount: number;
+    }>>(`/orders/stats/daily?days=${days}`);
+  }
+
+  async getOrderLocationStats(params?: { dateFrom?: string; dateTo?: string }) {
+    const query = new URLSearchParams();
+    if (params?.dateFrom) {query.set('dateFrom', params.dateFrom);}
+    if (params?.dateTo) {query.set('dateTo', params.dateTo);}
+    const queryString = query.toString();
+    return this.request<{
+      locations: Array<{
+        location: string;
+        count: number;
+        revenue: number;
+        percentage: number;
+      }>;
+      total: number;
+    }>(`/orders/stats/locations${queryString ? `?${queryString}` : ''}`);
   }
 
   async updateOrderStatus(id: string, status: string, cancelReason?: string) {
@@ -1011,6 +1085,18 @@ class ApiService {
     return this.request<LoyaltyStats>('/loyalty/stats');
   }
 
+  async getDailyLoyaltyStats(days: number = 7) {
+    return this.request<Array<{
+      date: string;
+      dayOfWeek: string;
+      pointsIssued: number;
+      pointsRedeemed: number;
+      pointsExpired: number;
+      bonusPoints: number;
+      transactionCount: number;
+    }>>(`/loyalty/stats/daily?days=${days}`);
+  }
+
   async getLoyaltyCustomers(params?: {
     page?: number;
     limit?: number;
@@ -1171,6 +1257,18 @@ class ApiService {
     if (params?.dateTo) {query.set('dateTo', params.dateTo);}
     const queryString = query.toString();
     return this.request<ReservationStats>(`/reservations/stats${queryString ? `?${queryString}` : ''}`);
+  }
+
+  async getDailyReservationStats(days: number = 7) {
+    return this.request<Array<{
+      date: string;
+      dayOfWeek: string;
+      count: number;
+      confirmed: number;
+      cancelled: number;
+      noShow: number;
+      totalGuests: number;
+    }>>(`/reservations/stats/daily?days=${days}`);
   }
 
   async getReservation(id: string) {
@@ -1457,6 +1555,29 @@ class ApiService {
 
   async getAdminReviewStats() {
     return this.request<AdminReviewStats>('/admin/reviews/stats');
+  }
+
+  async getReviewDistribution() {
+    return this.request<{
+      distribution: Array<{
+        rating: number;
+        count: number;
+        percentage: number;
+      }>;
+      total: number;
+    }>('/admin/reviews/stats/distribution');
+  }
+
+  async getReviewTrend(params?: { period?: 'day' | 'week' | 'month'; months?: number }) {
+    const query = new URLSearchParams();
+    if (params?.period) {query.set('period', params.period);}
+    if (params?.months) {query.set('months', String(params.months));}
+    const queryString = query.toString();
+    return this.request<Array<{
+      label: string;
+      avgRating: number;
+      count: number;
+    }>>(`/admin/reviews/stats/trend${queryString ? `?${queryString}` : ''}`);
   }
 
   async approveReview(id: string) {
@@ -1925,6 +2046,456 @@ class ApiService {
   }
 
   /**
+   * Download a file as Blob (for CSV, PDF exports)
+   */
+  async downloadBlob(endpoint: string, params?: Record<string, string | number | boolean | undefined>): Promise<Blob> {
+    let url = endpoint;
+    if (params) {
+      const query = new URLSearchParams();
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined) {
+          query.set(key, String(value));
+        }
+      });
+      const queryString = query.toString();
+      if (queryString) {
+        url = `${endpoint}?${queryString}`;
+      }
+    }
+
+    const token = this.getAccessToken();
+    const headers: Record<string, string> = {};
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    const response = await fetch(`${this.baseUrl}${url}`, {
+      method: 'GET',
+      headers,
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ message: 'Download failed' }));
+      throw new ApiError(errorData.message || 'Download failed', response.status);
+    }
+
+    return response.blob();
+  }
+
+  // ==================== DRIVER ENDPOINTS ====================
+
+  /**
+   * Driver login
+   */
+  async driverLogin(data: { email: string; password: string }) {
+    return this.request<{ token: string; driver: unknown }>('/drivers/login', {
+      method: 'POST',
+      body: data,
+      auth: 'none',
+    });
+  }
+
+  /**
+   * Get driver profile
+   */
+  async getDriverProfile() {
+    return this.request<unknown>('/driver/profile', {
+      auth: 'driver',
+    });
+  }
+
+  /**
+   * Go online (start accepting deliveries)
+   */
+  async driverGoOnline(location?: { lat: number; lng: number }) {
+    return this.request<unknown>('/driver/go-online', {
+      method: 'POST',
+      body: location ? { location } : {},
+      auth: 'driver',
+    });
+  }
+
+  /**
+   * Go offline (stop accepting deliveries)
+   */
+  async driverGoOffline() {
+    return this.request<unknown>('/driver/go-offline', {
+      method: 'POST',
+      auth: 'driver',
+    });
+  }
+
+  /**
+   * Update driver location
+   */
+  async updateDriverLocation(location: { lat: number; lng: number }) {
+    return this.request<unknown>('/driver/update-location', {
+      method: 'POST',
+      body: location,
+      auth: 'driver',
+    });
+  }
+
+  /**
+   * Get active delivery for driver
+   */
+  async getActiveDelivery() {
+    return this.request<unknown>('/driver/deliveries/active', {
+      auth: 'driver',
+    });
+  }
+
+  /**
+   * Get driver deliveries history
+   */
+  async getDriverDeliveries(params?: { page?: number; limit?: number; status?: string }) {
+    const queryString = params ? new URLSearchParams(params as Record<string, string>).toString() : '';
+    return this.request<unknown>(`/driver/deliveries${queryString ? '?' + queryString : ''}`, {
+      auth: 'driver',
+    });
+  }
+
+  /**
+   * Accept delivery assignment
+   */
+  async acceptDelivery(deliveryId: string) {
+    return this.request<unknown>(`/deliveries/${deliveryId}/accept`, {
+      method: 'POST',
+      auth: 'driver',
+    });
+  }
+
+  /**
+   * Reject delivery assignment
+   */
+  async rejectDelivery(deliveryId: string, reason?: string) {
+    return this.request<unknown>(`/deliveries/${deliveryId}/reject`, {
+      method: 'POST',
+      body: { reason },
+      auth: 'driver',
+    });
+  }
+
+  /**
+   * Update delivery status
+   */
+  async updateDeliveryStatus(deliveryId: string, status: string, data?: Record<string, unknown>) {
+    return this.request<unknown>(`/deliveries/${deliveryId}/status`, {
+      method: 'PUT',
+      body: { status, ...data },
+      auth: 'driver',
+    });
+  }
+
+  /**
+   * Complete delivery with POD
+   */
+  async completeDeliveryWithPOD(deliveryId: string, podData: {
+    photoUrl?: string;
+    signatureUrl?: string;
+    otpCode?: string;
+    deliveryNotes?: string;
+    gpsCoordinates?: { lat: number; lng: number };
+  }) {
+    return this.request<unknown>(`/deliveries/${deliveryId}/complete`, {
+      method: 'POST',
+      body: podData,
+      auth: 'driver',
+    });
+  }
+
+  /**
+   * Get delivery ETA (public - for customer tracking)
+   */
+  async getDeliveryETA(deliveryId: string) {
+    return this.request<{
+      deliveryId: string;
+      status: string;
+      etaType: 'to_restaurant' | 'to_customer';
+      eta: string;
+      durationMinutes: number;
+      distanceKm: number;
+      trafficCondition: 'light' | 'moderate' | 'heavy' | 'unknown';
+      driverLocation: { lat: number; lng: number; updatedAt: string };
+      destination: { lat: number; lng: number; type: string };
+      route?: { polyline: string; distanceKm: number; durationMinutes: number };
+      mapsApiEnabled: boolean;
+    }>(`/deliveries/${deliveryId}/eta`, {
+      auth: 'none',
+    });
+  }
+
+  /**
+   * Get delivery route with polyline (public - for customer tracking)
+   */
+  async getDeliveryRoute(deliveryId: string) {
+    return this.request<{
+      deliveryId: string;
+      status: string;
+      driverLocation: { lat: number; lng: number };
+      restaurant: { coordinates: { lat: number; lng: number }; address: string };
+      customer: { coordinates: { lat: number; lng: number }; address: string; instructions?: string };
+      eta: {
+        toRestaurant: { eta: string; durationMinutes: number; distanceKm: number };
+        toCustomer: { eta: string; durationMinutes: number; distanceKm: number };
+        total: { eta: string; minutes: number };
+      };
+      routes: {
+        toRestaurant?: { polyline: string; distanceKm: number; durationMinutes: number };
+        toCustomer?: { polyline: string; distanceKm: number; durationMinutes: number };
+      };
+      mapsApiEnabled: boolean;
+    }>(`/deliveries/${deliveryId}/route`, {
+      auth: 'none',
+    });
+  }
+
+  /**
+   * Track delivery by tracking code (public)
+   */
+  async trackDelivery(trackingCode: string) {
+    return this.request<unknown>(`/deliveries/track/${trackingCode}`, {
+      auth: 'none',
+    });
+  }
+
+  /**
+   * Add tip to a completed delivery (public - for customers)
+   */
+  async addDeliveryTip(deliveryId: string, amount: number, tipMessage?: string) {
+    return this.request<{ tipAmount: number; deliveryId: string }>(`/deliveries/${deliveryId}/tip`, {
+      method: 'POST',
+      body: { amount, message: tipMessage },
+      auth: 'none',
+    });
+  }
+
+  /**
+   * Rate a completed delivery (public - for customers)
+   */
+  async rateDelivery(deliveryId: string, rating: number, comment?: string) {
+    return this.request<{ rating: number; deliveryId: string }>(`/deliveries/${deliveryId}/rate`, {
+      method: 'POST',
+      body: { rating, comment },
+      auth: 'none',
+    });
+  }
+
+  /**
+   * Get driver earnings
+   */
+  async getDriverEarnings(params?: { startDate?: string; endDate?: string }) {
+    const queryString = params ? new URLSearchParams(params as Record<string, string>).toString() : '';
+    return this.request<unknown>(`/driver/earnings${queryString ? '?' + queryString : ''}`, {
+      auth: 'driver',
+    });
+  }
+
+  /**
+   * Get driver earnings summary
+   */
+  async getDriverEarningsSummary() {
+    return this.request<unknown>('/driver/earnings', {
+      auth: 'driver',
+    });
+  }
+
+  /**
+   * Get specific delivery details for driver
+   */
+  async getDriverDeliveryDetail(deliveryId: string) {
+    return this.request<unknown>(`/driver/deliveries/${deliveryId}`, {
+      auth: 'driver',
+    });
+  }
+
+  /**
+   * Verify delivery OTP
+   */
+  async verifyDeliveryOTP(deliveryId: string, otp: string) {
+    return this.request<unknown>(`/driver/deliveries/${deliveryId}/verify-otp`, {
+      method: 'POST',
+      body: { otp },
+      auth: 'driver',
+    });
+  }
+
+  /**
+   * Complete delivery without POD
+   */
+  async completeDeliverySimple(deliveryId: string, type: string = 'customer_confirm') {
+    return this.request<unknown>(`/driver/deliveries/${deliveryId}/complete`, {
+      method: 'POST',
+      body: { type },
+      auth: 'driver',
+    });
+  }
+
+  /**
+   * Update driver profile
+   */
+  async updateDriverProfile(data: Record<string, unknown>) {
+    return this.request<unknown>('/driver/profile', {
+      method: 'PUT',
+      body: data,
+      auth: 'driver',
+    });
+  }
+
+  /**
+   * Update driver notification preferences
+   */
+  async updateDriverNotifications(preferences: Record<string, boolean>) {
+    return this.request<unknown>('/driver/notifications', {
+      method: 'PUT',
+      body: { notificationPreferences: preferences },
+      auth: 'driver',
+    });
+  }
+
+  // ============================================
+  // Admin Driver Management API Methods
+  // ============================================
+
+  /**
+   * Get all drivers (admin)
+   */
+  async getDrivers(params?: { page?: number; limit?: number; search?: string; status?: string; vehicleType?: string }) {
+    const queryString = params ? new URLSearchParams(params as Record<string, string>).toString() : '';
+    return this.request<{ drivers: unknown[]; total: number; page: number; pages: number }>(
+      `/drivers${queryString ? '?' + queryString : ''}`,
+      { auth: 'admin' }
+    );
+  }
+
+  /**
+   * Verify driver (admin)
+   */
+  async verifyDriver(driverId: string) {
+    return this.request<unknown>(`/drivers/${driverId}/verify`, {
+      method: 'POST',
+      auth: 'admin',
+    });
+  }
+
+  /**
+   * Suspend driver (admin)
+   */
+  async suspendDriver(driverId: string, reason?: string) {
+    return this.request<unknown>(`/drivers/${driverId}/suspend`, {
+      method: 'POST',
+      body: { reason },
+      auth: 'admin',
+    });
+  }
+
+  /**
+   * Reactivate driver (admin)
+   */
+  async reactivateDriver(driverId: string) {
+    return this.request<unknown>(`/drivers/${driverId}/reactivate`, {
+      method: 'POST',
+      auth: 'admin',
+    });
+  }
+
+  /**
+   * Verify driver document (admin)
+   */
+  async verifyDriverDocument(driverId: string, docType: string) {
+    return this.request<unknown>(`/drivers/${driverId}/documents/${docType}/verify`, {
+      method: 'POST',
+      auth: 'admin',
+    });
+  }
+
+  // ============================================
+  // Masked Calling (Twilio Voice)
+  // ============================================
+
+  /**
+   * Check if masked calling is enabled
+   */
+  async isCallingEnabled() {
+    return this.request<{ enabled: boolean }>('/calls/enabled', {
+      auth: 'none',
+    });
+  }
+
+  /**
+   * Customer: Initiate call to driver
+   */
+  async customerInitiateCall(deliveryId: string) {
+    return this.request<{
+      callSessionId: string;
+      twilioCallSid: string;
+      message: string;
+    }>('/calls/customer/initiate', {
+      method: 'POST',
+      body: { deliveryId },
+      auth: 'customer',
+    });
+  }
+
+  /**
+   * Driver: Initiate call to customer
+   */
+  async driverInitiateCall(deliveryId: string) {
+    return this.request<{
+      callSessionId: string;
+      twilioCallSid: string;
+      message: string;
+    }>('/calls/driver/initiate', {
+      method: 'POST',
+      body: { deliveryId },
+      auth: 'driver',
+    });
+  }
+
+  /**
+   * Get call status
+   */
+  async getCallStatus(sessionId: string) {
+    return this.request<{
+      id: string;
+      status: 'initiating' | 'ringing' | 'in-progress' | 'completed' | 'failed' | 'no-answer' | 'busy';
+      duration?: number;
+      createdAt: string;
+      answeredAt?: string;
+      endedAt?: string;
+    }>(`/calls/status/${sessionId}`, {
+      auth: 'none',
+    });
+  }
+
+  /**
+   * End an active call
+   */
+  async endCall(sessionId: string) {
+    return this.request<{ message: string }>(`/calls/end/${sessionId}`, {
+      method: 'POST',
+      auth: 'none',
+    });
+  }
+
+  /**
+   * Get call history for a delivery
+   */
+  async getDeliveryCallHistory(deliveryId: string) {
+    return this.request<Array<{
+      id: string;
+      callerType: 'customer' | 'driver';
+      recipientType: 'customer' | 'driver';
+      status: string;
+      duration?: number;
+      createdAt: string;
+      endedAt?: string;
+    }>>(`/calls/delivery/${deliveryId}/history`, {
+      auth: 'none',
+    });
+  }
+
+  /**
    * Generic POST request
    */
   async post<T>(endpoint: string, body?: unknown): Promise<ApiResponse<T>> {
@@ -1943,6 +2514,803 @@ class ApiService {
    */
   async delete<T>(endpoint: string): Promise<ApiResponse<T>> {
     return this.request<T>(endpoint, { method: 'DELETE' });
+  }
+
+  // ============================================
+  // Hotel Guest API Methods
+  // ============================================
+
+  private hotelGuestToken: string | null = null;
+
+  /**
+   * Set hotel guest token
+   */
+  setHotelGuestToken(token: string | null): void {
+    this.hotelGuestToken = token;
+  }
+
+  /**
+   * Get hotel guest token
+   */
+  private getHotelGuestToken(): string | null {
+    if (this.hotelGuestToken) {return this.hotelGuestToken;}
+    // Try to get from localStorage
+    const keys = Object.keys(localStorage).filter(k => k.startsWith('menuqr_hotel_guest_') && k.endsWith('_auth'));
+    const firstKey = keys[0];
+    if (firstKey) {
+      const stored = localStorage.getItem(firstKey);
+      if (stored) {
+        try {
+          const { accessToken } = JSON.parse(stored);
+          this.hotelGuestToken = accessToken;
+          return accessToken;
+        } catch {
+          return null;
+        }
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Hotel guest request helper
+   */
+  private async hotelGuestRequest<T>(endpoint: string, options: RequestOptions = {}): Promise<ApiResponse<T>> {
+    const token = this.getHotelGuestToken();
+    const headers = { ...options.headers };
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    return this.request<T>(endpoint, { ...options, headers, auth: 'none' });
+  }
+
+  /**
+   * Get hotel by slug (public)
+   */
+  async hotelGetBySlug(slug: string) {
+    return this.request<HotelInfo>(`/hotels/slug/${slug}`, { auth: 'none' });
+  }
+
+  /**
+   * Get room by QR code (public)
+   */
+  async hotelGetRoomByQR(qrCode: string) {
+    return this.request<{ room: RoomInfo; hotel: HotelInfo }>(`/hotels/rooms/qr/${qrCode}`, { auth: 'none' });
+  }
+
+  /**
+   * Hotel guest authenticate with access code
+   */
+  async hotelGuestAuthAccessCode(hotelId: string, accessCode: string) {
+    return this.request<{
+      guest: HotelGuestData;
+      accessToken: string;
+      refreshToken: string;
+      hotel: HotelInfo;
+      room: RoomInfo;
+    }>(`/hotels/${hotelId}/guest/auth/access-code`, {
+      method: 'POST',
+      body: { accessCode },
+      auth: 'none',
+    });
+  }
+
+  /**
+   * Hotel guest authenticate with PIN
+   */
+  async hotelGuestAuthPIN(hotelId: string, roomNumber: string, pin: string) {
+    return this.request<{
+      guest: HotelGuestData;
+      accessToken: string;
+      refreshToken: string;
+      hotel: HotelInfo;
+      room: RoomInfo;
+    }>(`/hotels/${hotelId}/guest/auth/pin`, {
+      method: 'POST',
+      body: { roomNumber, pin },
+      auth: 'none',
+    });
+  }
+
+  /**
+   * Hotel guest set PIN
+   */
+  async hotelGuestSetPIN(pin: string) {
+    return this.hotelGuestRequest<{ message: string }>('/hotels/guest/auth/set-pin', {
+      method: 'POST',
+      body: { pin },
+    });
+  }
+
+  /**
+   * Hotel guest refresh token
+   */
+  async hotelGuestRefreshToken() {
+    return this.hotelGuestRequest<{ accessToken: string; refreshToken: string }>('/hotels/guest/auth/refresh', {
+      method: 'POST',
+    });
+  }
+
+  /**
+   * Get hotel guest profile
+   */
+  async hotelGuestGetProfile() {
+    return this.hotelGuestRequest<HotelGuestData>('/hotels/guest/me');
+  }
+
+  /**
+   * Update hotel guest preferences
+   */
+  async hotelGuestUpdatePreferences(data: {
+    language?: string;
+    dietaryPreferences?: string[];
+    allergens?: string[];
+  }) {
+    return this.hotelGuestRequest<HotelGuestData>('/hotels/guest/me/preferences', {
+      method: 'PATCH',
+      body: data,
+    });
+  }
+
+  /**
+   * Get hotel guest order history
+   */
+  async hotelGuestGetOrders() {
+    return this.hotelGuestRequest<HotelOrderData[]>('/hotels/guest/me/orders');
+  }
+
+  /**
+   * Get hotel guest active orders
+   */
+  async hotelGuestGetActiveOrders() {
+    return this.hotelGuestRequest<HotelOrderData[]>('/hotels/guest/orders');
+  }
+
+  /**
+   * Get hotel menus (public)
+   */
+  async hotelGetMenus(hotelId: string) {
+    return this.request<HotelMenuData[]>(`/hotels/${hotelId}/menus`, { auth: 'none' });
+  }
+
+  /**
+   * Get hotel menu for guest (with categories and dishes)
+   */
+  async hotelGetMenuForGuest(hotelId: string, menuId: string) {
+    return this.request<HotelMenuWithItems>(`/hotels/${hotelId}/menus/${menuId}/guest`, { auth: 'none' });
+  }
+
+  /**
+   * Get categories for a menu
+   */
+  async hotelGetCategories(hotelId: string, menuId: string) {
+    return this.request<HotelCategoryData[]>(`/hotels/${hotelId}/menus/${menuId}/categories`, { auth: 'none' });
+  }
+
+  /**
+   * Get dishes for a category
+   */
+  async hotelGetDishes(hotelId: string, menuId: string, categoryId: string) {
+    return this.request<HotelDishData[]>(`/hotels/${hotelId}/menus/${menuId}/categories/${categoryId}/dishes`, { auth: 'none' });
+  }
+
+  /**
+   * Get dish by ID
+   */
+  async hotelGetDish(hotelId: string, dishId: string) {
+    return this.request<HotelDishData>(`/hotels/${hotelId}/dishes/${dishId}`, { auth: 'none' });
+  }
+
+  /**
+   * Search dishes
+   */
+  async hotelSearchDishes(hotelId: string, query: string) {
+    return this.request<HotelDishData[]>(`/hotels/${hotelId}/dishes/search?q=${encodeURIComponent(query)}`, { auth: 'none' });
+  }
+
+  /**
+   * Get popular dishes
+   */
+  async hotelGetPopularDishes(hotelId: string) {
+    return this.request<HotelDishData[]>(`/hotels/${hotelId}/dishes/popular`, { auth: 'none' });
+  }
+
+  /**
+   * Get featured dishes
+   */
+  async hotelGetFeaturedDishes(hotelId: string) {
+    return this.request<HotelDishData[]>(`/hotels/${hotelId}/dishes/featured`, { auth: 'none' });
+  }
+
+  /**
+   * Create hotel order (guest)
+   */
+  async hotelCreateOrder(hotelId: string, orderData: {
+    roomId: string;
+    items: Array<{
+      dishId: string;
+      quantity: number;
+      options?: Array<{ name: string; price: number }>;
+      variant?: { name: string; price: number };
+      specialInstructions?: string;
+    }>;
+    paymentMethod?: string;
+    deliveryInstructions?: string;
+    specialInstructions?: string;
+    tip?: number;
+    isScheduled?: boolean;
+    scheduledFor?: string;
+  }) {
+    return this.hotelGuestRequest<HotelOrderData>(`/hotels/${hotelId}/orders`, {
+      method: 'POST',
+      body: orderData,
+    });
+  }
+
+  /**
+   * Get hotel order by ID
+   */
+  async hotelGetOrder(hotelId: string, orderId: string) {
+    return this.hotelGuestRequest<HotelOrderData>(`/hotels/${hotelId}/orders/${orderId}`);
+  }
+
+  /**
+   * Cancel hotel order
+   */
+  async hotelCancelOrder(hotelId: string, orderId: string, reason?: string) {
+    return this.hotelGuestRequest<HotelOrderData>(`/hotels/${hotelId}/orders/${orderId}/cancel`, {
+      method: 'POST',
+      body: { reason },
+    });
+  }
+
+  /**
+   * Rate hotel order
+   */
+  async hotelRateOrder(hotelId: string, orderId: string, rating: number, feedback?: string) {
+    return this.hotelGuestRequest<HotelOrderData>(`/hotels/${hotelId}/orders/${orderId}/rate`, {
+      method: 'POST',
+      body: { rating, feedback },
+    });
+  }
+
+  // ============================================
+  // Hotel Admin API Methods
+  // ============================================
+
+  /**
+   * Get current user's hotel (for hotel_owner/hotel_manager roles)
+   */
+  async getMyHotel() {
+    return this.request<HotelAdminData>('/hotels/my-hotel');
+  }
+
+  /**
+   * Update hotel
+   */
+  async updateHotel(hotelId: string, data: Partial<Omit<HotelAdminData, 'id' | 'createdAt' | 'updatedAt'>>) {
+    return this.request<HotelAdminData>(`/hotels/${hotelId}`, {
+      method: 'PUT',
+      body: data,
+    });
+  }
+
+  /**
+   * Update hotel settings only
+   */
+  async updateHotelSettings(hotelId: string, settings: Partial<HotelAdminData['settings']>) {
+    return this.request<HotelAdminData>(`/hotels/${hotelId}/settings`, {
+      method: 'PATCH',
+      body: settings,
+    });
+  }
+
+  /**
+   * Get hotel dashboard stats
+   */
+  async getHotelDashboardStats(hotelId: string) {
+    return this.request<HotelDashboardStats>(`/hotels/${hotelId}/dashboard`);
+  }
+
+  /**
+   * Get hotel rooms list
+   */
+  async getHotelRooms(hotelId: string, params?: { status?: string; floor?: number; page?: number; limit?: number }) {
+    const query = new URLSearchParams();
+    if (params?.status) {query.append('status', params.status);}
+    if (params?.floor !== undefined) {query.append('floor', String(params.floor));}
+    if (params?.page) {query.append('page', String(params.page));}
+    if (params?.limit) {query.append('limit', String(params.limit));}
+    const queryStr = query.toString();
+    return this.request<{ rooms: HotelRoomAdmin[]; total: number; page: number; pages: number }>(
+      `/hotels/${hotelId}/rooms${queryStr ? `?${queryStr}` : ''}`
+    );
+  }
+
+  /**
+   * Create a new room
+   */
+  async createHotelRoom(hotelId: string, data: Partial<HotelRoomAdmin>) {
+    return this.request<HotelRoomAdmin>(`/hotels/${hotelId}/rooms`, {
+      method: 'POST',
+      body: data,
+    });
+  }
+
+  /**
+   * Update room
+   */
+  async updateHotelRoom(hotelId: string, roomId: string, data: Partial<HotelRoomAdmin>) {
+    return this.request<HotelRoomAdmin>(`/hotels/${hotelId}/rooms/${roomId}`, {
+      method: 'PUT',
+      body: data,
+    });
+  }
+
+  /**
+   * Delete room
+   */
+  async deleteHotelRoom(hotelId: string, roomId: string) {
+    return this.request<{ message: string }>(`/hotels/${hotelId}/rooms/${roomId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  /**
+   * Update room status
+   */
+  async updateRoomStatus(hotelId: string, roomId: string, status: string) {
+    return this.request<HotelRoomAdmin>(`/hotels/${hotelId}/rooms/${roomId}/status`, {
+      method: 'PUT',
+      body: { status },
+    });
+  }
+
+  /**
+   * Bulk create rooms
+   */
+  async bulkCreateRooms(hotelId: string, data: {
+    prefix: string;
+    startNumber: number;
+    count: number;
+    floor: number;
+    building?: string;
+    roomType: string;
+    capacity: number;
+    isRoomServiceEnabled: boolean;
+  }) {
+    return this.request<{ created: number; rooms: HotelRoomAdmin[] }>(`/hotels/${hotelId}/rooms/bulk`, {
+      method: 'POST',
+      body: data,
+    });
+  }
+
+  /**
+   * Generate QR code for room
+   */
+  async generateRoomQR(hotelId: string, roomId: string) {
+    return this.request<{ qrCode: string; qrCodeUrl: string }>(`/hotels/${hotelId}/rooms/${roomId}/qr`, {
+      method: 'POST',
+    });
+  }
+
+  /**
+   * Get hotel guests list
+   */
+  async getHotelGuests(hotelId: string, params?: { status?: string; roomNumber?: string; page?: number; limit?: number }) {
+    const query = new URLSearchParams();
+    if (params?.status) {query.append('status', params.status);}
+    if (params?.roomNumber) {query.append('roomNumber', params.roomNumber);}
+    if (params?.page) {query.append('page', String(params.page));}
+    if (params?.limit) {query.append('limit', String(params.limit));}
+    const queryStr = query.toString();
+    return this.request<{ guests: HotelGuestAdmin[]; total: number; page: number; pages: number }>(
+      `/hotels/${hotelId}/guests${queryStr ? `?${queryStr}` : ''}`
+    );
+  }
+
+  /**
+   * Check-in guest
+   */
+  async checkInGuest(hotelId: string, data: {
+    name: string;
+    email?: string;
+    phone?: string;
+    roomId: string;
+    checkInDate: string;
+    checkOutDate: string;
+    reservationNumber?: string;
+  }) {
+    return this.request<HotelGuestAdmin>(`/hotels/${hotelId}/guests`, {
+      method: 'POST',
+      body: data,
+    });
+  }
+
+  /**
+   * Update guest
+   */
+  async updateHotelGuest(hotelId: string, guestId: string, data: Partial<HotelGuestAdmin>) {
+    return this.request<HotelGuestAdmin>(`/hotels/${hotelId}/guests/${guestId}`, {
+      method: 'PUT',
+      body: data,
+    });
+  }
+
+  /**
+   * Check-out guest
+   */
+  async checkOutGuest(hotelId: string, guestId: string) {
+    return this.request<{ message: string }>(`/hotels/${hotelId}/guests/${guestId}/checkout`, {
+      method: 'POST',
+    });
+  }
+
+  /**
+   * Get hotel orders (admin)
+   */
+  async getHotelOrders(hotelId: string, params?: {
+    status?: string;
+    roomNumber?: string;
+    floor?: number;
+    dateFrom?: string;
+    dateTo?: string;
+    page?: number;
+    limit?: number;
+  }) {
+    const query = new URLSearchParams();
+    if (params?.status) {query.append('status', params.status);}
+    if (params?.roomNumber) {query.append('roomNumber', params.roomNumber);}
+    if (params?.floor !== undefined) {query.append('floor', String(params.floor));}
+    if (params?.dateFrom) {query.append('dateFrom', params.dateFrom);}
+    if (params?.dateTo) {query.append('dateTo', params.dateTo);}
+    if (params?.page) {query.append('page', String(params.page));}
+    if (params?.limit) {query.append('limit', String(params.limit));}
+    const queryStr = query.toString();
+    return this.request<{ orders: HotelOrderAdmin[]; total: number; page: number; pages: number }>(
+      `/hotels/${hotelId}/orders${queryStr ? `?${queryStr}` : ''}`
+    );
+  }
+
+  /**
+   * Get active orders for KDS
+   */
+  async getHotelActiveOrders(hotelId: string) {
+    return this.request<HotelOrderAdmin[]>(`/hotels/${hotelId}/orders/active`);
+  }
+
+  /**
+   * Update order status
+   */
+  async updateHotelOrderStatus(hotelId: string, orderId: string, status: string) {
+    return this.request<HotelOrderAdmin>(`/hotels/${hotelId}/orders/${orderId}/status`, {
+      method: 'PUT',
+      body: { status },
+    });
+  }
+
+  /**
+   * Assign order to staff
+   */
+  async assignHotelOrder(hotelId: string, orderId: string, staffId: string) {
+    return this.request<HotelOrderAdmin>(`/hotels/${hotelId}/orders/${orderId}/assign`, {
+      method: 'PUT',
+      body: { staffId },
+    });
+  }
+
+  /**
+   * Mark order as delivered
+   */
+  async markHotelOrderDelivered(hotelId: string, orderId: string, signature?: string) {
+    return this.request<HotelOrderAdmin>(`/hotels/${hotelId}/orders/${orderId}/deliver`, {
+      method: 'POST',
+      body: { signature },
+    });
+  }
+
+  /**
+   * Cancel hotel order (admin)
+   */
+  async cancelHotelOrderAdmin(hotelId: string, orderId: string, reason: string) {
+    return this.request<HotelOrderAdmin>(`/hotels/${hotelId}/orders/${orderId}/cancel`, {
+      method: 'POST',
+      body: { reason },
+    });
+  }
+
+  /**
+   * Get hotel menus (admin)
+   */
+  async getHotelMenusAdmin(hotelId: string) {
+    return this.request<HotelMenuAdmin[]>(`/hotels/${hotelId}/menus`);
+  }
+
+  /**
+   * Create hotel menu
+   */
+  async createHotelMenu(hotelId: string, data: Partial<HotelMenuAdmin>) {
+    return this.request<HotelMenuAdmin>(`/hotels/${hotelId}/menus`, {
+      method: 'POST',
+      body: data,
+    });
+  }
+
+  /**
+   * Update hotel menu
+   */
+  async updateHotelMenu(hotelId: string, menuId: string, data: Partial<HotelMenuAdmin>) {
+    return this.request<HotelMenuAdmin>(`/hotels/${hotelId}/menus/${menuId}`, {
+      method: 'PUT',
+      body: data,
+    });
+  }
+
+  /**
+   * Delete hotel menu
+   */
+  async deleteHotelMenu(hotelId: string, menuId: string) {
+    return this.request<{ message: string }>(`/hotels/${hotelId}/menus/${menuId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  /**
+   * Get hotel categories (admin)
+   */
+  async getHotelCategoriesAdmin(hotelId: string, menuId: string) {
+    return this.request<HotelCategoryAdmin[]>(`/hotels/${hotelId}/menus/${menuId}/categories`);
+  }
+
+  /**
+   * Create hotel category
+   */
+  async createHotelCategory(hotelId: string, menuId: string, data: Partial<HotelCategoryAdmin>) {
+    return this.request<HotelCategoryAdmin>(`/hotels/${hotelId}/menus/${menuId}/categories`, {
+      method: 'POST',
+      body: data,
+    });
+  }
+
+  /**
+   * Update hotel category
+   */
+  async updateHotelCategory(hotelId: string, menuId: string, categoryId: string, data: Partial<HotelCategoryAdmin>) {
+    return this.request<HotelCategoryAdmin>(`/hotels/${hotelId}/menus/${menuId}/categories/${categoryId}`, {
+      method: 'PUT',
+      body: data,
+    });
+  }
+
+  /**
+   * Delete hotel category
+   */
+  async deleteHotelCategory(hotelId: string, menuId: string, categoryId: string) {
+    return this.request<{ message: string }>(`/hotels/${hotelId}/menus/${menuId}/categories/${categoryId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  /**
+   * Get hotel dishes (admin)
+   */
+  async getHotelDishesAdmin(hotelId: string, params?: { menuId?: string; categoryId?: string }) {
+    const query = new URLSearchParams();
+    if (params?.menuId) {query.append('menuId', params.menuId);}
+    if (params?.categoryId) {query.append('categoryId', params.categoryId);}
+    const queryStr = query.toString();
+    return this.request<HotelDishAdmin[]>(`/hotels/${hotelId}/dishes${queryStr ? `?${queryStr}` : ''}`);
+  }
+
+  /**
+   * Create hotel dish
+   */
+  async createHotelDish(hotelId: string, data: Partial<HotelDishAdmin>) {
+    return this.request<HotelDishAdmin>(`/hotels/${hotelId}/dishes`, {
+      method: 'POST',
+      body: data,
+    });
+  }
+
+  /**
+   * Update hotel dish
+   */
+  async updateHotelDish(hotelId: string, dishId: string, data: Partial<HotelDishAdmin>) {
+    return this.request<HotelDishAdmin>(`/hotels/${hotelId}/dishes/${dishId}`, {
+      method: 'PUT',
+      body: data,
+    });
+  }
+
+  /**
+   * Delete hotel dish
+   */
+  async deleteHotelDish(hotelId: string, dishId: string) {
+    return this.request<{ message: string }>(`/hotels/${hotelId}/dishes/${dishId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  /**
+   * Get hotel reports
+   */
+  async getHotelReports(hotelId: string, reportType: string, params?: { dateFrom?: string; dateTo?: string }) {
+    const query = new URLSearchParams();
+    if (params?.dateFrom) {query.append('dateFrom', params.dateFrom);}
+    if (params?.dateTo) {query.append('dateTo', params.dateTo);}
+    const queryStr = query.toString();
+    return this.request<HotelReportData>(`/hotels/${hotelId}/reports/${reportType}${queryStr ? `?${queryStr}` : ''}`);
+  }
+
+  // ============================================
+  // Subscription API Methods
+  // ============================================
+
+  /**
+   * Get all available subscription plans (public)
+   */
+  async getSubscriptionPlans() {
+    return this.request<{ plans: SubscriptionPlan[] }>('/subscription/plans', { auth: 'none' });
+  }
+
+  /**
+   * Get plan by slug (public)
+   */
+  async getSubscriptionPlanBySlug(slug: string) {
+    return this.request<SubscriptionPlan>(`/subscription/plans/${slug}`, { auth: 'none' });
+  }
+
+  /**
+   * Get current restaurant's subscription
+   */
+  async getCurrentSubscription() {
+    return this.request<SubscriptionInfo>('/subscription/current');
+  }
+
+  /**
+   * Get available features for current subscription
+   */
+  async getSubscriptionFeatures() {
+    return this.request<{ features: SubscriptionFeature[]; featureKeys: string[] }>('/subscription/features');
+  }
+
+  /**
+   * Check if a specific feature is available
+   */
+  async checkSubscriptionFeature(feature: string) {
+    return this.request<{ feature: string; featureName: string; hasAccess: boolean }>(
+      '/subscription/check-feature',
+      { method: 'POST', body: { feature } }
+    );
+  }
+
+  /**
+   * Check multiple features at once
+   */
+  async checkSubscriptionFeatures(features: string[]) {
+    return this.request<{ features: Array<{ key: string; name: string; hasAccess: boolean }> }>(
+      '/subscription/check-features',
+      { method: 'POST', body: { features } }
+    );
+  }
+
+  /**
+   * Get usage summary for current subscription
+   */
+  async getSubscriptionUsage() {
+    return this.request<{ usage: Record<string, UsageCheckResult> }>('/subscription/usage');
+  }
+
+  /**
+   * Get usage for a specific resource
+   */
+  async getResourceUsage(resource: string) {
+    return this.request<UsageCheckResult>(`/subscription/usage/${resource}`);
+  }
+
+  /**
+   * Preview upgrade to a new plan
+   */
+  async previewSubscriptionUpgrade(planSlug: string) {
+    return this.request<UpgradePreview>(
+      '/subscription/preview-upgrade',
+      { method: 'POST', body: { planSlug } }
+    );
+  }
+
+  /**
+   * Preview downgrade to a lower plan
+   */
+  async previewSubscriptionDowngrade(planSlug: string) {
+    return this.request<DowngradePreview>(
+      '/subscription/preview-downgrade',
+      { method: 'POST', body: { planSlug } }
+    );
+  }
+
+  /**
+   * Change subscription plan
+   */
+  async changeSubscriptionPlan(planId: string, immediate = false) {
+    return this.request<{ subscriptionId: string; newPlan: string; effectiveDate: string }>(
+      '/subscription/change-plan',
+      { method: 'POST', body: { planId, immediate } }
+    );
+  }
+
+  /**
+   * Cancel subscription
+   */
+  async cancelSubscription(reason?: string) {
+    return this.request<{ status: string; accessUntil: string }>(
+      '/subscription/cancel',
+      { method: 'POST', body: { reason } }
+    );
+  }
+
+  /**
+   * Reactivate a cancelled subscription
+   */
+  async reactivateSubscription() {
+    return this.request<{ status: string; currentPeriodEnd: string }>(
+      '/subscription/reactivate',
+      { method: 'POST' }
+    );
+  }
+
+  // ============================================
+  // Downgrade Handling Methods
+  // ============================================
+
+  /**
+   * Analyze impact of downgrading to a specific plan
+   */
+  async analyzeDowngrade(planSlug: string) {
+    return this.request<DowngradeAnalysis>(
+      '/subscription/analyze-downgrade',
+      { method: 'POST', body: { planSlug } }
+    );
+  }
+
+  /**
+   * Schedule a downgrade for end of billing period
+   */
+  async scheduleDowngrade(planSlug: string, reason?: string, immediate = false) {
+    return this.request<{ scheduled: boolean; effectiveDate: string; archivedItems?: { dishes: number; campaigns: number }; newPlan: string }>(
+      '/subscription/schedule-downgrade',
+      { method: 'POST', body: { planSlug, reason, immediate } }
+    );
+  }
+
+  /**
+   * Cancel a pending scheduled downgrade
+   */
+  async cancelScheduledDowngrade() {
+    return this.request<{ message: string }>(
+      '/subscription/cancel-scheduled-downgrade',
+      { method: 'POST' }
+    );
+  }
+
+  /**
+   * Get pending subscription changes
+   */
+  async getPendingChanges() {
+    return this.request<PendingChangesInfo>('/subscription/pending-changes');
+  }
+
+  /**
+   * Get grace period status
+   */
+  async getGracePeriodStatus() {
+    return this.request<GracePeriodInfo>('/subscription/grace-period');
+  }
+
+  /**
+   * Get history of past downgrades
+   */
+  async getDowngradeHistory() {
+    return this.request<DowngradeHistoryInfo>('/subscription/downgrade-history');
   }
 }
 
@@ -2392,6 +3760,703 @@ export interface MetricsHistoryPoint {
   requests: number;
   avgResponseTime: number;
   errorRate: number;
+}
+
+// ============================================
+// Hotel Types
+// ============================================
+
+export interface HotelInfo {
+  id: string;
+  name: string;
+  slug: string;
+  description?: { fr: string; en?: string };
+  logo?: string;
+  coverImage?: string;
+  starRating?: number;
+  phone?: string;
+  email?: string;
+  address: {
+    street: string;
+    city: string;
+    postalCode: string;
+    country: string;
+    coordinates?: { lat: number; lng: number };
+  };
+  settings: {
+    currency: string;
+    timezone: string;
+    defaultLanguage: string;
+    availableLanguages: string[];
+    roomService: {
+      enabled: boolean;
+      minOrderAmount?: number;
+      deliveryFee: number;
+      deliveryFeeType: 'fixed' | 'percentage';
+      estimatedDeliveryMinutes: number;
+      allowScheduledOrders: boolean;
+    };
+    billing: {
+      allowRoomCharge: boolean;
+      requirePaymentUpfront: boolean;
+      acceptedPaymentMethods: string[];
+    };
+    guestAuth?: {
+      pinLength: number;
+      requirePinForOrders: boolean;
+      allowAccessCodeAuth: boolean;
+    };
+  };
+  isActive: boolean;
+}
+
+export interface RoomInfo {
+  id: string;
+  hotelId: string;
+  roomNumber: string;
+  displayName?: string;
+  floor: number;
+  building?: string;
+  type: 'standard' | 'superior' | 'deluxe' | 'suite' | 'penthouse';
+  roomServiceEnabled: boolean;
+  specialInstructions?: string;
+  status: 'vacant' | 'occupied' | 'checkout' | 'maintenance' | 'blocked';
+}
+
+export interface HotelGuestData {
+  id: string;
+  hotelId: string;
+  name: string;
+  email?: string;
+  phone?: string;
+  roomId: string;
+  roomNumber: string;
+  floor: number;
+  building?: string;
+  checkInDate: string;
+  checkOutDate: string;
+  language: string;
+  dietaryPreferences?: string[];
+  allergens?: string[];
+  totalOrders: number;
+  totalSpent: number;
+  isActive: boolean;
+}
+
+export interface HotelMenuData {
+  id: string;
+  hotelId: string;
+  name: { fr: string; en?: string };
+  slug: string;
+  description?: { fr: string; en?: string };
+  type: 'room_service' | 'breakfast' | 'minibar' | 'poolside' | 'spa' | 'special';
+  availableFrom?: string;
+  availableTo?: string;
+  availableDays?: string[];
+  isAvailable24h: boolean;
+  isActive: boolean;
+  isCurrentlyAvailable: boolean;
+  order: number;
+}
+
+export interface HotelCategoryData {
+  id: string;
+  hotelId: string;
+  menuId: string;
+  name: { fr: string; en?: string };
+  slug: string;
+  description?: { fr: string; en?: string };
+  image?: string;
+  icon?: string;
+  order: number;
+  isActive: boolean;
+  isCurrentlyAvailable: boolean;
+}
+
+export interface HotelDishData {
+  id: string;
+  hotelId: string;
+  menuId: string;
+  categoryId: string;
+  name: { fr: string; en?: string };
+  slug: string;
+  description?: { fr: string; en?: string };
+  price: number;
+  images?: string[];
+  allergens?: string[];
+  tags?: string[];
+  options?: Array<{
+    name: { fr: string; en?: string };
+    price: number;
+    isDefault?: boolean;
+  }>;
+  variants?: Array<{
+    name: { fr: string; en?: string };
+    price: number;
+  }>;
+  isVegetarian: boolean;
+  isVegan: boolean;
+  isGlutenFree: boolean;
+  isSpicy: boolean;
+  spicyLevel?: number;
+  isAvailable: boolean;
+  isPopular: boolean;
+  isNewDish: boolean;
+  isFeatured: boolean;
+  preparationTime?: number;
+  order: number;
+  isCurrentlyAvailable: boolean;
+}
+
+export interface HotelMenuWithItems extends HotelMenuData {
+  categories: Array<HotelCategoryData & {
+    dishes: HotelDishData[];
+  }>;
+}
+
+export interface HotelOrderData {
+  id: string;
+  orderNumber: string;
+  hotelId: string;
+  roomId: string;
+  roomNumber: string;
+  floor: number;
+  building?: string;
+  guestId?: string;
+  guestName: string;
+  guestPhone?: string;
+  menuType: string;
+  items: Array<{
+    dishId: string;
+    name: { fr: string; en?: string };
+    price: number;
+    quantity: number;
+    options?: Array<{ name: string; price: number }>;
+    variant?: { name: string; price: number };
+    specialInstructions?: string;
+    subtotal: number;
+  }>;
+  subtotal: number;
+  serviceCharge: number;
+  deliveryFee: number;
+  tax: number;
+  tip: number;
+  total: number;
+  status: 'pending' | 'confirmed' | 'preparing' | 'ready' | 'picked_up' | 'delivering' | 'delivered' | 'completed' | 'cancelled';
+  paymentStatus: 'pending' | 'paid' | 'room_charge' | 'refunded' | 'failed';
+  paymentMethod?: 'room_charge' | 'card' | 'cash' | 'mobile_pay';
+  estimatedDeliveryTime?: string;
+  actualDeliveryTime?: string;
+  deliveryInstructions?: string;
+  specialInstructions?: string;
+  isScheduled: boolean;
+  scheduledFor?: string;
+  assignedTo?: {
+    staffId: string;
+    staffName: string;
+    assignedAt: string;
+  };
+  deliveredBy?: {
+    staffId: string;
+    staffName: string;
+    deliveredAt?: string;
+  };
+  rating?: number;
+  feedback?: string;
+  ratedAt?: string;
+  confirmedAt?: string;
+  preparingAt?: string;
+  readyAt?: string;
+  pickedUpAt?: string;
+  deliveredAt?: string;
+  completedAt?: string;
+  cancelledAt?: string;
+  cancelReason?: string;
+  cancelledBy?: 'guest' | 'staff' | 'kitchen' | 'system';
+  createdAt: string;
+  updatedAt: string;
+}
+
+// =============================================
+// HOTEL ADMIN INTERFACES
+// =============================================
+
+export interface HotelAdminData {
+  id: string;
+  name: string;
+  slug: string;
+  description?: { fr: string; en?: string };
+  logo?: string;
+  coverImage?: string;
+  starRating: number;
+  address: {
+    street: string;
+    city: string;
+    postalCode: string;
+    country: string;
+  };
+  phone?: string;
+  email?: string;
+  website?: string;
+  isActive: boolean;
+  settings: {
+    currency: string;
+    timezone: string;
+    defaultLanguage: string;
+    availableLanguages: string[];
+    roomService: {
+      enabled: boolean;
+      availableHours: { start: string; end: string };
+      minimumOrder: number;
+      deliveryFee: number;
+      serviceChargePercent: number;
+    };
+    notifications: {
+      orderEmail: boolean;
+      orderSms: boolean;
+      orderPush: boolean;
+      lowStockAlert: boolean;
+    };
+    payment: {
+      roomCharge: boolean;
+      cardOnDelivery: boolean;
+      onlinePayment: boolean;
+      cashOnDelivery: boolean;
+    };
+  };
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface HotelDashboardStats {
+  totalRooms: number;
+  occupiedRooms: number;
+  availableRooms: number;
+  occupancyRate: number;
+  activeGuests: number;
+  todayOrders: number;
+  pendingOrders: number;
+  todayRevenue: number;
+  averageOrderValue: number;
+  roomServiceEnabled: boolean;
+  recentOrders: HotelOrderAdmin[];
+  popularDishes: Array<{
+    dishId: string;
+    name: { fr: string; en?: string };
+    orderCount: number;
+    revenue: number;
+  }>;
+  ordersByStatus: Record<string, number>;
+  revenueByDay: Array<{
+    date: string;
+    revenue: number;
+    orders: number;
+  }>;
+}
+
+export interface HotelRoomAdmin {
+  id: string;
+  hotelId: string;
+  roomNumber: string;
+  floor: number;
+  building?: string;
+  roomType: 'standard' | 'deluxe' | 'suite' | 'presidential' | 'apartment';
+  capacity: number;
+  description?: { fr: string; en?: string };
+  amenities: string[];
+  status: 'available' | 'occupied' | 'cleaning' | 'maintenance' | 'out_of_service';
+  currentGuest?: {
+    guestId: string;
+    guestName: string;
+    checkInDate: string;
+    checkOutDate: string;
+  };
+  qrCode?: string;
+  qrCodeUrl?: string;
+  isRoomServiceEnabled: boolean;
+  pricePerNight?: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface HotelGuestAdmin {
+  id: string;
+  hotelId: string;
+  roomId: string;
+  roomNumber: string;
+  floor: number;
+  building?: string;
+  name: string;
+  email?: string;
+  phone?: string;
+  idNumber?: string;
+  nationality?: string;
+  checkInDate: string;
+  checkOutDate: string;
+  status: 'checked_in' | 'checked_out' | 'reserved' | 'no_show';
+  totalOrders: number;
+  totalSpent: number;
+  preferredLanguage?: string;
+  dietaryRestrictions?: string[];
+  specialRequests?: string;
+  notes?: string;
+  lastOrderAt?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface HotelOrderAdmin {
+  id: string;
+  orderNumber: string;
+  hotelId: string;
+  roomId: string;
+  roomNumber: string;
+  floor: number;
+  building?: string;
+  guestId?: string;
+  guestName: string;
+  guestPhone?: string;
+  menuType: string;
+  items: Array<{
+    dishId: string;
+    name: { fr: string; en?: string };
+    price: number;
+    quantity: number;
+    options?: Array<{ name: string; price: number }>;
+    variant?: { name: string; price: number };
+    specialInstructions?: string;
+    subtotal: number;
+    status?: 'pending' | 'preparing' | 'ready' | 'delivered';
+  }>;
+  subtotal: number;
+  serviceCharge: number;
+  deliveryFee: number;
+  tax: number;
+  tip: number;
+  total: number;
+  status: 'pending' | 'confirmed' | 'preparing' | 'ready' | 'picked_up' | 'delivering' | 'delivered' | 'completed' | 'cancelled' | 'rejected';
+  paymentStatus: 'pending' | 'paid' | 'room_charge' | 'refunded' | 'failed';
+  paymentMethod?: 'room_charge' | 'card' | 'cash' | 'mobile_pay';
+  estimatedDeliveryTime?: string;
+  actualDeliveryTime?: string;
+  deliveryInstructions?: string;
+  specialInstructions?: string;
+  isScheduled: boolean;
+  scheduledFor?: string;
+  priority: 'normal' | 'high' | 'urgent';
+  assignedTo?: {
+    staffId: string;
+    staffName: string;
+    assignedAt: string;
+  };
+  deliveredBy?: {
+    staffId: string;
+    staffName: string;
+    deliveredAt?: string;
+    signature?: string;
+  };
+  rating?: number;
+  feedback?: string;
+  ratedAt?: string;
+  confirmedAt?: string;
+  preparingAt?: string;
+  readyAt?: string;
+  pickedUpAt?: string;
+  deliveredAt?: string;
+  completedAt?: string;
+  cancelledAt?: string;
+  cancelReason?: string;
+  cancelledBy?: 'guest' | 'staff' | 'kitchen' | 'system';
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface HotelMenuAdmin {
+  id: string;
+  hotelId: string;
+  name: { fr: string; en?: string };
+  slug: string;
+  description?: { fr: string; en?: string };
+  type: 'room_service' | 'breakfast' | 'restaurant' | 'bar' | 'pool' | 'spa' | 'minibar';
+  image?: string;
+  isActive: boolean;
+  isDefault: boolean;
+  availability: {
+    isAlwaysAvailable: boolean;
+    schedule?: Array<{
+      dayOfWeek: number;
+      startTime: string;
+      endTime: string;
+    }>;
+  };
+  categoriesCount: number;
+  dishesCount: number;
+  order: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface HotelCategoryAdmin {
+  id: string;
+  hotelId: string;
+  menuId: string;
+  name: { fr: string; en?: string };
+  slug: string;
+  description?: { fr: string; en?: string };
+  image?: string;
+  icon?: string;
+  order: number;
+  isActive: boolean;
+  dishesCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface HotelDishAdmin {
+  id: string;
+  hotelId: string;
+  menuId: string;
+  categoryId: string;
+  name: { fr: string; en?: string };
+  slug: string;
+  description?: { fr: string; en?: string };
+  price: number;
+  images?: string[];
+  allergens?: string[];
+  tags?: string[];
+  options?: Array<{
+    name: { fr: string; en?: string };
+    price: number;
+    isDefault?: boolean;
+  }>;
+  variants?: Array<{
+    name: { fr: string; en?: string };
+    price: number;
+  }>;
+  isVegetarian: boolean;
+  isVegan: boolean;
+  isGlutenFree: boolean;
+  isSpicy: boolean;
+  spicyLevel?: number;
+  isAvailable: boolean;
+  isPopular: boolean;
+  isNewDish: boolean;
+  isFeatured: boolean;
+  preparationTime?: number;
+  order: number;
+  orderCount?: number;
+  revenue?: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface HotelReportData {
+  period: {
+    from: string;
+    to: string;
+  };
+  summary: {
+    totalRevenue: number;
+    totalOrders: number;
+    averageOrderValue: number;
+    uniqueGuests: number;
+    averageRating: number;
+  };
+  revenueByDay: Array<{
+    date: string;
+    revenue: number;
+    orders: number;
+  }>;
+  ordersByStatus: Record<string, number>;
+  topDishes: Array<{
+    dishId: string;
+    name: { fr: string; en?: string };
+    quantity: number;
+    revenue: number;
+  }>;
+  topRooms: Array<{
+    roomId: string;
+    roomNumber: string;
+    orders: number;
+    revenue: number;
+  }>;
+  peakHours: Array<{
+    hour: number;
+    orders: number;
+    revenue: number;
+  }>;
+  paymentMethods: Array<{
+    method: string;
+    count: number;
+    total: number;
+  }>;
+}
+
+// ============================================
+// Subscription Types
+// ============================================
+
+export interface SubscriptionPlan {
+  id: string;
+  name: string;
+  slug: string;
+  tier: string;
+  tierDisplayName: string;
+  description?: string;
+  displayFeatures: string[];
+  limits: {
+    dishes: number;
+    orders: number;
+    smsCredits: number;
+    storage: number;
+    campaigns: number;
+    users: number;
+    tables: number;
+    locations: number;
+  };
+  pricing: {
+    monthly: number;
+    yearly: number;
+    currency: string;
+    monthlyFormatted: string;
+    yearlyFormatted: string;
+    yearlySavings: number;
+  };
+  trialDays: number;
+  isPopular?: boolean;
+}
+
+export interface SubscriptionFeature {
+  key: string;
+  name: string;
+}
+
+export interface SubscriptionUsage {
+  dishes: number;
+  orders: number;
+  smsCredits: number;
+  storage: number;
+  campaigns: number;
+}
+
+export interface SubscriptionInfo {
+  id: string;
+  plan: {
+    id: string;
+    name: string;
+    slug: string;
+    tier: string;
+    tierDisplayName: string;
+    displayFeatures?: string[];
+    pricing?: {
+      monthly: number;
+      yearly: number;
+      currency: string;
+      monthlyFormatted?: string;
+      yearlyFormatted?: string;
+      yearlySavings?: number;
+    };
+  };
+  status: 'active' | 'trial' | 'cancelled' | 'expired' | 'past_due';
+  isValid: boolean;
+  isInTrial: boolean;
+  trialEndsAt?: string;
+  currentPeriodEnd?: string;
+  features: SubscriptionFeature[];
+  limits: SubscriptionPlan['limits'];
+  usage: SubscriptionUsage;
+}
+
+export interface UsageCheckResult {
+  resource: string;
+  used: number;
+  limit: number;
+  remaining: number;
+  percentage: number;
+  isUnlimited: boolean;
+  canUse: boolean;
+}
+
+export interface UpgradePreview {
+  currentPlan: { name: string; tier: string };
+  targetPlan: { name: string; tier: string };
+  newFeatures: SubscriptionFeature[];
+  newLimits: Record<string, { current: number; new: number }>;
+  priceDifference: { monthly: number; yearly: number };
+}
+
+export interface DowngradePreview {
+  currentPlan: { name: string; tier: string };
+  targetPlan: { name: string; tier: string };
+  lostFeatures: SubscriptionFeature[];
+  impactedLimits: Array<{
+    resource: string;
+    currentUsage: number;
+    newLimit: number;
+    action: string;
+  }>;
+  warnings: string[];
+}
+
+export interface DowngradeAnalysis {
+  dishes?: {
+    current: number;
+    limit: number;
+    toArchive: number;
+  };
+  campaigns?: {
+    current: number;
+    limit: number;
+    toCancel: number;
+  };
+  featuresLosing: Array<{ key: string; name: string }>;
+  featuresKeeping: Array<{ key: string; name: string }>;
+  warnings: string[];
+  blockers: string[];
+  newPlan: {
+    id: string;
+    name: string;
+    slug: string;
+    tier: string;
+  };
+}
+
+export interface PendingChangesInfo {
+  hasPendingChanges: boolean;
+  pendingChange?: {
+    type: 'upgrade' | 'downgrade' | 'cancellation';
+    effectiveDate: string;
+    requestedAt: string;
+    reason?: string;
+    newPlan?: {
+      name: string;
+      slug: string;
+      tier: string;
+    };
+  };
+}
+
+export interface GracePeriodInfo {
+  inGracePeriod: boolean;
+  gracePeriod?: {
+    reason: 'payment_failed' | 'downgrade' | 'trial_ended';
+    startedAt: string;
+    endsAt: string;
+    daysRemaining: number;
+    notificationsSent: number;
+  };
+}
+
+export interface DowngradeHistoryInfo {
+  history: Array<{
+    fromPlan: { name: string; slug: string; tier: string };
+    toPlan: { name: string; slug: string; tier: string };
+    effectiveDate: string;
+    archivedItems: {
+      dishes: number;
+      campaigns: number;
+    };
+  }>;
 }
 
 export const api = new ApiService(API_BASE_URL);

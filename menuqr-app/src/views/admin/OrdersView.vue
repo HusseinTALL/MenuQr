@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { message } from 'ant-design-vue';
+import { useRouter } from 'vue-router';
 import {
   ReloadOutlined,
   ExportOutlined,
@@ -10,7 +11,10 @@ import {
   CloseOutlined,
   SoundOutlined,
   SoundFilled,
+  AppstoreOutlined,
 } from '@ant-design/icons-vue';
+
+const router = useRouter();
 import api, { type Order, type Restaurant, type Dish } from '@/services/api';
 import { formatPrice } from '@/utils/formatters';
 import type { ColumnType } from 'ant-design-vue/es/table';
@@ -192,14 +196,20 @@ const stats = computed(() => {
   const completedToday = todayOrders.filter(o => o.status === 'completed');
   const pendingOrders = orders.value.filter(o => o.status === 'pending');
 
-  // Calculate average wait time for active orders
-  const activeOrders = orders.value.filter(o => ['pending', 'confirmed', 'preparing'].includes(o.status));
+  // Calculate average wait time for active orders (realistic calculation)
+  // Only consider orders from last 2 hours, cap individual wait to 60 min max
+  const now = new Date();
+  const twoHoursAgo = new Date(now.getTime() - 2 * 60 * 60 * 1000);
+  const activeOrders = orders.value.filter(o =>
+    ['pending', 'confirmed', 'preparing'].includes(o.status) &&
+    new Date(o.createdAt) >= twoHoursAgo
+  );
   let avgWaitTime = 0;
   if (activeOrders.length > 0) {
     const totalWait = activeOrders.reduce((sum, o) => {
       const created = new Date(o.createdAt);
-      const now = new Date();
-      return sum + Math.floor((now.getTime() - created.getTime()) / 1000 / 60);
+      const waitMinutes = Math.floor((now.getTime() - created.getTime()) / 1000 / 60);
+      return sum + Math.min(waitMinutes, 60); // Cap at 60 min per order
     }, 0);
     avgWaitTime = Math.round(totalWait / activeOrders.length);
   }
@@ -779,6 +789,15 @@ onUnmounted(() => {
           </div>
 
           <a-space wrap>
+            <a-button
+              type="primary"
+              class="bg-gradient-to-r from-purple-500 to-indigo-500 border-none hover:from-purple-600 hover:to-indigo-600"
+              @click="router.push('/admin/kds')"
+            >
+              <template #icon><AppstoreOutlined /></template>
+              Vue Kanban (KDS)
+            </a-button>
+
             <a-button
               :type="kitchenMode ? 'primary' : 'default'"
               ghost

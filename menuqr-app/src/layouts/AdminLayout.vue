@@ -30,6 +30,8 @@ import {
   BellOutlined,
   ClockCircleOutlined,
   FireOutlined,
+  CarOutlined,
+  ThunderboltOutlined,
 } from '@ant-design/icons-vue';
 
 const router = useRouter();
@@ -110,6 +112,8 @@ const menuGroups = computed(() => [
     items: [
       { key: '/admin', icon: HomeOutlined, label: 'Dashboard', badge: 0 },
       { key: '/admin/orders', icon: FileTextOutlined, label: 'Commandes', badge: badges.value.pendingOrders },
+      { key: '/admin/deliveries', icon: ShopOutlined, label: 'Livraisons', badge: 0 },
+      { key: '/admin/delivery-batching', icon: ThunderboltOutlined, label: 'Lots', badge: 0 },
       { key: '/admin/kds', icon: FireOutlined, label: 'Cuisine (KDS)', badge: 0 },
       { key: '/admin/reservations', icon: CalendarOutlined, label: 'Réservations', badge: badges.value.todayReservations },
       { key: '/admin/tables', icon: TableOutlined, label: 'Tables', badge: 0 },
@@ -133,13 +137,14 @@ const menuGroups = computed(() => [
     label: 'GESTION',
     items: [
       { key: '/admin/staff', icon: UserOutlined, label: 'Personnel', badge: 0 },
+      { key: '/admin/drivers', icon: CarOutlined, label: 'Livreurs', badge: 0 },
       { key: '/admin/reviews', icon: StarOutlined, label: 'Avis Clients', badge: badges.value.pendingReviews },
     ],
   },
   {
     label: 'CONFIGURATION',
     items: [
-      { key: '/admin/pricing', icon: CreditCardOutlined, label: 'Abonnements', badge: 0 },
+      { key: '/admin/billing', icon: CreditCardOutlined, label: 'Abonnement', badge: 0 },
       { key: '/admin/settings', icon: SettingOutlined, label: 'Paramètres', badge: 0 },
     ],
   },

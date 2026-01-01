@@ -2,6 +2,7 @@ import mongoose from 'mongoose';
 import { Campaign } from '../models/index.js';
 import { smsService } from './smsService.js';
 import { logger } from '../utils/logger.js';
+import { subscriptionService } from './subscriptionService.js';
 
 /**
  * Send campaign messages to all recipients
@@ -62,6 +63,20 @@ export async function sendCampaignMessages(
   campaign.status = campaign.stats.failed === campaign.stats.totalRecipients ? 'failed' : 'completed';
   campaign.completedAt = new Date();
   await campaign.save();
+
+  // Track SMS credits usage (only for successfully sent messages)
+  if (campaign.stats.success > 0) {
+    try {
+      await subscriptionService.incrementUsage(
+        new mongoose.Types.ObjectId(campaign.restaurantId.toString()),
+        'smsCredits',
+        campaign.stats.success
+      );
+    } catch (usageError) {
+      logger.error('[Campaign] Failed to track SMS credits usage:', usageError);
+      // Don't fail - campaign already completed
+    }
+  }
 
   logger.info('[Campaign] Completed', { campaignId: campaignId.toString(), success: campaign.stats.success, failed: campaign.stats.failed });
 }

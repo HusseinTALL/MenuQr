@@ -12,10 +12,27 @@ export interface ISubscriptionUsage {
   lastResetAt: Date;
 }
 
+export interface IPendingChange {
+  type: 'upgrade' | 'downgrade' | 'cancellation';
+  newPlanId?: mongoose.Types.ObjectId;
+  effectiveDate: Date;
+  requestedAt: Date;
+  reason?: string;
+}
+
+export interface IGracePeriod {
+  isActive: boolean;
+  startedAt?: Date;
+  endsAt?: Date;
+  reason?: 'payment_failed' | 'downgrade' | 'trial_ended';
+  notificationsSent: number;
+}
+
 export interface ISubscription extends Document {
   _id: mongoose.Types.ObjectId;
   restaurantId: mongoose.Types.ObjectId;
   planId: mongoose.Types.ObjectId;
+  previousPlanId?: mongoose.Types.ObjectId;
   status: SubscriptionStatus;
   billingCycle: BillingCycle;
   currentPeriodStart: Date;
@@ -24,6 +41,17 @@ export interface ISubscription extends Document {
   cancelledAt?: Date;
   cancelReason?: string;
   usage: ISubscriptionUsage;
+  pendingChange?: IPendingChange;
+  gracePeriod?: IGracePeriod;
+  downgradeHistory: Array<{
+    fromPlanId: mongoose.Types.ObjectId;
+    toPlanId: mongoose.Types.ObjectId;
+    effectiveDate: Date;
+    archivedItems: {
+      dishes: number;
+      campaigns: number;
+    };
+  }>;
   stripeSubscriptionId?: string;
   stripeCustomerId?: string;
   lastPaymentAt?: Date;
@@ -44,6 +72,10 @@ const subscriptionSchema = new Schema<ISubscription>(
       type: Schema.Types.ObjectId,
       ref: 'SubscriptionPlan',
       required: true,
+    },
+    previousPlanId: {
+      type: Schema.Types.ObjectId,
+      ref: 'SubscriptionPlan',
     },
     status: {
       type: String,
@@ -78,6 +110,46 @@ const subscriptionSchema = new Schema<ISubscription>(
       campaigns: { type: Number, default: 0 },
       lastResetAt: { type: Date, default: Date.now },
     },
+    pendingChange: {
+      type: {
+        type: String,
+        enum: ['upgrade', 'downgrade', 'cancellation'],
+      },
+      newPlanId: {
+        type: Schema.Types.ObjectId,
+        ref: 'SubscriptionPlan',
+      },
+      effectiveDate: Date,
+      requestedAt: Date,
+      reason: String,
+    },
+    gracePeriod: {
+      isActive: { type: Boolean, default: false },
+      startedAt: Date,
+      endsAt: Date,
+      reason: {
+        type: String,
+        enum: ['payment_failed', 'downgrade', 'trial_ended'],
+      },
+      notificationsSent: { type: Number, default: 0 },
+    },
+    downgradeHistory: [{
+      fromPlanId: {
+        type: Schema.Types.ObjectId,
+        ref: 'SubscriptionPlan',
+        required: true,
+      },
+      toPlanId: {
+        type: Schema.Types.ObjectId,
+        ref: 'SubscriptionPlan',
+        required: true,
+      },
+      effectiveDate: { type: Date, required: true },
+      archivedItems: {
+        dishes: { type: Number, default: 0 },
+        campaigns: { type: Number, default: 0 },
+      },
+    }],
     stripeSubscriptionId: String,
     stripeCustomerId: String,
     lastPaymentAt: Date,

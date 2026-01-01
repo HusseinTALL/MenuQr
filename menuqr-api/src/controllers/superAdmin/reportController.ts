@@ -8,6 +8,7 @@ import {
   Invoice,
   AuditLog,
 } from '../../models/index.js';
+import { generateReportPDF, ReportData } from '../../services/pdfService.js';
 
 // Helper to wrap async handlers
 type AsyncRequestHandler = (req: Request, res: Response, next?: (err?: unknown) => void) => Promise<unknown>;
@@ -92,7 +93,7 @@ export const getReportTypes = asyncHandler(async (_req: Request, res: Response) 
       id: 'audit',
       name: 'Journal d\'audit',
       description: 'Historique des actions sur la plateforme',
-      formats: ['csv'],
+      formats: ['csv', 'pdf'],
       filters: ['action', 'category', 'dateRange'],
     },
   ];
@@ -129,20 +130,20 @@ export const generateRestaurantReport = asyncHandler(async (req: Request, res: R
     createdAt: new Date(r.createdAt).toLocaleDateString('fr-FR'),
   }));
 
-  if (format === 'csv') {
-    const columns = [
-      { key: 'id', label: 'ID' },
-      { key: 'name', label: 'Nom' },
-      { key: 'slug', label: 'Slug' },
-      { key: 'ownerName', label: 'Propriétaire' },
-      { key: 'ownerEmail', label: 'Email propriétaire' },
-      { key: 'contactEmail', label: 'Email contact' },
-      { key: 'contactPhone', label: 'Téléphone' },
-      { key: 'address', label: 'Adresse' },
-      { key: 'isActive', label: 'Actif' },
-      { key: 'createdAt', label: 'Date création' },
-    ];
+  const columns = [
+    { key: 'id', label: 'ID' },
+    { key: 'name', label: 'Nom' },
+    { key: 'slug', label: 'Slug' },
+    { key: 'ownerName', label: 'Propriétaire' },
+    { key: 'ownerEmail', label: 'Email propriétaire' },
+    { key: 'contactEmail', label: 'Email contact' },
+    { key: 'contactPhone', label: 'Téléphone' },
+    { key: 'address', label: 'Adresse' },
+    { key: 'isActive', label: 'Actif' },
+    { key: 'createdAt', label: 'Date création' },
+  ];
 
+  if (format === 'csv') {
     const csv = toCSV(data, columns);
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.setHeader('Content-Disposition', `attachment; filename=restaurants_${formatDateForFile(new Date())}.csv`);
@@ -150,16 +151,39 @@ export const generateRestaurantReport = asyncHandler(async (req: Request, res: R
     return;
   }
 
-  // For PDF, return JSON data that frontend will format
+  if (format === 'pdf') {
+    const reportData: ReportData = {
+      title: 'Rapport des Restaurants',
+      subtitle: startDate || endDate ? `Période: ${startDate || 'début'} - ${endDate || 'fin'}` : undefined,
+      generatedAt: new Date(),
+      columns,
+      data: data as Array<Record<string, string | number>>,
+      summary: {
+        'Total': data.length,
+        'Actifs': data.filter(d => d.isActive === 'Oui').length,
+        'Inactifs': data.filter(d => d.isActive === 'Non').length,
+      },
+    };
+    const pdfBuffer = await generateReportPDF(reportData);
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename=restaurants_${formatDateForFile(new Date())}.pdf`);
+    res.send(pdfBuffer);
+    return;
+  }
+
+  // JSON format for preview
   res.json({
-    title: 'Rapport des Restaurants',
-    generatedAt: new Date().toISOString(),
-    totalCount: data.length,
-    data,
-    summary: {
-      total: data.length,
-      active: data.filter(d => d.isActive === 'Oui').length,
-      inactive: data.filter(d => d.isActive === 'Non').length,
+    success: true,
+    data: {
+      title: 'Rapport des Restaurants',
+      generatedAt: new Date().toISOString(),
+      totalCount: data.length,
+      data,
+      summary: {
+        total: data.length,
+        active: data.filter(d => d.isActive === 'Oui').length,
+        inactive: data.filter(d => d.isActive === 'Non').length,
+      },
     },
   });
 });
@@ -189,17 +213,17 @@ export const generateUserReport = asyncHandler(async (req: Request, res: Respons
     createdAt: new Date(u.createdAt).toLocaleDateString('fr-FR'),
   }));
 
-  if (format === 'csv') {
-    const columns = [
-      { key: 'id', label: 'ID' },
-      { key: 'name', label: 'Nom' },
-      { key: 'email', label: 'Email' },
-      { key: 'role', label: 'Rôle' },
-      { key: 'isActive', label: 'Actif' },
-      { key: 'lastLogin', label: 'Dernière connexion' },
-      { key: 'createdAt', label: 'Date création' },
-    ];
+  const columns = [
+    { key: 'id', label: 'ID' },
+    { key: 'name', label: 'Nom' },
+    { key: 'email', label: 'Email' },
+    { key: 'role', label: 'Rôle' },
+    { key: 'isActive', label: 'Actif' },
+    { key: 'lastLogin', label: 'Dernière connexion' },
+    { key: 'createdAt', label: 'Date création' },
+  ];
 
+  if (format === 'csv') {
     const csv = toCSV(data, columns);
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.setHeader('Content-Disposition', `attachment; filename=utilisateurs_${formatDateForFile(new Date())}.csv`);
@@ -207,18 +231,47 @@ export const generateUserReport = asyncHandler(async (req: Request, res: Respons
     return;
   }
 
+  const byRole = users.reduce((acc, u) => {
+    acc[u.role] = (acc[u.role] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>);
+
+  if (format === 'pdf') {
+    const summaryObj: Record<string, string | number> = {
+      'Total': data.length,
+      'Actifs': data.filter(d => d.isActive === 'Oui').length,
+    };
+    Object.entries(byRole).forEach(([role, count]) => {
+      summaryObj[`Rôle ${role}`] = count;
+    });
+
+    const reportData: ReportData = {
+      title: 'Rapport des Utilisateurs',
+      subtitle: startDate || endDate ? `Période: ${startDate || 'début'} - ${endDate || 'fin'}` : undefined,
+      generatedAt: new Date(),
+      columns,
+      data: data as Array<Record<string, string | number>>,
+      summary: summaryObj,
+    };
+    const pdfBuffer = await generateReportPDF(reportData);
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename=utilisateurs_${formatDateForFile(new Date())}.pdf`);
+    res.send(pdfBuffer);
+    return;
+  }
+
   res.json({
-    title: 'Rapport des Utilisateurs',
-    generatedAt: new Date().toISOString(),
-    totalCount: data.length,
-    data,
-    summary: {
-      total: data.length,
-      byRole: users.reduce((acc, u) => {
-        acc[u.role] = (acc[u.role] || 0) + 1;
-        return acc;
-      }, {} as Record<string, number>),
-      active: data.filter(d => d.isActive === 'Oui').length,
+    success: true,
+    data: {
+      title: 'Rapport des Utilisateurs',
+      generatedAt: new Date().toISOString(),
+      totalCount: data.length,
+      data,
+      summary: {
+        total: data.length,
+        byRole,
+        active: data.filter(d => d.isActive === 'Oui').length,
+      },
     },
   });
 });
@@ -256,21 +309,21 @@ export const generateOrderReport = asyncHandler(async (req: Request, res: Respon
     createdAt: new Date(o.createdAt).toLocaleDateString('fr-FR'),
   }));
 
-  if (format === 'csv') {
-    const columns = [
-      { key: 'id', label: 'ID' },
-      { key: 'orderNumber', label: 'N° Commande' },
-      { key: 'restaurant', label: 'Restaurant' },
-      { key: 'customerName', label: 'Client' },
-      { key: 'customerPhone', label: 'Téléphone' },
-      { key: 'status', label: 'Statut' },
-      { key: 'itemCount', label: 'Nb articles' },
-      { key: 'subtotal', label: 'Sous-total' },
-      { key: 'total', label: 'Total' },
-      { key: 'paymentStatus', label: 'Paiement' },
-      { key: 'createdAt', label: 'Date' },
-    ];
+  const columns = [
+    { key: 'id', label: 'ID' },
+    { key: 'orderNumber', label: 'N° Commande' },
+    { key: 'restaurant', label: 'Restaurant' },
+    { key: 'customerName', label: 'Client' },
+    { key: 'customerPhone', label: 'Téléphone' },
+    { key: 'status', label: 'Statut' },
+    { key: 'itemCount', label: 'Nb articles' },
+    { key: 'subtotal', label: 'Sous-total' },
+    { key: 'total', label: 'Total' },
+    { key: 'paymentStatus', label: 'Paiement' },
+    { key: 'createdAt', label: 'Date' },
+  ];
 
+  if (format === 'csv') {
     const csv = toCSV(data, columns);
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.setHeader('Content-Disposition', `attachment; filename=commandes_${formatDateForFile(new Date())}.csv`);
@@ -279,19 +332,47 @@ export const generateOrderReport = asyncHandler(async (req: Request, res: Respon
   }
 
   const totalRevenue = orders.reduce((sum, o) => sum + (o.total || 0), 0);
+  const byStatus = orders.reduce((acc, o) => {
+    acc[o.status] = (acc[o.status] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>);
+
+  if (format === 'pdf') {
+    const summaryObj: Record<string, string | number> = {
+      'Total commandes': data.length,
+      'Chiffre d\'affaires': `${totalRevenue.toFixed(2)} €`,
+    };
+    Object.entries(byStatus).forEach(([status, count]) => {
+      summaryObj[`Statut ${status}`] = count;
+    });
+
+    const reportData: ReportData = {
+      title: 'Rapport des Commandes',
+      subtitle: startDate || endDate ? `Période: ${startDate || 'début'} - ${endDate || 'fin'}` : undefined,
+      generatedAt: new Date(),
+      columns,
+      data: data as Array<Record<string, string | number>>,
+      summary: summaryObj,
+    };
+    const pdfBuffer = await generateReportPDF(reportData);
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename=commandes_${formatDateForFile(new Date())}.pdf`);
+    res.send(pdfBuffer);
+    return;
+  }
 
   res.json({
-    title: 'Rapport des Commandes',
-    generatedAt: new Date().toISOString(),
-    totalCount: data.length,
-    data,
-    summary: {
-      total: data.length,
-      totalRevenue: totalRevenue.toFixed(2),
-      byStatus: orders.reduce((acc, o) => {
-        acc[o.status] = (acc[o.status] || 0) + 1;
-        return acc;
-      }, {} as Record<string, number>),
+    success: true,
+    data: {
+      title: 'Rapport des Commandes',
+      generatedAt: new Date().toISOString(),
+      totalCount: data.length,
+      data,
+      summary: {
+        total: data.length,
+        totalRevenue: totalRevenue.toFixed(2),
+        byStatus,
+      },
     },
   });
 });
@@ -337,37 +418,61 @@ export const generateFinancialReport = asyncHandler(async (req: Request, res: Re
     return sum + monthlyPrice;
   }, 0);
 
+  const data = invoices.map(i => ({
+    id: i._id.toString(),
+    invoiceNumber: i.invoiceNumber,
+    restaurant: (i.restaurantId as { name?: string })?.name || '-',
+    status: i.status,
+    subtotal: i.subtotal?.toFixed(2) || '0.00',
+    tax: i.taxAmount?.toFixed(2) || '0.00',
+    total: i.total?.toFixed(2) || '0.00',
+    paidAt: i.paidAt ? new Date(i.paidAt).toLocaleDateString('fr-FR') : '-',
+    dueDate: i.dueDate ? new Date(i.dueDate).toLocaleDateString('fr-FR') : '-',
+    createdAt: new Date(i.createdAt).toLocaleDateString('fr-FR'),
+  }));
+
+  const columns = [
+    { key: 'id', label: 'ID' },
+    { key: 'invoiceNumber', label: 'N° Facture' },
+    { key: 'restaurant', label: 'Restaurant' },
+    { key: 'status', label: 'Statut' },
+    { key: 'subtotal', label: 'HT' },
+    { key: 'tax', label: 'TVA' },
+    { key: 'total', label: 'TTC' },
+    { key: 'paidAt', label: 'Payé le' },
+    { key: 'dueDate', label: 'Échéance' },
+    { key: 'createdAt', label: 'Date création' },
+  ];
+
   if (format === 'csv') {
-    const data = invoices.map(i => ({
-      id: i._id.toString(),
-      invoiceNumber: i.invoiceNumber,
-      restaurant: (i.restaurantId as { name?: string })?.name || '-',
-      status: i.status,
-      subtotal: i.subtotal?.toFixed(2) || '0.00',
-      tax: i.taxAmount?.toFixed(2) || '0.00',
-      total: i.total?.toFixed(2) || '0.00',
-      paidAt: i.paidAt ? new Date(i.paidAt).toLocaleDateString('fr-FR') : '-',
-      dueDate: i.dueDate ? new Date(i.dueDate).toLocaleDateString('fr-FR') : '-',
-      createdAt: new Date(i.createdAt).toLocaleDateString('fr-FR'),
-    }));
-
-    const columns = [
-      { key: 'id', label: 'ID' },
-      { key: 'invoiceNumber', label: 'N° Facture' },
-      { key: 'restaurant', label: 'Restaurant' },
-      { key: 'status', label: 'Statut' },
-      { key: 'subtotal', label: 'HT' },
-      { key: 'tax', label: 'TVA' },
-      { key: 'total', label: 'TTC' },
-      { key: 'paidAt', label: 'Payé le' },
-      { key: 'dueDate', label: 'Échéance' },
-      { key: 'createdAt', label: 'Date création' },
-    ];
-
     const csv = toCSV(data, columns);
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.setHeader('Content-Disposition', `attachment; filename=rapport_financier_${formatDateForFile(new Date())}.csv`);
     res.send('\uFEFF' + csv);
+    return;
+  }
+
+  if (format === 'pdf') {
+    const reportData: ReportData = {
+      title: 'Rapport Financier',
+      subtitle: startDate || endDate ? `Période: ${startDate || 'début'} - ${endDate || 'fin'}` : undefined,
+      generatedAt: new Date(),
+      columns,
+      data: data as Array<Record<string, string | number>>,
+      summary: {
+        'Revenus totaux (payés)': `${totalRevenue.toFixed(2)} €`,
+        'Revenus en attente': `${pendingRevenue.toFixed(2)} €`,
+        'MRR': `${mrr.toFixed(2)} €`,
+        'ARR': `${(mrr * 12).toFixed(2)} €`,
+        'Total factures': invoices.length,
+        'Factures payées': invoices.filter(i => i.status === 'paid').length,
+        'Factures en attente': invoices.filter(i => i.status === 'pending').length,
+      },
+    };
+    const pdfBuffer = await generateReportPDF(reportData);
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename=rapport_financier_${formatDateForFile(new Date())}.pdf`);
+    res.send(pdfBuffer);
     return;
   }
 
@@ -437,22 +542,59 @@ export const generateSubscriptionReport = asyncHandler(async (req: Request, res:
     createdAt: new Date(s.createdAt).toLocaleDateString('fr-FR'),
   }));
 
-  if (format === 'csv') {
-    const columns = [
-      { key: 'id', label: 'ID' },
-      { key: 'restaurant', label: 'Restaurant' },
-      { key: 'plan', label: 'Plan' },
-      { key: 'status', label: 'Statut' },
-      { key: 'billingCycle', label: 'Cycle' },
-      { key: 'currentPeriodStart', label: 'Début période' },
-      { key: 'currentPeriodEnd', label: 'Fin période' },
-      { key: 'createdAt', label: 'Date création' },
-    ];
+  const columns = [
+    { key: 'id', label: 'ID' },
+    { key: 'restaurant', label: 'Restaurant' },
+    { key: 'plan', label: 'Plan' },
+    { key: 'status', label: 'Statut' },
+    { key: 'billingCycle', label: 'Cycle' },
+    { key: 'currentPeriodStart', label: 'Début période' },
+    { key: 'currentPeriodEnd', label: 'Fin période' },
+    { key: 'createdAt', label: 'Date création' },
+  ];
 
+  const byStatus = subscriptions.reduce((acc, s) => {
+    acc[s.status] = (acc[s.status] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>);
+
+  const byPlan = subscriptions.reduce((acc, s) => {
+    const planName = (s.planId as { name?: string })?.name || 'Unknown';
+    acc[planName] = (acc[planName] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>);
+
+  if (format === 'csv') {
     const csv = toCSV(data, columns);
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.setHeader('Content-Disposition', `attachment; filename=abonnements_${formatDateForFile(new Date())}.csv`);
     res.send('\uFEFF' + csv);
+    return;
+  }
+
+  if (format === 'pdf') {
+    const summaryObj: Record<string, string | number> = {
+      'Total abonnements': data.length,
+    };
+    Object.entries(byStatus).forEach(([status, count]) => {
+      summaryObj[`Statut ${status}`] = count;
+    });
+    Object.entries(byPlan).forEach(([plan, count]) => {
+      summaryObj[`Plan ${plan}`] = count;
+    });
+
+    const reportData: ReportData = {
+      title: 'Rapport des Abonnements',
+      subtitle: startDate || endDate ? `Période: ${startDate || 'début'} - ${endDate || 'fin'}` : undefined,
+      generatedAt: new Date(),
+      columns,
+      data: data as Array<Record<string, string | number>>,
+      summary: summaryObj,
+    };
+    const pdfBuffer = await generateReportPDF(reportData);
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename=abonnements_${formatDateForFile(new Date())}.pdf`);
+    res.send(pdfBuffer);
     return;
   }
 
@@ -507,25 +649,55 @@ export const generateInvoiceReport = asyncHandler(async (req: Request, res: Resp
     createdAt: new Date(i.createdAt).toLocaleDateString('fr-FR'),
   }));
 
-  if (format === 'csv') {
-    const columns = [
-      { key: 'id', label: 'ID' },
-      { key: 'invoiceNumber', label: 'N° Facture' },
-      { key: 'restaurant', label: 'Restaurant' },
-      { key: 'status', label: 'Statut' },
-      { key: 'subtotal', label: 'HT' },
-      { key: 'tax', label: 'TVA' },
-      { key: 'total', label: 'TTC' },
-      { key: 'currency', label: 'Devise' },
-      { key: 'paidAt', label: 'Payé le' },
-      { key: 'dueDate', label: 'Échéance' },
-      { key: 'createdAt', label: 'Date création' },
-    ];
+  const columns = [
+    { key: 'id', label: 'ID' },
+    { key: 'invoiceNumber', label: 'N° Facture' },
+    { key: 'restaurant', label: 'Restaurant' },
+    { key: 'status', label: 'Statut' },
+    { key: 'subtotal', label: 'HT' },
+    { key: 'tax', label: 'TVA' },
+    { key: 'total', label: 'TTC' },
+    { key: 'currency', label: 'Devise' },
+    { key: 'paidAt', label: 'Payé le' },
+    { key: 'dueDate', label: 'Échéance' },
+    { key: 'createdAt', label: 'Date création' },
+  ];
 
+  const totalAmount = invoices.reduce((sum, i) => sum + (i.total || 0), 0);
+  const byStatus = invoices.reduce((acc, i) => {
+    acc[i.status] = (acc[i.status] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>);
+
+  if (format === 'csv') {
     const csv = toCSV(data, columns);
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.setHeader('Content-Disposition', `attachment; filename=factures_${formatDateForFile(new Date())}.csv`);
     res.send('\uFEFF' + csv);
+    return;
+  }
+
+  if (format === 'pdf') {
+    const summaryObj: Record<string, string | number> = {
+      'Total factures': data.length,
+      'Montant total': `${totalAmount.toFixed(2)} €`,
+    };
+    Object.entries(byStatus).forEach(([status, count]) => {
+      summaryObj[`Statut ${status}`] = count;
+    });
+
+    const reportData: ReportData = {
+      title: 'Rapport des Factures',
+      subtitle: startDate || endDate ? `Période: ${startDate || 'début'} - ${endDate || 'fin'}` : undefined,
+      generatedAt: new Date(),
+      columns,
+      data: data as Array<Record<string, string | number>>,
+      summary: summaryObj,
+    };
+    const pdfBuffer = await generateReportPDF(reportData);
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename=factures_${formatDateForFile(new Date())}.pdf`);
+    res.send(pdfBuffer);
     return;
   }
 
@@ -536,11 +708,8 @@ export const generateInvoiceReport = asyncHandler(async (req: Request, res: Resp
     data,
     summary: {
       total: data.length,
-      totalAmount: invoices.reduce((sum, i) => sum + (i.total || 0), 0).toFixed(2),
-      byStatus: invoices.reduce((acc, i) => {
-        acc[i.status] = (acc[i.status] || 0) + 1;
-        return acc;
-      }, {} as Record<string, number>),
+      totalAmount: totalAmount.toFixed(2),
+      byStatus,
     },
   });
 });
@@ -586,23 +755,46 @@ export const generateUsageReport = asyncHandler(async (req: Request, res: Respon
   const totalRevenue = recentOrders.reduce((sum, o) => sum + (o.total || 0), 0);
   const avgOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
 
+  const data = ordersByDay.map(d => ({
+    date: d._id,
+    orders: d.count,
+    revenue: d.revenue?.toFixed(2) || '0.00',
+  }));
+
+  const columns = [
+    { key: 'date', label: 'Date' },
+    { key: 'orders', label: 'Commandes' },
+    { key: 'revenue', label: 'Revenus' },
+  ];
+
   if (format === 'csv') {
-    const data = ordersByDay.map(d => ({
-      date: d._id,
-      orders: d.count,
-      revenue: d.revenue?.toFixed(2) || '0.00',
-    }));
-
-    const columns = [
-      { key: 'date', label: 'Date' },
-      { key: 'orders', label: 'Commandes' },
-      { key: 'revenue', label: 'Revenus' },
-    ];
-
     const csv = toCSV(data, columns);
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.setHeader('Content-Disposition', `attachment; filename=utilisation_${formatDateForFile(new Date())}.csv`);
     res.send('\uFEFF' + csv);
+    return;
+  }
+
+  if (format === 'pdf') {
+    const reportData: ReportData = {
+      title: 'Rapport d\'Utilisation',
+      subtitle: startDate || endDate ? `Période: ${startDate || 'début'} - ${endDate || 'fin'}` : undefined,
+      generatedAt: new Date(),
+      columns,
+      data: data as Array<Record<string, string | number>>,
+      summary: {
+        'Total restaurants': totalRestaurants,
+        'Restaurants actifs': activeRestaurants,
+        'Total utilisateurs': totalUsers,
+        'Total commandes': totalOrders,
+        'Revenus totaux': `${totalRevenue.toFixed(2)} €`,
+        'Panier moyen': `${avgOrderValue.toFixed(2)} €`,
+      },
+    };
+    const pdfBuffer = await generateReportPDF(reportData);
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename=utilisation_${formatDateForFile(new Date())}.pdf`);
+    res.send(pdfBuffer);
     return;
   }
 
@@ -617,11 +809,7 @@ export const generateUsageReport = asyncHandler(async (req: Request, res: Respon
       totalRevenue: totalRevenue.toFixed(2),
       avgOrderValue: avgOrderValue.toFixed(2),
     },
-    dailyStats: ordersByDay.map(d => ({
-      date: d._id,
-      orders: d.count,
-      revenue: d.revenue?.toFixed(2) || '0.00',
-    })),
+    dailyStats: data,
   });
 });
 
@@ -655,22 +843,58 @@ export const generateAuditReport = asyncHandler(async (req: Request, res: Respon
     createdAt: new Date(l.createdAt).toLocaleString('fr-FR'),
   }));
 
-  if (format === 'csv') {
-    const columns = [
-      { key: 'id', label: 'ID' },
-      { key: 'user', label: 'Utilisateur' },
-      { key: 'userEmail', label: 'Email' },
-      { key: 'action', label: 'Action' },
-      { key: 'category', label: 'Catégorie' },
-      { key: 'resource', label: 'Ressource' },
-      { key: 'ipAddress', label: 'IP' },
-      { key: 'createdAt', label: 'Date' },
-    ];
+  const columns = [
+    { key: 'id', label: 'ID' },
+    { key: 'user', label: 'Utilisateur' },
+    { key: 'userEmail', label: 'Email' },
+    { key: 'action', label: 'Action' },
+    { key: 'category', label: 'Catégorie' },
+    { key: 'resource', label: 'Ressource' },
+    { key: 'ipAddress', label: 'IP' },
+    { key: 'createdAt', label: 'Date' },
+  ];
 
+  const byAction = logs.reduce((acc, l) => {
+    acc[l.action] = (acc[l.action] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>);
+
+  const byCategory = logs.reduce((acc, l) => {
+    acc[l.category] = (acc[l.category] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>);
+
+  if (format === 'csv') {
     const csv = toCSV(data, columns);
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.setHeader('Content-Disposition', `attachment; filename=audit_${formatDateForFile(new Date())}.csv`);
     res.send('\uFEFF' + csv);
+    return;
+  }
+
+  if (format === 'pdf') {
+    const summaryObj: Record<string, string | number> = {
+      'Total entrées': data.length,
+    };
+    Object.entries(byAction).slice(0, 5).forEach(([actionName, count]) => {
+      summaryObj[`Action ${actionName}`] = count;
+    });
+    Object.entries(byCategory).slice(0, 5).forEach(([cat, count]) => {
+      summaryObj[`Catégorie ${cat}`] = count;
+    });
+
+    const reportData: ReportData = {
+      title: 'Journal d\'Audit',
+      subtitle: startDate || endDate ? `Période: ${startDate || 'début'} - ${endDate || 'fin'}` : undefined,
+      generatedAt: new Date(),
+      columns,
+      data: data.slice(0, 500) as Array<Record<string, string | number>>,
+      summary: summaryObj,
+    };
+    const pdfBuffer = await generateReportPDF(reportData);
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename=audit_${formatDateForFile(new Date())}.pdf`);
+    res.send(pdfBuffer);
     return;
   }
 
@@ -681,14 +905,8 @@ export const generateAuditReport = asyncHandler(async (req: Request, res: Respon
     data: data.slice(0, 500),
     summary: {
       total: data.length,
-      byAction: logs.reduce((acc, l) => {
-        acc[l.action] = (acc[l.action] || 0) + 1;
-        return acc;
-      }, {} as Record<string, number>),
-      byCategory: logs.reduce((acc, l) => {
-        acc[l.category] = (acc[l.category] || 0) + 1;
-        return acc;
-      }, {} as Record<string, number>),
+      byAction,
+      byCategory,
     },
   });
 });

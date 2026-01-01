@@ -25,6 +25,18 @@ import {
 import superAdminRoutes from './superAdminRoutes.js';
 import { getCaptchaConfig } from '../services/captchaService.js';
 
+// Delivery System Routes
+import deliveryDriverRoutes from './deliveryDriverRoutes.js';
+import deliveryRoutes from './deliveryRoutes.js';
+import driverSelfServiceRoutes from './driverSelfServiceRoutes.js';
+import chatRoutes from './chatRoutes.js';
+import callRoutes from './callRoutes.js';
+import stripeRoutes from './stripeRoutes.js';
+import subscriptionRoutes from './subscriptionRoutes.js';
+
+// Hotel System Routes
+import hotelRoutes from './hotelRoutes.js';
+
 const router = Router();
 
 // Health check
@@ -76,5 +88,24 @@ router.use('/customer', customerRoutes);
 
 // Super Admin routes
 router.use('/superadmin', superAdminRoutes);
+
+// Delivery System routes
+router.use('/drivers', deliveryDriverRoutes);         // Driver management (admin + public registration)
+router.use('/deliveries', deliveryRoutes);            // Delivery management (admin)
+router.use('/driver', driverSelfServiceRoutes);       // Driver self-service (driver app)
+router.use('/chat', chatRoutes);                      // Chat for deliveries (group chat)
+router.use('/calls', callRoutes);                     // Masked calling (Twilio Voice)
+
+// Twilio webhooks (need to be at root level for Twilio)
+router.use('/twilio', callRoutes);
+
+// Stripe Connect (driver payouts)
+router.use('/stripe', stripeRoutes);
+
+// Subscription Management
+router.use('/subscription', subscriptionRoutes);
+
+// Hotel System routes
+router.use('/hotels', hotelRoutes);
 
 export default router;

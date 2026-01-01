@@ -152,14 +152,14 @@ const openEditModal = (plan: Plan) => {
   editingPlanId.value = plan._id;
   planForm.value = {
     name: plan.name,
-    description: plan.description,
-    features: plan.features.join('\n'),
-    limits: { ...plan.limits },
-    pricing: { ...plan.pricing },
-    trialDays: plan.trialDays,
-    isActive: plan.isActive,
-    isPopular: plan.isPopular,
-    sortOrder: plan.sortOrder,
+    description: plan.description || '',
+    features: (plan.features || []).join('\n'),
+    limits: { ...defaultLimits, ...(plan.limits || {}) },
+    pricing: { ...defaultPricing, ...(plan.pricing || {}) },
+    trialDays: plan.trialDays || 0,
+    isActive: plan.isActive ?? true,
+    isPopular: plan.isPopular ?? false,
+    sortOrder: plan.sortOrder || 0,
   };
   modalVisible.value = true;
 };
@@ -310,12 +310,12 @@ onMounted(() => {
             <p class="plan-description">{{ plan.description }}</p>
 
             <div class="plan-pricing">
-              <span class="price">{{ plan.pricing.monthly }}</span>
-              <span class="currency">{{ plan.pricing.currency }}</span>
+              <span class="price">{{ plan.pricing?.monthly ?? 0 }}</span>
+              <span class="currency">{{ plan.pricing?.currency ?? 'EUR' }}</span>
               <span class="period">/mois</span>
             </div>
             <div class="yearly-price">
-              ou {{ plan.pricing.yearly }} {{ plan.pricing.currency }}/an
+              ou {{ plan.pricing?.yearly ?? 0 }} {{ plan.pricing?.currency ?? 'EUR' }}/an
             </div>
 
             <div class="subscription-count">
@@ -329,7 +329,7 @@ onMounted(() => {
             <div class="plan-features">
               <h4>Fonctionnalites</h4>
               <ul>
-                <li v-for="feature in plan.features" :key="feature">
+                <li v-for="feature in (plan.features || [])" :key="feature">
                   <CheckOutlined class="feature-icon" /> {{ feature }}
                 </li>
               </ul>
@@ -339,27 +339,27 @@ onMounted(() => {
               <h4>Limites</h4>
               <div class="limits-grid">
                 <div class="limit-item">
-                  <span class="limit-value">{{ formatLimit(plan.limits.dishes) }}</span>
+                  <span class="limit-value">{{ formatLimit(plan.limits?.dishes ?? 0) }}</span>
                   <span class="limit-label">Plats</span>
                 </div>
                 <div class="limit-item">
-                  <span class="limit-value">{{ formatLimit(plan.limits.orders) }}</span>
+                  <span class="limit-value">{{ formatLimit(plan.limits?.orders ?? 0) }}</span>
                   <span class="limit-label">Commandes</span>
                 </div>
                 <div class="limit-item">
-                  <span class="limit-value">{{ formatLimit(plan.limits.users) }}</span>
+                  <span class="limit-value">{{ formatLimit(plan.limits?.users ?? 0) }}</span>
                   <span class="limit-label">Utilisateurs</span>
                 </div>
                 <div class="limit-item">
-                  <span class="limit-value">{{ formatLimit(plan.limits.tables) }}</span>
+                  <span class="limit-value">{{ formatLimit(plan.limits?.tables ?? 0) }}</span>
                   <span class="limit-label">Tables</span>
                 </div>
                 <div class="limit-item">
-                  <span class="limit-value">{{ formatLimit(plan.limits.smsCredits) }}</span>
+                  <span class="limit-value">{{ formatLimit(plan.limits?.smsCredits ?? 0) }}</span>
                   <span class="limit-label">SMS</span>
                 </div>
                 <div class="limit-item">
-                  <span class="limit-value">{{ plan.trialDays }}j</span>
+                  <span class="limit-value">{{ plan.trialDays || 0 }}j</span>
                   <span class="limit-label">Essai</span>
                 </div>
               </div>

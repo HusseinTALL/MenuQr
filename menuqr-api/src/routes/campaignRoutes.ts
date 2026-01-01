@@ -19,11 +19,14 @@ import {
   campaignQueryValidator,
   sendCampaignValidator,
 } from '../validators/campaign.js';
+import { requireFeature } from '../middleware/feature.js';
+import { FEATURES } from '../config/features.js';
 
 const router = Router();
 
-// All routes require authentication
+// All routes require authentication and SMS_CAMPAIGNS feature
 router.use(authenticate);
+router.use(requireFeature(FEATURES.SMS_CAMPAIGNS));
 
 // Read routes
 router.get('/', hasPermission(PERMISSIONS.CAMPAIGNS_READ), validate(campaignQueryValidator), getCampaigns);
