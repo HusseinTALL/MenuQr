@@ -167,8 +167,9 @@ export const getDeliveries = async (req: Request, res: Response): Promise<void> 
 
     const [deliveries, total, statsAgg] = await Promise.all([
       Delivery.find(query)
-        .populate('driverId', 'firstName lastName phone vehicleType rating')
+        .populate('driverId', 'firstName lastName phone vehicleType rating profilePhoto')
         .populate('orderId', 'orderNumber total items')
+        .populate('customerId', 'name phone email firstName lastName')
         .sort(sort)
         .skip(skip)
         .limit(Number(limit)),

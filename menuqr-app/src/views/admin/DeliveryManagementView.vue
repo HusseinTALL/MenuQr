@@ -519,7 +519,7 @@ onUnmounted(() => {
       <template #bodyCell="{ column, record }">
         <template v-if="column.key === 'orderId'">
           <div class="order-cell">
-            <span class="order-id">#{{ record.orderId?.slice(-6) || record._id.slice(-6) }}</span>
+            <span class="order-id">#{{ record.orderId?.orderNumber || record.orderId?._id?.slice(-6) || record._id.slice(-6) }}</span>
             <a-tag v-if="record.isPriority" color="red" size="small">URGENT</a-tag>
           </div>
           <div class="order-time">{{ formatTime(record.createdAt) }}</div>
@@ -537,11 +537,11 @@ onUnmounted(() => {
         </template>
 
         <template v-else-if="column.key === 'customer'">
-          <div v-if="record.customerId" class="customer-cell">
+          <div v-if="record.customerId && typeof record.customerId === 'object'" class="customer-cell">
             <span class="customer-name">
-              {{ record.customerId.firstName }} {{ record.customerId.lastName }}
+              {{ record.customerId.name || `${record.customerId.firstName || ''} ${record.customerId.lastName || ''}`.trim() || '-' }}
             </span>
-            <a :href="'tel:' + record.customerId.phone" class="customer-phone">
+            <a v-if="record.customerId.phone" :href="'tel:' + record.customerId.phone" class="customer-phone">
               <PhoneOutlined /> {{ record.customerId.phone }}
             </a>
           </div>
