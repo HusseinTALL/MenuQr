@@ -84,12 +84,15 @@ export const getNotifications = asyncHandler(async (req: Request, res: Response)
   ]);
 
   res.json({
-    notifications,
-    pagination: {
-      page: Number(page),
-      limit: Number(limit),
-      total,
-      pages: Math.ceil(total / Number(limit)),
+    success: true,
+    data: {
+      notifications,
+      pagination: {
+        page: Number(page),
+        limit: Number(limit),
+        total,
+        pages: Math.ceil(total / Number(limit)),
+      },
     },
   });
 });
@@ -205,13 +208,16 @@ export const getNotificationStats = asyncHandler(async (_req: Request, res: Resp
   ]);
 
   res.json({
-    total: totalNotifications,
-    pending: pendingNotifications,
-    sent: sentNotifications,
-    failed: failedNotifications,
-    byType: byType.reduce((acc, item) => ({ ...acc, [item._id]: item.count }), {}),
-    byChannel: byChannel.reduce((acc, item) => ({ ...acc, [item._id]: item.count }), {}),
-    recentNotifications,
+    success: true,
+    data: {
+      total: totalNotifications,
+      pending: pendingNotifications,
+      sent: sentNotifications,
+      failed: failedNotifications,
+      byType: byType.reduce((acc, item) => ({ ...acc, [item._id]: item.count }), {}),
+      byChannel: byChannel.reduce((acc, item) => ({ ...acc, [item._id]: item.count }), {}),
+      recentNotifications,
+    },
   });
 });
 
@@ -245,12 +251,15 @@ export const getAnnouncements = asyncHandler(async (req: Request, res: Response)
   ]);
 
   res.json({
-    announcements,
-    pagination: {
-      page: Number(page),
-      limit: Number(limit),
-      total,
-      pages: Math.ceil(total / Number(limit)),
+    success: true,
+    data: {
+      announcements,
+      pagination: {
+        page: Number(page),
+        limit: Number(limit),
+        total,
+        pages: Math.ceil(total / Number(limit)),
+      },
     },
   });
 });
@@ -505,12 +514,15 @@ export const getMassEmailHistory = asyncHandler(async (req: Request, res: Respon
   ]);
 
   res.json({
-    emails,
-    pagination: {
-      page: Number(page),
-      limit: Number(limit),
-      total,
-      pages: Math.ceil(total / Number(limit)),
+    success: true,
+    data: {
+      emails,
+      pagination: {
+        page: Number(page),
+        limit: Number(limit),
+        total,
+        pages: Math.ceil(total / Number(limit)),
+      },
     },
   });
 });
@@ -524,7 +536,10 @@ export const getAlertRules = asyncHandler(async (_req: Request, res: Response) =
     .populate('createdBy', 'firstName lastName')
     .sort({ trigger: 1 });
 
-  res.json(alertRules);
+  res.json({
+    success: true,
+    data: alertRules,
+  });
 });
 
 // Get alert rule by ID
@@ -735,7 +750,7 @@ export const getRecipients = asyncHandler(async (req: Request, res: Response) =>
       .limit(50)
       .sort({ name: 1 });
 
-    res.json(restaurants);
+    res.json({ success: true, data: restaurants });
     return;
   }
 
@@ -754,9 +769,9 @@ export const getRecipients = asyncHandler(async (req: Request, res: Response) =>
       .limit(50)
       .sort({ firstName: 1 });
 
-    res.json(users);
+    res.json({ success: true, data: users });
     return;
   }
 
-  res.status(400).json({ message: 'Type de destinataire invalide' });
+  res.status(400).json({ success: false, message: 'Type de destinataire invalide' });
 });
