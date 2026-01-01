@@ -2204,18 +2204,18 @@ const generateSparklinePath = (data: number[], width = 80, height = 28) => {
 }
 
 .chart-container {
-  height: 300px;
+  height: 450px;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
 .chart-container.large {
-  height: 400px;
+  height: 550px;
 }
 
 .chart-container.doughnut {
-  height: 280px;
+  height: 380px;
 }
 
 .chart-container canvas {
@@ -2410,7 +2410,7 @@ const generateSparklinePath = (data: number[], width = 80, height = 28) => {
 
 /* Extra Large Chart Container */
 .chart-container.xlarge {
-  height: 450px;
+  height: 650px;
 }
 
 /* Comparison Section - Trends Tab */
@@ -2891,15 +2891,15 @@ const generateSparklinePath = (data: number[], width = 80, height = 28) => {
   }
 
   .chart-container {
-    height: 250px;
+    height: 350px;
   }
 
   .chart-container.large {
-    height: 300px;
+    height: 400px;
   }
 
   .chart-container.xlarge {
-    height: 350px;
+    height: 500px;
   }
 
   .metrics-row {
