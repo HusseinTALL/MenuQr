@@ -76,7 +76,7 @@ interface RecentActivity {
     _id: string;
     orderNumber: string;
     status: string;
-    totalAmount: number;
+    total: number;
     restaurantId: { name: string; slug: string };
     createdAt: string;
   }>;
@@ -131,7 +131,8 @@ const fetchData = async () => {
 const formatCurrency = (amount: number) => {
   return new Intl.NumberFormat('fr-FR', {
     style: 'currency',
-    currency: 'EUR',
+    currency: 'XOF',
+    maximumFractionDigits: 0,
   }).format(amount);
 };
 
@@ -197,7 +198,7 @@ const revenueChartData = computed(() => {
     labels,
     datasets: [
       {
-        label: 'Revenus (EUR)',
+        label: 'Revenus (FCFA)',
         data: revenueData,
         borderColor: '#22c55e',
         backgroundColor: 'rgba(34, 197, 94, 0.1)',
@@ -625,7 +626,7 @@ onMounted(() => {
                   <span class="activity-time">{{ formatDate(order.createdAt) }}</span>
                 </div>
                 <div class="activity-meta">
-                  <span class="activity-amount">{{ formatCurrency(order.totalAmount) }}</span>
+                  <span class="activity-amount">{{ formatCurrency(order.total || 0) }}</span>
                   <a-tag :color="getStatusColor(order.status)" size="small">
                     {{ order.status }}
                   </a-tag>
