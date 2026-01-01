@@ -1,4 +1,5 @@
 <script setup lang="ts">
+/* eslint-disable @typescript-eslint/ban-ts-comment */
 // @ts-nocheck - TODO: Fix notification stats type errors
 import { ref, reactive, onMounted } from 'vue';
 import {

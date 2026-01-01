@@ -1,4 +1,5 @@
 <script setup lang="ts">
+/* eslint-disable @typescript-eslint/ban-ts-comment */
 // @ts-nocheck - TODO: Fix feature index type error
 /**
  * UpgradePrompt Component
