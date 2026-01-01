@@ -545,7 +545,7 @@ export function checkFeatures(featuresToCheck: Feature[]) {
       }
 
       next();
-    } catch (_error) {
+    } catch {
       // Don't fail on soft check
       next();
     }

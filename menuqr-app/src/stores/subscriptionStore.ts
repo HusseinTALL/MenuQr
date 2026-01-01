@@ -11,8 +11,6 @@ import api from '@/services/api';
 import type {
   SubscriptionInfo,
   SubscriptionPlan,
-  SubscriptionFeature,
-  UsageCheckResult,
   UpgradePreview,
   DowngradePreview,
 } from '@/services/api';

@@ -1,10 +1,8 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch, h } from 'vue';
 import { message } from 'ant-design-vue';
-import { useSubscription, FEATURES } from '@/composables/useSubscription';
+import { FEATURES } from '@/composables/useSubscription';
 import { FeatureGate } from '@/components/subscription';
-
-const { hasFeature } = useSubscription();
 import {
   CalendarOutlined,
   TeamOutlined,

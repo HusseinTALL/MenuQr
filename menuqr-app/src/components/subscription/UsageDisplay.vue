@@ -28,7 +28,6 @@ const props = withDefaults(
 
 const {
   limits,
-  usage,
   getUsageInfo,
   navigateToUpgrade,
 } = useSubscription();

@@ -2,10 +2,8 @@
 import { ref, computed, onMounted, watch } from 'vue';
 import api, { type Campaign } from '@/services/api';
 import { message } from 'ant-design-vue';
-import { useSubscription, FEATURES } from '@/composables/useSubscription';
+import { FEATURES } from '@/composables/useSubscription';
 import { FeatureGate } from '@/components/subscription';
-
-const { hasFeature, guardFeature } = useSubscription();
 import {
   SearchOutlined,
   PlusOutlined,

@@ -1,12 +1,11 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, h } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import {
   CalendarOutlined,
   ArrowRightOutlined,
   CloseOutlined,
   CheckOutlined,
   LoadingOutlined,
-  ArrowUpOutlined,
   ArrowDownOutlined,
   StopOutlined,
   RocketOutlined,

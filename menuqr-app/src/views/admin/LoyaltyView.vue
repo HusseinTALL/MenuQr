@@ -4,10 +4,8 @@ import { api } from '@/services/api';
 import type { LoyaltyStats, CustomerWithLoyalty, LoyaltyTier } from '@/types/loyalty';
 import { TIER_CONFIG } from '@/types/loyalty';
 import { message } from 'ant-design-vue';
-import { useSubscription, FEATURES } from '@/composables/useSubscription';
+import { FEATURES } from '@/composables/useSubscription';
 import { FeatureGate } from '@/components/subscription';
-
-const { hasFeature } = useSubscription();
 import type { TableColumnsType } from 'ant-design-vue';
 import {
   SearchOutlined,

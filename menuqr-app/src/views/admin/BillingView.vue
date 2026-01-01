@@ -11,41 +11,36 @@ import { message } from 'ant-design-vue';
 import {
   CreditCardOutlined,
   CrownOutlined,
-  HistoryOutlined,
   RocketOutlined,
   CheckCircleOutlined,
   ExclamationCircleOutlined,
   CloseCircleOutlined,
   CalendarOutlined,
-  SettingOutlined,
   ThunderboltOutlined,
-  SafetyCertificateOutlined,
   BarChartOutlined,
   FileTextOutlined,
   DownloadOutlined,
-  ClockCircleOutlined,
-  StarOutlined,
   FireOutlined,
   GiftOutlined,
   ArrowRightOutlined,
   CheckOutlined,
 } from '@ant-design/icons-vue';
-import { useSubscription, FEATURES } from '@/composables/useSubscription';
+import { useSubscription } from '@/composables/useSubscription';
 import { UsageDisplay, PricingPlans, UpgradePrompt } from '@/components/subscription';
 import PendingChangesBanner from '@/components/subscription/PendingChangesBanner.vue';
 import GracePeriodBanner from '@/components/subscription/GracePeriodBanner.vue';
 import DowngradeWarningModal from '@/components/subscription/DowngradeWarningModal.vue';
 
 const route = useRoute();
-const router = useRouter();
+const _router = useRouter();
 
 const {
-  subscription,
+  subscription: _subscription,
   currentPlan,
   currentTier,
   tierName,
-  isValid,
-  isInTrial,
+  isValid: _isValid,
+  isInTrial: _isInTrial,
   trialDaysLeft,
   daysUntilRenewal,
   subscriptionStatus,

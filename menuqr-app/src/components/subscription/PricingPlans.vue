@@ -41,7 +41,6 @@ const {
   currentTier,
   isLoading,
   fetchPlans,
-  changePlan,
   formatPrice,
   TIER_HIERARCHY,
 } = useSubscription();
@@ -76,7 +75,7 @@ function isUpgrade(plan: SubscriptionPlan): boolean {
   return planLevel > currentLevel;
 }
 
-function isDowngrade(plan: SubscriptionPlan): boolean {
+function _isDowngrade(plan: SubscriptionPlan): boolean {
   const currentLevel = TIER_HIERARCHY[currentTier.value] ?? 0;
   const planLevel = TIER_HIERARCHY[plan.tier] ?? 0;
   return planLevel < currentLevel;
@@ -92,7 +91,7 @@ function getAnnualPrice(plan: SubscriptionPlan): string {
   return formatPrice(plan.pricing.yearly);
 }
 
-function getSavings(plan: SubscriptionPlan): number {
+function _getSavings(plan: SubscriptionPlan): number {
   return plan.pricing.yearlySavings;
 }
 
