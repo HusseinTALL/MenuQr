@@ -197,8 +197,10 @@ export const getMyReservations = asyncHandler(
 
     res.json({
       success: true,
-      data: result.reservations,
-      pagination: result.pagination,
+      data: {
+        reservations: result.reservations,
+        pagination: result.pagination,
+      },
     });
   }
 );
@@ -327,8 +329,10 @@ export const getReservations = asyncHandler(
 
     res.json({
       success: true,
-      data: result.reservations,
-      pagination: result.pagination,
+      data: {
+        reservations: result.reservations,
+        pagination: result.pagination,
+      },
     });
   }
 );
