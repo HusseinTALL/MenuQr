@@ -633,7 +633,7 @@ onUnmounted(() => {
       <template v-if="selectedDelivery">
         <a-descriptions :column="2" bordered size="small">
           <a-descriptions-item label="ID Commande" :span="1">
-            #{{ selectedDelivery.orderId?.slice(-6) || selectedDelivery._id.slice(-6) }}
+            #{{ selectedDelivery.orderId?.orderNumber || selectedDelivery.orderId?._id?.slice(-6) || selectedDelivery._id.slice(-6) }}
           </a-descriptions-item>
           <a-descriptions-item label="Statut" :span="1">
             <a-tag :color="getStatusColor(selectedDelivery.status)">
@@ -650,10 +650,10 @@ onUnmounted(() => {
           </a-descriptions-item>
 
           <a-descriptions-item label="Client" :span="1">
-            <template v-if="selectedDelivery.customerId">
-              {{ selectedDelivery.customerId.firstName }} {{ selectedDelivery.customerId.lastName }}
+            <template v-if="selectedDelivery.customerId && typeof selectedDelivery.customerId === 'object'">
+              {{ selectedDelivery.customerId.name || `${selectedDelivery.customerId.firstName || ''} ${selectedDelivery.customerId.lastName || ''}`.trim() || '-' }}
               <br />
-              <a :href="'tel:' + selectedDelivery.customerId.phone">
+              <a v-if="selectedDelivery.customerId.phone" :href="'tel:' + selectedDelivery.customerId.phone">
                 {{ selectedDelivery.customerId.phone }}
               </a>
             </template>
